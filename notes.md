@@ -1,0 +1,15 @@
+##### ToDo
+- [x] port initial exercise1 project structure
+    - [x] copy LICENSE
+    - [x] learn to create (multi-level) Rust modules to translate project structure 
+    - [x] third party libraries
+        - [x] **glm**: glm = "0.2.3"
+        - [x] **stb**: stb = "0.3.2"
+        - [x] **catch2**: Won't do, testing is integrated into rust
+    - [x] test code
+        - [x] structure
+        - [x] test logic
+- [ ] port intersection tests
+    - [ ] sphere
+    - [ ] plane
+    - [ ] triangle

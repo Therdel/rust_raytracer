@@ -1,0 +1,17 @@
+[package]
+name = "whitted_raytracer"
+version = "0.1.0"
+authors = ["Therdel <14974231+Therdel@users.noreply.github.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+stb = { version = "0.3.2", default-features = false, features = ["stb_image_write"] }
+glm = "0.2.3"
+float_eq = "^0.5"
+
+[profile.dev]
+opt-level = 3
+[profile.release]
+opt-level = 3

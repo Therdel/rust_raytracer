@@ -81,17 +81,10 @@ impl Intersect for Sphere {
             let does_intersect_in_ray_direction = t >= 0.0;
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
-
-                // compensate numeric error on intersection
-                // move hitpoint along surface normal in direction of ray origin
-                // this avoids cases where hitpoints numerically "sink through" the surface
                 let normal = self.normal(&hit_position);
-                let n_dot_rdir = glm::dot(normal, ray.direction);
-                let intersect_frontside = n_dot_rdir < 0.0;
-                let hit_normal = if intersect_frontside { normal } else { normal * -1.0 };
-                let offset = hit_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
+                let hit_position_acne_compensated = compensate_acne(&hit_position, ray, &normal);
 
-                let hitpoint = Hitpoint {t: t, position: hit_position + offset};
+                let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated};
                 result = Some(hitpoint);
             }
         }
@@ -117,15 +110,9 @@ impl Intersect for Plane {
             let does_intersect_in_ray_direction = t >= 0.0;
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
+                let hit_position_acne_compensated = compensate_acne(&hit_position, ray, &self.normal);
 
-                // compensate numeric error on intersection
-                // move hitpoint along surface normal in direction of ray origin
-                // this avoids cases where hitpoints numerically "sink through" the surface
-                let intersect_frontside = n_dot_rdir < 0.0;
-                let hit_normal = if intersect_frontside { self.normal } else { self.normal * -1.0 };
-                let offset = hit_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
-
-                let hitpoint = Hitpoint {t: t, position: hit_position + offset};
+                let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated};
                 result = Some(hitpoint);
             }
         }
@@ -162,20 +149,25 @@ impl Intersect for Triangle {
             !is_hit_point_outside;
         if does_intersect {
             let hit_position = utils::ray_equation(ray, t);
+            let hit_position_acne_compensated = compensate_acne(&hit_position, ray, self.normal());
 
-            // compensate numeric error on intersection
-            // move hitpoint along surface normal in direction of ray origin
-            // this avoids cases where hitpoints numerically "sink through" the surface
-            let n_dot_rdir = glm::dot(*self.normal(), ray.direction);
-            let intersect_frontside = n_dot_rdir < 0.0;
-
-            let surface_normal = if intersect_frontside { *self.normal() } else { -*self.normal() };
-            let offset = surface_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
-
-            let hitpoint = Hitpoint {t: t, position: hit_position + offset};
+            let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated};
             result = Some(hitpoint);
         }
 
         result
     }
+}
+
+/// compensate numeric error on intersection.
+/// moves hitpoint along surface normal in direction of ray origin
+/// this avoids cases where hitpoints numerically "sink through" the surface
+fn compensate_acne(hit_position: &glm::Vec3, ray: &Ray, normal: &glm::Vec3) -> glm::Vec3 {
+    let n_dot_rdir = glm::dot(*normal, ray.direction);
+    let intersect_frontside = n_dot_rdir < 0.0;
+
+    let surface_normal = if intersect_frontside { *normal } else { -*normal };
+    let offset = surface_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
+    let hit_position_compensated = *hit_position + offset;
+    hit_position_compensated
 }

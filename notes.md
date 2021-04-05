@@ -9,7 +9,8 @@
     - [x] test code
         - [x] structure
         - [x] test logic
-- [ ] port intersection tests
-    - [ ] sphere
-    - [ ] plane
-    - [ ] triangle
+- [x] port intersection tests
+    - [x] sphere
+    - [x] plane
+    - [x] triangle
+    - [x] unify surface acne compensation

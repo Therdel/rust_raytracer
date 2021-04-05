@@ -103,7 +103,33 @@ impl Intersect for Plane {
     type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
-        todo!()
+        let mut result = None;
+
+        let n_dot_rdir = glm::dot(self.normal, ray.direction);
+        let parallel = n_dot_rdir == 0.0;
+        if !parallel {
+            // t = d - N * rOrg
+            //     ------------
+            //       N * rDir
+            let t = (self.distance - glm::dot(self.normal, ray.origin))
+                / n_dot_rdir;
+
+            let does_intersect_in_ray_direction = t >= 0.0;
+            if does_intersect_in_ray_direction {
+                let hit_position = utils::ray_equation(ray, t);
+
+                // compensate numeric error on intersection
+                // move hitpoint along surface normal in direction of ray origin
+                // this avoids cases where hitpoints numerically "sink through" the surface
+                let intersect_frontside = n_dot_rdir < 0.0;
+                let hit_normal = if intersect_frontside { self.normal } else { self.normal * -1.0 };
+                let offset = hit_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
+
+                let hitpoint = Hitpoint {t: t, position: hit_position + offset};
+                result = Some(hitpoint);
+            }
+        }
+        result
     }
 }
 

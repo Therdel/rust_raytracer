@@ -137,6 +137,45 @@ impl Intersect for Triangle {
     type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
-        todo!()
+        let mut result = None;
+
+        let e1 = self.b - self.a;
+        let e2 = self.c - self.a;
+        let s = ray.origin - self.a;
+        let q = glm::cross(ray.direction, e2);
+        let r = glm::cross(s, e1);
+
+        let q_dot_e1 = glm::dot(q, e1);
+
+        let t = glm::dot(r, e2) / q_dot_e1;
+        let v = glm::dot(q, s) / q_dot_e1;
+        let w = glm::dot(r, ray.direction) / q_dot_e1;
+        let u = 1.0 - v - w;
+
+        let is_ray_parallel = glm::dot(e1, q) == 0.0;
+        // TODO: Document that the official solution (e1 * q) < 0 discards intersections from behind the triangle.
+        let does_ray_point_away = t < 0.0; //glm::dot(e1, q) < 0; // FIXME: Why not [..] = t < 0 ?
+        let is_hit_point_outside = u < 0.0 || v < 0.0 || u + v > 1.0;
+
+        let does_intersect = !is_ray_parallel &&
+            !does_ray_point_away &&
+            !is_hit_point_outside;
+        if does_intersect {
+            let hit_position = utils::ray_equation(ray, t);
+
+            // compensate numeric error on intersection
+            // move hitpoint along surface normal in direction of ray origin
+            // this avoids cases where hitpoints numerically "sink through" the surface
+            let n_dot_rdir = glm::dot(*self.normal(), ray.direction);
+            let intersect_frontside = n_dot_rdir < 0.0;
+
+            let surface_normal = if intersect_frontside { *self.normal() } else { -*self.normal() };
+            let offset = surface_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
+
+            let hitpoint = Hitpoint {t: t, position: hit_position + offset};
+            result = Some(hitpoint);
+        }
+
+        result
     }
 }

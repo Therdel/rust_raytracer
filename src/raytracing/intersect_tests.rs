@@ -79,11 +79,9 @@ mod tests {
         use super::*;
 
         fn triangle() -> Triangle {
-            Triangle {
-                a: glm::vec3(-1., 1., 0.),
-                b: glm::vec3(1., 0., 0.),
-                c: glm::vec3(-1., -1., 0.),
-            }
+            Triangle::new(glm::vec3(-1., 1., 0.),
+                          glm::vec3(1., 0., 0.),
+                          glm::vec3(-1., -1., 0.))
         }
 
         #[test]

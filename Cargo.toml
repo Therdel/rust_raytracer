@@ -12,6 +12,6 @@ glm = "0.2.3"
 float_eq = "^0.5"
 
 [profile.dev]
-opt-level = 3
+opt-level = 0
 [profile.release]
 opt-level = 3

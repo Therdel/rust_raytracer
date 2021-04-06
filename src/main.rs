@@ -3,13 +3,15 @@ mod raytracing;
 mod utils;
 
 use std::ffi::CString;
-use exercise1::Canvas;
+use exercise1::{Canvas, Scene};
+use raytracing::{Triangle, Plane, Sphere};
 
 const IMAGE_PATH: &'static str = "render.png";
 const IMAGE_WIDTH: usize = 1000;
 const IMAGE_HEIGHT: usize = 1000;
 
 fn main() -> std::io::Result<()> {
+    let _scene = test_scene();
     let mut canvas = Canvas::new((IMAGE_WIDTH, IMAGE_HEIGHT));
 
     for y in 0..IMAGE_HEIGHT {
@@ -20,4 +22,28 @@ fn main() -> std::io::Result<()> {
     }
     canvas.write_png(CString::new(IMAGE_PATH)?.as_c_str());
     Ok(())
+}
+
+fn test_scene() -> Scene {
+    Scene {
+        planes: vec![
+            Plane {
+                normal: glm::vec3(0., 0., -1.0),
+                distance: 1.0,
+            }
+        ],
+        spheres: vec![
+            Sphere {
+                center: glm::vec3(0., 0., -2.0),
+                radius: 0.5,
+            }
+        ],
+        triangles: vec![
+            Triangle::new(
+                glm::vec3(-5., -2.5, -5.),
+                glm::vec3(5., -2.5, -5.),
+                glm::vec3(0., 2.5, -5.),
+            )
+        ],
+    }
 }

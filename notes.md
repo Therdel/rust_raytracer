@@ -1,7 +1,8 @@
 ##### ToDo
+
 - [x] port initial exercise1 project structure
     - [x] copy LICENSE
-    - [x] learn to create (multi-level) Rust modules to translate project structure 
+    - [x] learn to create (multi-level) Rust modules to translate project structure
     - [x] third party libraries
         - [x] **glm**: glm = "0.2.3"
         - [x] **stb**: stb = "0.3.2"
@@ -14,3 +15,11 @@
     - [x] plane
     - [x] triangle
     - [x] unify surface acne compensation
+- [ ] scene config
+    - [x] hardcoded
+    - [ ] parse from string
+    - [ ] parse from file
+    - [ ] primitives
+        - [ ] sphere
+        - [ ] plane
+        - [ ] triangle

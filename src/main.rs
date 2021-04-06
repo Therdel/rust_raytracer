@@ -3,8 +3,8 @@ mod raytracing;
 mod utils;
 
 use std::ffi::CString;
-use exercise1::{Canvas, Scene};
-use raytracing::{Triangle, Plane, Sphere};
+use crate::exercise1::{Canvas, Scene};
+use crate::raytracing::{Triangle, Plane, Sphere, Light};
 
 const IMAGE_PATH: &'static str = "render.png";
 const IMAGE_WIDTH: usize = 1000;
@@ -16,7 +16,7 @@ fn main() -> std::io::Result<()> {
 
     for y in 0..IMAGE_HEIGHT {
         for x in 0..IMAGE_WIDTH {
-            let color = glm::vec3(0.5, 0.5, 0.5); // raytrace here
+            let color = glm::vec3(1., 0.5, 0.5); // raytrace here
             canvas.set_pixel((x, y), &color);
         }
     }
@@ -26,6 +26,14 @@ fn main() -> std::io::Result<()> {
 
 fn test_scene() -> Scene {
     Scene {
+        lights: vec![
+            Light {
+                position: glm::vec4(1.0, 1.0, 1.0, 0.0), // directional
+                ambient: glm::vec3(0.1, 0.1, 0.1),
+                diffuse: glm::vec3(0.2, 0.2, 0.2),
+                specular: glm::vec3(0.5, 0.5, 0.5),
+            }
+        ],
         planes: vec![
             Plane {
                 normal: glm::vec3(0., 0., -1.0),

@@ -14,3 +14,6 @@ pub use primitives::*;
 
 mod light;
 pub use light::*;
+
+mod camera;
+pub use camera::*;

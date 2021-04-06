@@ -4,7 +4,7 @@ mod utils;
 
 use std::ffi::CString;
 use crate::exercise1::{Canvas, Scene};
-use crate::raytracing::{Triangle, Plane, Sphere, Light};
+use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera};
 
 const IMAGE_PATH: &'static str = "render.png";
 const IMAGE_WIDTH: usize = 1000;
@@ -26,6 +26,13 @@ fn main() -> std::io::Result<()> {
 
 fn test_scene() -> Scene {
     Scene {
+        camera: Camera {
+            position: glm::vec3(0.0, 0.0, 1.0),
+            orientation: glm::vec3(0.0, 0.0, 0.0),
+            pixel_width: 1000,
+            pixel_height: 1000,
+            fov: 90.0,
+        },
         lights: vec![
             Light {
                 position: glm::vec4(1.0, 1.0, 1.0, 0.0), // directional
@@ -36,21 +43,21 @@ fn test_scene() -> Scene {
         ],
         planes: vec![
             Plane {
-                normal: glm::vec3(0., 0., -1.0),
+                normal: glm::vec3(0.0, 0.0, -1.0),
                 distance: 1.0,
             }
         ],
         spheres: vec![
             Sphere {
-                center: glm::vec3(0., 0., -2.0),
+                center: glm::vec3(0.0, 0.0, -2.0),
                 radius: 0.5,
             }
         ],
         triangles: vec![
             Triangle::new(
-                glm::vec3(-5., -2.5, -5.),
-                glm::vec3(5., -2.5, -5.),
-                glm::vec3(0., 2.5, -5.),
+                glm::vec3(-5.0, -2.5, -5.0),
+                glm::vec3(5.0, -2.5, -5.0),
+                glm::vec3(0.0, 2.5, -5.0),
             )
         ],
     }

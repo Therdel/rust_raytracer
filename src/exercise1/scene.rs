@@ -1,6 +1,7 @@
-use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light};
+use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera};
 
 pub struct Scene {
+    pub camera: Camera,
     pub lights: Vec<Light>,
     pub planes: Vec<Plane>,
     pub spheres: Vec<Sphere>,

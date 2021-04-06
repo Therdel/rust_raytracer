@@ -1,9 +1,8 @@
-use crate::raytracing::{Intersect, Plane, Ray, Sphere, Triangle};
-use crate::utils;
-
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::raytracing::{Intersect, Plane, Ray, Sphere, Triangle};
+    use crate::utils;
+
     mod ray_sphere_intersection {
         use super::*;
 

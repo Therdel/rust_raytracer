@@ -27,11 +27,14 @@ fn main() -> std::io::Result<()> {
 fn test_scene() -> Scene {
     Scene {
         camera: Camera {
-            position: glm::vec3(0.0, 0.0, 1.0),
-            orientation: glm::vec3(0.0, 0.0, 0.0),
+            position: glm::vec3(0.0, 0.0, -0.9),
+            orientation: glm::vec3(0.0f32.to_radians(),
+                                   0.0f32.to_radians(),
+                                   0.0f32.to_radians()),
             pixel_width: 1000,
             pixel_height: 1000,
-            fov: 90.0,
+            y_fov_degrees: 90.0,
+            z_near: 0.1, z_far: 25.0,
         },
         lights: vec![
             Light {

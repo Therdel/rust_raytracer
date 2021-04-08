@@ -17,7 +17,7 @@ fn main() -> std::io::Result<()> {
     for y in 0..IMAGE_HEIGHT {
         for x in 0..IMAGE_WIDTH {
             let color = glm::vec3(1., 0.5, 0.5); // raytrace here
-            canvas.set_pixel((x, y), &color);
+            canvas.set_pixel(x, y, &color);
         }
     }
     canvas.write_png(CString::new(IMAGE_PATH)?.as_c_str());

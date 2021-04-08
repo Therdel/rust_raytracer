@@ -19,8 +19,10 @@ impl Canvas {
         }
     }
 
-    pub fn set_pixel(&mut self, coordinate: (usize, usize), color: &glm::Vec3) {
-        let pos = coordinate.0 + self.width * coordinate.1;
+    pub fn set_pixel(&mut self, x: usize, y: usize, color: &glm::Vec3) {
+        let max_y_index = self.height - 1;
+        let y_inverted = max_y_index - y;
+        let pos = x + self.width * y_inverted;
         self.pixels[pos] = Self::quantize_colors(color);
     }
 

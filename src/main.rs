@@ -24,6 +24,27 @@ fn main() -> std::io::Result<()> {
     Ok(())
 }
 
+fn generate_primary_ray(screen_coordinate: &glm::Vec2, screen_to_world: &glm::Mat4) -> Ray {
+    let p_screen = glm::vec4(screen_coordinate.x, screen_coordinate.y, 0.0, 1.0);
+    // TODO: Document that NDC "looks" in *positive* z-axis. Document wrong viewing direction
+    //       Erklärung: Hat was mit der z-Range zutun, wie man die definiert.
+    // TODO: Document that this is *always* in camera view direction. (NDC)
+    let p_screen_forward = p_screen + glm::vec4(0.0, 0.0, 1.0, 0.0);
+
+    let p_world = *screen_to_world * p_screen;
+    let p_world_forward = *screen_to_world * p_screen_forward;
+
+    let p_world_inhomogeneous = (p_world / p_world.w).truncate(3);
+    let p_world_forward_inhomogeneous = (p_world_forward / p_world_forward.w).truncate(3);
+
+    let direction = p_world_forward_inhomogeneous - p_world_inhomogeneous;
+    let direction_normalized = glm::normalize(direction);
+    Ray {
+        origin: p_world_inhomogeneous,
+        direction: direction_normalized,
+    }
+}
+
 fn test_scene() -> Scene {
     Scene {
         camera: Camera {

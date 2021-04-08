@@ -11,9 +11,9 @@ pub struct Canvas {
 
 impl Canvas {
     pub fn new(canvas_dimensions: (usize, usize)) -> Canvas {
-        const BLACK: ColorRgb = [0u8, 0u8, 0u8];
+        const URPLE: ColorRgb = [255, 127, 127];
         Canvas {
-            pixels: vec![BLACK; canvas_dimensions.0 * canvas_dimensions.1],
+            pixels: vec![URPLE; canvas_dimensions.0 * canvas_dimensions.1],
             width: canvas_dimensions.0,
             height: canvas_dimensions.1
         }

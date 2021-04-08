@@ -4,20 +4,28 @@ mod utils;
 
 use std::ffi::CString;
 use crate::exercise1::{Canvas, Scene};
-use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera};
+use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera, Ray, Intersect};
+use num_traits::AsPrimitive; // ::as_()
 
 const IMAGE_PATH: &'static str = "render.png";
 const IMAGE_WIDTH: usize = 1000;
 const IMAGE_HEIGHT: usize = 1000;
 
 fn main() -> std::io::Result<()> {
-    let _scene = test_scene();
+    let scene = test_scene();
+    let screen_to_world = raytracing::transform::matrix::screen_to_world(&scene.camera);
     let mut canvas = Canvas::new((IMAGE_WIDTH, IMAGE_HEIGHT));
 
     for y in 0..IMAGE_HEIGHT {
         for x in 0..IMAGE_WIDTH {
-            let color = glm::vec3(1., 0.5, 0.5); // raytrace here
-            canvas.set_pixel(x, y, &color);
+            let ray = generate_primary_ray(&glm::vec2(x.as_(), y.as_()),
+                                           &screen_to_world);
+            if let Some(hitpoint) = scene.intersect(&ray) {
+                let scale = 1.0 / 10.0;
+                let brightness = hitpoint.t * scale;
+                let color = glm::vec3(brightness, brightness, brightness);
+                canvas.set_pixel(x, y, &color);
+            }
         }
     }
     canvas.write_png(CString::new(IMAGE_PATH)?.as_c_str());
@@ -48,7 +56,7 @@ fn generate_primary_ray(screen_coordinate: &glm::Vec2, screen_to_world: &glm::Ma
 fn test_scene() -> Scene {
     Scene {
         camera: Camera {
-            position: glm::vec3(0.0, 0.0, -0.9),
+            position: glm::vec3(0.0, 0.0, -1.0),
             orientation: glm::vec3(0.0f32.to_radians(),
                                    0.0f32.to_radians(),
                                    0.0f32.to_radians()),
@@ -67,8 +75,8 @@ fn test_scene() -> Scene {
         ],
         planes: vec![
             Plane {
-                normal: glm::vec3(0.0, 0.0, -1.0),
-                distance: 1.0,
+                normal: glm::vec3(0.0, -1.0, 0.0),
+                distance: 5.0,
             }
         ],
         spheres: vec![

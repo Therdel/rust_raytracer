@@ -4,7 +4,7 @@ mod utils;
 
 use std::ffi::CString;
 use crate::exercise1::{Canvas, Scene};
-use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera, Ray, Intersect};
+use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera, Ray, Intersect, LightColor};
 use num_traits::AsPrimitive; // ::as_()
 
 const IMAGE_PATH: &'static str = "render.png";
@@ -68,9 +68,11 @@ fn test_scene() -> Scene {
         lights: vec![
             Light {
                 position: glm::vec4(1.0, 1.0, 1.0, 0.0), // directional
-                ambient: glm::vec3(0.1, 0.1, 0.1),
-                diffuse: glm::vec3(0.2, 0.2, 0.2),
-                specular: glm::vec3(0.5, 0.5, 0.5),
+                color: LightColor {
+                    ambient: glm::vec3(0.1, 0.1, 0.1),
+                    diffuse: glm::vec3(0.2, 0.2, 0.2),
+                    specular: glm::vec3(0.5, 0.5, 0.5),
+                }
             }
         ],
         planes: vec![

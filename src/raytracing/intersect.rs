@@ -14,7 +14,7 @@ pub trait Intersect {
     fn intersect(&self, ray: &Ray) -> Option<Self::Result>;
 }
 
-impl Intersect for Sphere {
+impl Intersect for Sphere<'_> {
     type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
@@ -92,7 +92,7 @@ impl Intersect for Sphere {
     }
 }
 
-impl Intersect for Plane {
+impl Intersect for Plane<'_> {
     type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
@@ -120,7 +120,7 @@ impl Intersect for Plane {
     }
 }
 
-impl Intersect for Triangle {
+impl Intersect for Triangle<'_> {
     type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {

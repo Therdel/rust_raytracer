@@ -19,3 +19,6 @@ mod camera;
 pub use camera::*;
 
 pub mod transform;
+
+mod material;
+pub use material::*;

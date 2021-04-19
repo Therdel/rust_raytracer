@@ -1,14 +1,16 @@
-use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera};
+use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material};
 
-pub struct Scene {
+pub struct Scene<'a> {
     pub camera: Camera,
     pub lights: Vec<Light>,
-    pub planes: Vec<Plane>,
-    pub spheres: Vec<Sphere>,
-    pub triangles: Vec<Triangle>,
+    pub planes: Vec<Plane<'a>>,
+    pub spheres: Vec<Sphere<'a>>,
+    pub triangles: Vec<Triangle<'a>>,
+
+    pub materials: Vec<Material>
 }
 
-impl raytracing::Intersect for Scene {
+impl raytracing::Intersect for Scene<'_> {
     type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {

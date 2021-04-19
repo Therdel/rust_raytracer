@@ -1,15 +1,20 @@
-pub struct Triangle {
+use crate::raytracing::Material;
+
+pub struct Triangle<'a> {
     pub a: glm::Vec3,
     pub b: glm::Vec3,
     pub c: glm::Vec3,
     normal: glm::Vec3,
+
+    pub material: &'a Material,
 }
 
-impl Triangle {
-    pub fn new(a: glm::Vec3, b: glm::Vec3, c: glm::Vec3) -> Triangle {
+impl Triangle<'_> {
+    pub fn new(a: glm::Vec3, b: glm::Vec3, c: glm::Vec3, material: &Material) -> Triangle {
         Triangle {
             a, b, c,
-            normal: Triangle::calculate_unit_normal(a, b, c)
+            normal: Triangle::calculate_unit_normal(a, b, c),
+            material: material
         }
     }
 

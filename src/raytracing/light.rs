@@ -1,4 +1,4 @@
-type Color = glm::Vec3;
+use crate::utils::ColorRGB;
 
 pub struct Light {
     pub position: glm::Vec4,
@@ -6,7 +6,7 @@ pub struct Light {
 }
 
 pub struct LightColor {
-    pub ambient: Color,
-    pub diffuse: Color,
-    pub specular: Color,
+    pub ambient: ColorRGB,
+    pub diffuse: ColorRGB,
+    pub specular: ColorRGB,
 }

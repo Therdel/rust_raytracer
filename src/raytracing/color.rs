@@ -1,7 +1,7 @@
 pub type ColorRgb = glm::Vec3;
 pub type ColorRgbU8 = [u8; 3];
 
-pub trait Predefined {
+pub trait Color {
     /// "Colors that end in 'urple'!"
     fn urple() -> Self;
 
@@ -11,7 +11,7 @@ pub trait Predefined {
     fn black() -> Self;
 }
 
-impl Predefined for ColorRgb {
+impl Color for ColorRgb {
     fn urple() -> Self { glm::vec3(1.0, 0.5, 0.5) }
 
     fn red() -> Self { glm::vec3(1.0, 0.0, 0.0) }

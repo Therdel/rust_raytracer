@@ -8,5 +8,3 @@ pub fn assert_approx_eq(a: f32, b: f32) {
 pub fn ray_equation(ray: &Ray, t: f32) -> glm::Vec3 {
     ray.origin + ray.direction * t
 }
-
-pub type ColorRGB = glm::Vec3;

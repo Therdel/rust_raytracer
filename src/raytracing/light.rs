@@ -1,4 +1,4 @@
-use crate::utils::ColorRGB;
+use crate::raytracing::color::ColorRgb;
 
 pub struct Light {
     pub position: glm::Vec4,
@@ -6,7 +6,7 @@ pub struct Light {
 }
 
 pub struct LightColor {
-    pub ambient: ColorRGB,
-    pub diffuse: ColorRGB,
-    pub specular: ColorRGB,
+    pub ambient: ColorRgb,
+    pub diffuse: ColorRgb,
+    pub specular: ColorRgb,
 }

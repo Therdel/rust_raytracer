@@ -4,7 +4,7 @@ mod utils;
 
 use std::ffi::CString;
 use crate::exercise1::{Canvas, Scene};
-use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera, Ray, Intersect, LightColor};
+use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera, Ray, Intersect, LightColor, color::*};
 use num_traits::AsPrimitive; // ::as_()
 
 const IMAGE_PATH: &'static str = "render.png";
@@ -14,7 +14,7 @@ const IMAGE_HEIGHT: usize = 1000;
 fn main() -> std::io::Result<()> {
     let scene = test_scene();
     let screen_to_world = raytracing::transform::matrix::screen_to_world(&scene.camera);
-    let mut canvas = Canvas::new((IMAGE_WIDTH, IMAGE_HEIGHT));
+    let mut canvas = Canvas::new((IMAGE_WIDTH, IMAGE_HEIGHT), ColorRgb::urple());
 
     for y in 0..IMAGE_HEIGHT {
         for x in 0..IMAGE_WIDTH {

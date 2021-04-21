@@ -10,6 +10,26 @@ pub struct Scene<'a> {
     pub materials: Vec<Material>
 }
 
+// impl<'a> Scene<'a> {
+    // pub fn get_material(&'a self, name: &str) -> Option<&'a Material> {
+        // TODO: Document learnt: Why didn't this work?
+        // self.materials.iter().find(|&material| {
+        //     material.name == name
+        // })
+
+        // TODO: Document learn: Why didn't this work?
+        //       Document: missing ```&'a self``` lifetime.
+        // let mut result = None;
+        // for i in 0..self.materials.len() {
+        //     let ref material = self.materials[i];
+        //     if material.name == name {
+        //         result = Some(material);
+        //     }
+        // }
+        // result
+    // }
+// }
+
 impl raytracing::Intersect for Scene<'_> {
     type Result = Hitpoint;
 

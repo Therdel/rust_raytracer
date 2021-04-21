@@ -1,7 +1,8 @@
 use crate::exercise1::Scene;
 use crate::raytracing::transform::matrix;
-use crate::raytracing::{Ray, Intersect};
+use crate::raytracing::{Ray, Intersect, Light};
 use crate::raytracing::color::ColorRgb;
+use num_traits::Zero;
 
 pub struct Raytracer<'scene> {
     scene: &'scene Scene<'scene>,
@@ -17,6 +18,7 @@ pub trait Public {
 }
 
 trait Private {
+    fn trace_shadow_ray(&self, world_pos: &glm::Vec3, light: &Light) -> bool;
 }
 
 impl Public for Raytracer<'_> {
@@ -62,6 +64,40 @@ impl Public for Raytracer<'_> {
 }
 
 impl Private for Raytracer<'_> {
+    fn trace_shadow_ray(&self, world_pos: &glm::Vec3, light: &Light) -> bool {
+        let is_directional_light = light.position.w.is_zero();
+
+        let direction = {
+            if is_directional_light {
+                light.position.truncate(3)
+            } else {
+                let light_world_pos = (light.position / light.position.w).truncate(3);
+                light_world_pos - *world_pos
+            }
+        };
+
+        let direction = glm::normalize(direction);
+
+        let ray = Ray { origin: *world_pos, direction };
+
+        let is_shadow;
+        if let Some(hitpoint) = self.scene.intersect(&ray) {
+            if is_directional_light {
+                // any intersection puts shadow of infinitely distant (directional light)
+                is_shadow = true;
+            } else {
+                let light_world_pos = (light.position / light.position.w).truncate(3);
+                let distance_to_light = glm::distance(ray.origin, light_world_pos);
+                let ray_distance_travelled = hitpoint.t;
+
+                is_shadow = ray_distance_travelled < distance_to_light;
+            }
+        } else {
+            is_shadow = false;
+        }
+
+        is_shadow
+    }
 }
 
 /// TODO: Why does the second one compile but the first doesn't?

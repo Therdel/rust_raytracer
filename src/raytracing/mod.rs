@@ -23,7 +23,6 @@ pub mod transform;
 mod material;
 pub use material::*;
 
-mod raytracer;
-pub use raytracer::*;
+pub mod raytracer;
 
 pub mod color;

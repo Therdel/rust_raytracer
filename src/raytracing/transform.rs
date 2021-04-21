@@ -1,5 +1,4 @@
 pub mod matrix {
-    use num_traits::{ToPrimitive, AsPrimitive};
     use glm::{BaseFloat, GenFloat};
     use crate::raytracing::Camera;
 

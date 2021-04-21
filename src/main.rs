@@ -4,8 +4,10 @@ mod utils;
 
 use std::ffi::CString;
 use crate::exercise1::{Canvas, Scene};
-use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera, Ray, Intersect, LightColor, Material, color::*};
-use num_traits::AsPrimitive; // ::as_()
+use crate::raytracing::{
+    Triangle, Plane, Sphere, Light, Camera, LightColor, Material, color::*,
+    raytracer::{Raytracer, Public}
+};
 
 const IMAGE_PATH: &'static str = "render.png";
 const IMAGE_WIDTH: usize = 1000;
@@ -25,44 +27,20 @@ fn main() -> std::io::Result<()> {
     scene.spheres = test_spheres(&scene.materials);
     scene.triangles = test_triangles(&scene.materials);
 
-    let screen_to_world = raytracing::transform::matrix::screen_to_world(&scene.camera);
     let mut canvas = Canvas::new((IMAGE_WIDTH, IMAGE_HEIGHT), ColorRgb::urple());
+    let raytracer = Raytracer::new(&scene);
 
     for y in 0..IMAGE_HEIGHT {
         for x in 0..IMAGE_WIDTH {
-            let ray = generate_primary_ray(&glm::vec2(x.as_(), y.as_()),
-                                           &screen_to_world);
-            if let Some(hitpoint) = scene.intersect(&ray) {
-                let scale = 1.0 / 10.0;
-                let brightness = hitpoint.t * scale;
-                let color = glm::vec3(brightness, brightness, brightness);
-                canvas.set_pixel(x, y, &color);
+            let coordinate = glm::vec2(x as _, y as _);
+            let ray = raytracer.generate_primary_ray(&coordinate);
+            if let Some(hit_color) = raytracer.depth_map(&ray) {
+                canvas.set_pixel(x, y, &hit_color);
             }
         }
     }
     canvas.write_png(CString::new(IMAGE_PATH)?.as_c_str());
     Ok(())
-}
-
-fn generate_primary_ray(screen_coordinate: &glm::Vec2, screen_to_world: &glm::Mat4) -> Ray {
-    let p_screen = glm::vec4(screen_coordinate.x, screen_coordinate.y, 0.0, 1.0);
-    // TODO: Document that NDC "looks" in *positive* z-axis. Document wrong viewing direction
-    //       Erklärung: Hat was mit der z-Range zutun, wie man die definiert.
-    // TODO: Document that this is *always* in camera view direction. (NDC)
-    let p_screen_forward = p_screen + glm::vec4(0.0, 0.0, 1.0, 0.0);
-
-    let p_world = *screen_to_world * p_screen;
-    let p_world_forward = *screen_to_world * p_screen_forward;
-
-    let p_world_inhomogeneous = (p_world / p_world.w).truncate(3);
-    let p_world_forward_inhomogeneous = (p_world_forward / p_world_forward.w).truncate(3);
-
-    let direction = p_world_forward_inhomogeneous - p_world_inhomogeneous;
-    let direction_normalized = glm::normalize(direction);
-    Ray {
-        origin: p_world_inhomogeneous,
-        direction: direction_normalized,
-    }
 }
 
 fn test_lights() -> Vec<Light> {

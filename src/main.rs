@@ -15,7 +15,7 @@ const IMAGE_HEIGHT: usize = 1000;
 
 fn main() -> std::io::Result<()> {
     let mut scene = Scene {
-        camera: test_camera(1000, 1000),
+        camera: test_camera(IMAGE_WIDTH, IMAGE_HEIGHT),
         lights: test_lights(),
         planes: vec![],
         spheres: vec![],

@@ -1,8 +1,8 @@
 use crate::exercise1::Scene;
 use crate::raytracing::transform::matrix;
-use crate::raytracing::{Ray, Intersect, Light};
+use crate::raytracing::{Ray, Intersect, Light, Hitpoint};
 use crate::raytracing::color::ColorRgb;
-use num_traits::Zero;
+use num_traits::{Zero, zero};
 
 pub struct Raytracer<'scene> {
     scene: &'scene Scene<'scene>,
@@ -12,13 +12,18 @@ pub struct Raytracer<'scene> {
 pub trait Public {
     fn new<'scene>(scene: &'scene Scene) -> Raytracer<'scene>;
 
+    fn raytrace(&self, ray: &Ray) -> Option<ColorRgb>;
     fn depth_map(&self, ray: &Ray) -> Option<ColorRgb>;
 
     fn generate_primary_ray(&self, screen_coordinate: &glm::Vec2) -> Ray;
 }
 
 trait Private {
+    fn shade(&self, ray: &Ray, hitpoint: &Hitpoint) -> Option<ColorRgb>;
+    fn radiance(&self, ray: &Ray, hitpoint: &Hitpoint, light: &Light, is_shadow: bool) -> ColorRgb;
     fn trace_shadow_ray(&self, world_pos: &glm::Vec3, light: &Light) -> bool;
+    fn create_reflected_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3) -> glm::Vec3;
+    fn get_hitpoint_to_light_unit_vector(hitpoint: &Hitpoint, light: &Light) -> glm::Vec3;
 }
 
 impl Public for Raytracer<'_> {
@@ -27,6 +32,11 @@ impl Public for Raytracer<'_> {
             scene,
             screen_to_world: matrix::screen_to_world(&scene.camera),
         }
+    }
+
+    fn raytrace(&self, ray: &Ray) -> Option<ColorRgb> {
+        let hitpoint = self.scene.intersect(ray)?;
+        self.shade(ray, &hitpoint)
     }
 
     fn depth_map(&self, ray: &Ray) -> Option<ColorRgb> {
@@ -64,6 +74,42 @@ impl Public for Raytracer<'_> {
 }
 
 impl Private for Raytracer<'_> {
+    fn shade(&self, ray: &Ray, hitpoint: &Hitpoint) -> Option<ColorRgb> {
+        let mut color = None;
+
+        for light in &self.scene.lights {
+            let is_shadow = self.trace_shadow_ray(&hitpoint.position, light);
+            let radiance_color = self.radiance(ray, hitpoint, light, is_shadow);
+
+            match color {
+                Some(old_color) =>
+                    color = Some(old_color + radiance_color),
+                None =>
+                    color = Some(radiance_color)
+            }
+        }
+
+        color
+    }
+
+    fn radiance(&self, ray: &Ray, hitpoint: &Hitpoint, light: &Light, is_shadow: bool) -> ColorRgb {
+        let l = Self::get_hitpoint_to_light_unit_vector(hitpoint, light);
+        let n = hitpoint.hit_normal;
+        let v = -ray.direction;
+        let r = Self::create_reflected_ray(&l, &n);
+
+        let l_dot_n = glm::max(glm::dot(l, n), 0.0);
+        let r_dot_v = glm::max(glm::dot(r, v), 0.0);
+
+        let emissive = hitpoint.material.emissive;
+        let ambient = light.color.ambient + hitpoint.material.ambient;
+        let diffuse = if is_shadow { zero() } else { light.color.diffuse * hitpoint.material.diffuse * l_dot_n };
+        let specular = if is_shadow { zero() } else { light.color.specular * hitpoint.material.specular * glm::pow(r_dot_v, hitpoint.material.shininess) };
+
+        let radiance = emissive + ambient + diffuse + specular;
+        radiance
+    }
+
     fn trace_shadow_ray(&self, world_pos: &glm::Vec3, light: &Light) -> bool {
         let is_directional_light = light.position.w.is_zero();
 
@@ -97,6 +143,23 @@ impl Private for Raytracer<'_> {
         }
 
         is_shadow
+    }
+
+    fn create_reflected_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3) -> glm::Vec3 {
+        *normal * 2. * (glm::dot(*normal, *to_viewer)) - *to_viewer
+    }
+
+    fn get_hitpoint_to_light_unit_vector(hitpoint: &Hitpoint, light: &Light) -> glm::Vec3 {
+        let is_directional_light = light.position.w.is_zero();
+        let vector = {
+            if is_directional_light {
+                light.position.truncate(3)
+            } else {
+                let light_world_pos = (light.position / light.position.w).truncate(3);
+                light_world_pos - hitpoint.position
+            }
+        };
+        glm::normalize(vector)
     }
 }
 

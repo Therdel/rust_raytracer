@@ -1,4 +1,4 @@
-use crate::raytracing::{Ray, Hitpoint, Sphere, Plane, Triangle};
+use crate::raytracing::{Ray, Hitpoint, Sphere, Plane, Triangle, Material};
 use crate::utils;
 use num_traits::identities::Zero;
 use num_traits::Signed;
@@ -82,9 +82,8 @@ impl<'a> Intersect for Sphere<'a> {
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
                 let normal = self.normal(&hit_position);
-                let hit_position_acne_compensated = compensate_acne(&hit_position, ray, &normal);
+                let hitpoint = create_hitpoint(t, &hit_position, ray, &normal, self.material);
 
-                let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated, material: self.material};
                 result = Some(hitpoint);
             }
         }
@@ -110,9 +109,8 @@ impl<'a> Intersect for Plane<'a> {
             let does_intersect_in_ray_direction = t >= 0.0;
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
-                let hit_position_acne_compensated = compensate_acne(&hit_position, ray, &self.normal);
+                let hitpoint = create_hitpoint(t, &hit_position, ray, &self.normal, self.material);
 
-                let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated, material: self.material};
                 result = Some(hitpoint);
             }
         }
@@ -149,9 +147,8 @@ impl<'a> Intersect for Triangle<'a> {
             !is_hit_point_outside;
         if does_intersect {
             let hit_position = utils::ray_equation(ray, t);
-            let hit_position_acne_compensated = compensate_acne(&hit_position, ray, self.normal());
+            let hitpoint = create_hitpoint(t, &hit_position, ray, self.normal(), self.material);
 
-            let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated, material: self.material};
             result = Some(hitpoint);
         }
 
@@ -159,15 +156,18 @@ impl<'a> Intersect for Triangle<'a> {
     }
 }
 
-/// compensate numeric error on intersection.
-/// moves hitpoint along surface normal in direction of ray origin
-/// this avoids cases where hitpoints numerically "sink through" the surface
-fn compensate_acne(hit_position: &glm::Vec3, ray: &Ray, normal: &glm::Vec3) -> glm::Vec3 {
+fn create_hitpoint<'material>(t: f32, hit_position: &glm::Vec3, ray: &Ray, normal: &glm::Vec3, material: &'material Material) -> Hitpoint<'material> {
     let n_dot_rdir = glm::dot(*normal, ray.direction);
     let intersect_frontside = n_dot_rdir < 0.0;
 
-    let surface_normal = if intersect_frontside { *normal } else { -*normal };
-    let offset = surface_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
-    let hit_position_compensated = *hit_position + offset;
-    hit_position_compensated
+    // invert surface normal when hitting the primitives' backside | inside
+    let hit_normal = if intersect_frontside { *normal } else { -*normal };
+
+    // compensate numeric error on intersection.
+    // moves hitpoint along surface normal in direction of ray origin
+    // this avoids cases where hitpoints numerically "sink through" the surface
+    let offset = hit_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
+    let hit_position_acne_compensated = *hit_position + offset;
+
+    Hitpoint {t, position: hit_position_acne_compensated, hit_normal, material: material}
 }

@@ -16,7 +16,7 @@ impl Color for ColorRgb {
 
     fn red() -> Self { glm::vec3(1.0, 0.0, 0.0) }
     fn green() -> Self { glm::vec3(0.0, 1.0, 0.0) }
-    fn yellow() -> Self { glm::vec3(0.0, 1.0, 1.0) }
+    fn yellow() -> Self { glm::vec3(1.0, 1.0, 0.0) }
     fn black() -> Self { glm::vec3(0.0, 0.0, 0.0) }
 }
 

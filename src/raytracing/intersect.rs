@@ -14,10 +14,10 @@ pub trait Intersect {
     fn intersect(&self, ray: &Ray) -> Option<Self::Result>;
 }
 
-impl Intersect for Sphere<'_> {
-    type Result = Hitpoint;
+impl<'a> Intersect for Sphere<'a> {
+    type Result = Hitpoint<'a>;
 
-    fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
+    fn intersect(&self, ray: &Ray) -> Option<Hitpoint<'a>> {
         let mut result = None;
 
         // m = rOrg - C
@@ -84,7 +84,7 @@ impl Intersect for Sphere<'_> {
                 let normal = self.normal(&hit_position);
                 let hit_position_acne_compensated = compensate_acne(&hit_position, ray, &normal);
 
-                let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated};
+                let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated, material: self.material};
                 result = Some(hitpoint);
             }
         }
@@ -92,10 +92,10 @@ impl Intersect for Sphere<'_> {
     }
 }
 
-impl Intersect for Plane<'_> {
-    type Result = Hitpoint;
+impl<'a> Intersect for Plane<'a> {
+    type Result = Hitpoint<'a>;
 
-    fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
+    fn intersect(&self, ray: &Ray) -> Option<Hitpoint<'a>> {
         let mut result = None;
 
         let n_dot_rdir = glm::dot(self.normal, ray.direction);
@@ -112,7 +112,7 @@ impl Intersect for Plane<'_> {
                 let hit_position = utils::ray_equation(ray, t);
                 let hit_position_acne_compensated = compensate_acne(&hit_position, ray, &self.normal);
 
-                let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated};
+                let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated, material: self.material};
                 result = Some(hitpoint);
             }
         }
@@ -120,10 +120,10 @@ impl Intersect for Plane<'_> {
     }
 }
 
-impl Intersect for Triangle<'_> {
-    type Result = Hitpoint;
+impl<'a> Intersect for Triangle<'a> {
+    type Result = Hitpoint<'a>;
 
-    fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
+    fn intersect(&self, ray: &Ray) -> Option<Hitpoint<'a>> {
         let mut result = None;
 
         let e1 = self.b - self.a;
@@ -151,7 +151,7 @@ impl Intersect for Triangle<'_> {
             let hit_position = utils::ray_equation(ray, t);
             let hit_position_acne_compensated = compensate_acne(&hit_position, ray, self.normal());
 
-            let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated};
+            let hitpoint = Hitpoint {t: t, position: hit_position_acne_compensated, material: self.material};
             result = Some(hitpoint);
         }
 

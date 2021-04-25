@@ -30,8 +30,8 @@ pub struct Scene<'a> {
     // }
 // }
 
-impl raytracing::Intersect for Scene<'_> {
-    type Result = Hitpoint;
+impl<'a> raytracing::Intersect for Scene<'a> {
+    type Result = Hitpoint<'a>;
 
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
         let mut closest_hitpoint: Option<Self::Result> = None;

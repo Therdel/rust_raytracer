@@ -20,6 +20,14 @@ impl Color for ColorRgb {
     fn black() -> Self { glm::vec3(0.0, 0.0, 0.0) }
 }
 
+pub fn add_option(lhs: Option<ColorRgb>, rhs: Option<ColorRgb>) -> Option<ColorRgb> {
+    if let Some(lhs) = lhs {
+        Some(lhs + rhs?)
+    } else {
+        rhs
+    }
+}
+
 pub trait QuantizeToU8 {
     fn quantize(&self) -> ColorRgbU8;
 }

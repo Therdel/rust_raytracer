@@ -58,9 +58,9 @@ fn test_lights() -> Vec<Light> {
 
 fn test_camera(width: usize, height: usize) -> Camera {
     Camera {
-        position: glm::vec3(0.0, 0.0, -1.0),
+        position: glm::vec3(3.0, 0.0, 1.0),
         orientation: glm::vec3(0.0f32.to_radians(),
-                               20.0f32.to_radians(),
+                               25.0f32.to_radians(),
                                0.0f32.to_radians()),
         pixel_width: width,
         pixel_height: height,
@@ -99,6 +99,24 @@ fn test_materials() -> Vec<Material> {
             material_type: MaterialType::Phong,
         },
         Material {
+            name: String::from("some_shiny_white"),
+            emissive: glm::vec3(0.1, 0.1, 0.1),
+            ambient: glm::vec3(0.4, 0.4, 0.4),
+            diffuse: glm::vec3(0.4, 0.4, 0.4),
+            specular: glm::vec3(0.6, 0.6, 0.6),
+            shininess: 10.0,
+            material_type: MaterialType::Phong,
+        },
+        Material {
+            name: String::from("some_shiny_blue"),
+            emissive: glm::vec3(0.0, 0.037, 0.072),
+            ambient: glm::vec3(0.0, 0.148, 0.288),
+            diffuse: glm::vec3(0.0, 0.148, 0.288),
+            specular: glm::vec3(0.6, 0.6, 0.6),
+            shininess: 10.0,
+            material_type: MaterialType::Phong,
+        },
+        Material {
             name: String::from("reflective"),
             emissive: glm::vec3(0.0, 0.0, 0.0),
             ambient: glm::vec3(0.0, 0.0, 0.0),
@@ -113,13 +131,21 @@ fn test_materials() -> Vec<Material> {
 fn test_triangles(materials: &[Material]) -> Vec<Triangle> {
     vec![
         Triangle::new(
+            glm::vec3(-5.0, 1.25, -5.0),
+            glm::vec3(5.0, 1.25, -5.0),
+            glm::vec3(0.0, -3.75, -5.0),
+            materials.iter().find(|&material| {
+                material.name == "some_shiny_white"
+            }).unwrap()
+        ),
+        Triangle::new(
             glm::vec3(-5.0, -2.5, -5.0),
             glm::vec3(5.0, -2.5, -5.0),
             glm::vec3(0.0, 2.5, -5.0),
             materials.iter().find(|&material| {
-                material.name == "some_shiny_yellow"
+                material.name == "some_shiny_blue"
             }).unwrap()
-        )
+        ),
     ]
 }
 
@@ -156,6 +182,13 @@ fn test_spheres(materials: &[Material]) -> Vec<Sphere> {
             radius: 0.5,
             material: materials.iter().find(|&material| {
                 material.name == "some_shiny_red"
+            }).unwrap()
+        },
+        Sphere {
+            center: glm::vec3(0.0, 2.5, -5.0),
+            radius: 1.0,
+            material: materials.iter().find(|&material| {
+                material.name == "reflective"
             }).unwrap()
         }
     ]

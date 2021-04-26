@@ -1,8 +1,11 @@
 use crate::exercise1::Scene;
 use crate::raytracing::transform::matrix;
-use crate::raytracing::{Ray, Intersect, Light, Hitpoint};
-use crate::raytracing::color::ColorRgb;
+use crate::raytracing::{Ray, Intersect, Light, Hitpoint, MaterialType};
+use crate::raytracing::color::{ColorRgb, Color, self};
 use num_traits::{Zero, zero};
+
+const MAX_RAY_RECURSION_DEPTH: usize = 10;
+const REFLECTION_DIM_FACTOR: f32 = 0.8;
 
 pub struct Raytracer<'scene> {
     scene: &'scene Scene<'scene>,
@@ -19,7 +22,8 @@ pub trait Public {
 }
 
 trait Private {
-    fn shade(&self, ray: &Ray, hitpoint: &Hitpoint) -> Option<ColorRgb>;
+    fn raytrace_impl(&self, ray: &Ray, ray_recursion_depth: usize) -> Option<ColorRgb>;
+    fn shade(&self, ray: &Ray, hitpoint: &Hitpoint, ray_recursion_depth: usize) -> Option<ColorRgb>;
     fn radiance(&self, ray: &Ray, hitpoint: &Hitpoint, light: &Light, is_shadow: bool) -> ColorRgb;
     fn trace_shadow_ray(&self, world_pos: &glm::Vec3, light: &Light) -> bool;
     fn create_reflected_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3) -> glm::Vec3;
@@ -35,8 +39,7 @@ impl Public for Raytracer<'_> {
     }
 
     fn raytrace(&self, ray: &Ray) -> Option<ColorRgb> {
-        let hitpoint = self.scene.intersect(ray)?;
-        self.shade(ray, &hitpoint)
+        self.raytrace_impl(ray, 0)
     }
 
     fn depth_map(&self, ray: &Ray) -> Option<ColorRgb> {
@@ -74,22 +77,42 @@ impl Public for Raytracer<'_> {
 }
 
 impl Private for Raytracer<'_> {
-    fn shade(&self, ray: &Ray, hitpoint: &Hitpoint) -> Option<ColorRgb> {
-        let mut color = None;
-
-        for light in &self.scene.lights {
-            let is_shadow = self.trace_shadow_ray(&hitpoint.position, light);
-            let radiance_color = self.radiance(ray, hitpoint, light, is_shadow);
-
-            match color {
-                Some(old_color) =>
-                    color = Some(old_color + radiance_color),
-                None =>
-                    color = Some(radiance_color)
-            }
+    fn raytrace_impl(&self, ray: &Ray, ray_recursion_depth: usize) -> Option<ColorRgb> {
+        if ray_recursion_depth < MAX_RAY_RECURSION_DEPTH {
+            let hitpoint = self.scene.intersect(ray)?;
+            self.shade(ray, &hitpoint, ray_recursion_depth)
+        } else {
+            None
         }
+    }
 
-        color
+    fn shade(&self, ray: &Ray, hitpoint: &Hitpoint, ray_recursion_depth: usize) -> Option<ColorRgb> {
+        let shade_phong = || {
+            let mut current_color = None;
+            for light in &self.scene.lights {
+                let is_shadow = self.trace_shadow_ray(&hitpoint.position, light);
+                let radiance_color = self.radiance(ray, hitpoint, light, is_shadow);
+
+                current_color = color::add_option(current_color, Some(radiance_color));
+            }
+            current_color
+        };
+
+        let shade_reflect = || {
+            // TODO: why can't we do ```-&ray.direction``` here?
+            let direction = Self::create_reflected_ray(&-ray.direction, &hitpoint.hit_normal);
+            let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(direction), };
+
+            let reflection_color =
+                self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
+                    .and_then(|color| Some(color * REFLECTION_DIM_FACTOR));
+            reflection_color
+        };
+
+        match &hitpoint.material.material_type {
+            &MaterialType::Phong => shade_phong(),
+            &MaterialType::ReflectAndPhong => color::add_option(shade_reflect(), shade_phong())
+        }
     }
 
     fn radiance(&self, ray: &Ray, hitpoint: &Hitpoint, light: &Light, is_shadow: bool) -> ColorRgb {

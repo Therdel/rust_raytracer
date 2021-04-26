@@ -5,7 +5,7 @@ mod utils;
 use std::ffi::CString;
 use crate::exercise1::{Canvas, Scene};
 use crate::raytracing::{
-    Triangle, Plane, Sphere, Light, Camera, LightColor, Material, color::*,
+    Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*,
     raytracer::{Raytracer, Public}
 };
 
@@ -77,7 +77,8 @@ fn test_materials() -> Vec<Material> {
             ambient: glm::vec3(0.4, 0.0, 0.0),
             diffuse: glm::vec3(0.4, 0.0, 0.0),
             specular: glm::vec3(0.6, 0.6, 0.6),
-            shininess: 10.0
+            shininess: 10.0,
+            material_type: MaterialType::Phong,
         },
         Material {
             name: String::from("some_shiny_yellow"),
@@ -85,7 +86,8 @@ fn test_materials() -> Vec<Material> {
             ambient: glm::vec3(0.4, 0.4, 0.0),
             diffuse: glm::vec3(0.4, 0.4, 0.0),
             specular: glm::vec3(0.6, 0.6, 0.6),
-            shininess: 10.0
+            shininess: 10.0,
+            material_type: MaterialType::Phong,
         },
         Material {
             name: String::from("some_shiny_green"),
@@ -93,7 +95,17 @@ fn test_materials() -> Vec<Material> {
             ambient: glm::vec3(0.0, 0.4, 0.0),
             diffuse: glm::vec3(0.0, 0.4, 0.0),
             specular: glm::vec3(0.6, 0.6, 0.6),
-            shininess: 10.0
+            shininess: 10.0,
+            material_type: MaterialType::Phong,
+        },
+        Material {
+            name: String::from("reflective"),
+            emissive: glm::vec3(0.0, 0.0, 0.0),
+            ambient: glm::vec3(0.0, 0.0, 0.0),
+            diffuse: glm::vec3(0.0, 0.0, 0.0),
+            specular: glm::vec3(1.0, 1.0, 1.0),
+            shininess: 10.0,
+            material_type: MaterialType::ReflectAndPhong,
         },
     ]
 }

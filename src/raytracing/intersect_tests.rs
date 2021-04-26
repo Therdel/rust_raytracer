@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests {
     use num_traits::zero;
-    use crate::raytracing::Material;
+    use crate::raytracing::{Material, MaterialType};
     use crate::raytracing::{Intersect, Plane, Ray, Sphere, Triangle};
     use crate::utils;
 
@@ -12,7 +12,8 @@ mod tests {
             ambient: zero(),
             diffuse: zero(),
             specular: zero(),
-            shininess: 0.0
+            shininess: 0.0,
+            material_type: MaterialType::Phong
         }
     }
 

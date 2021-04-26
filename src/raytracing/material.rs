@@ -8,4 +8,11 @@ pub struct Material {
     pub diffuse: ColorRgb,
     pub specular: ColorRgb,
     pub shininess: f32,
+
+    pub material_type: MaterialType,
+}
+
+pub enum MaterialType {
+    Phong,
+    ReflectAndPhong
 }

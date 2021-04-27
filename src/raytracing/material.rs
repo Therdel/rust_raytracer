@@ -14,5 +14,9 @@ pub struct Material {
 
 pub enum MaterialType {
     Phong,
-    ReflectAndPhong
+    ReflectAndPhong,
+    ReflectAndRefract {
+        index_inner: f32,
+        index_outer: f32,
+    }
 }

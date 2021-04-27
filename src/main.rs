@@ -125,6 +125,18 @@ fn test_materials() -> Vec<Material> {
             shininess: 10.0,
             material_type: MaterialType::ReflectAndPhong,
         },
+        Material {
+            name: String::from("transparent"),
+            emissive: glm::vec3(0.0, 0.0, 0.0),
+            ambient: glm::vec3(0.0, 0.0, 0.0),
+            diffuse: glm::vec3(0.0, 0.0, 0.0),
+            specular: glm::vec3(0.2, 0.2, 0.2),
+            shininess: 100.0,
+            material_type: MaterialType::ReflectAndRefract {
+                index_inner: 1.5,
+                index_outer: 1.0
+            },
+        },
     ]
 }
 

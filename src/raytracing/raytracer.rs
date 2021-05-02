@@ -27,7 +27,11 @@ trait Private {
     fn radiance(&self, ray: &Ray, hitpoint: &Hitpoint, light: &Light, is_shadow: bool) -> ColorRgb;
     fn trace_shadow_ray(&self, world_pos: &glm::Vec3, light: &Light) -> bool;
     fn create_reflected_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3) -> glm::Vec3;
+    fn create_transmitted_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3,
+                              n1_current: f32, n2_pierce: f32) -> glm::Vec3;
     fn get_hitpoint_to_light_unit_vector(hitpoint: &Hitpoint, light: &Light) -> glm::Vec3;
+    fn get_fresnel_factor(reflected_ray: &Ray, transmitted_ray: &Ray,
+                          reflection_normal: &glm::Vec3, n1_current: f32, n2_pierce: f32) -> f32;
 }
 
 impl Public for Raytracer<'_> {
@@ -109,9 +113,42 @@ impl Private for Raytracer<'_> {
             Some(reflection_color * REFLECTION_DIM_FACTOR)
         };
 
+        let shade_refract = |index_inner: f32, index_outer: f32| -> Option<ColorRgb> {
+            let on_frontside = hitpoint.on_frontside;
+            let origin_transmitted = &hitpoint.position_for_refraction;
+            let (n1_current, n2_pierce) = match on_frontside {
+                true => (index_outer, index_inner),
+                false => (index_inner, index_outer)
+            };
+            let direction_transmitted = Self::create_transmitted_ray(&-ray.direction, &hitpoint.hit_normal, n1_current, n2_pierce);
+
+            let transmitted_ray = Ray { origin: *origin_transmitted, direction: glm::normalize(direction_transmitted)};
+            let direction_reflected = Self::create_reflected_ray(&-ray.direction, &hitpoint.hit_normal);
+            let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(direction_reflected) };
+
+            let reflected_color = self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
+                .unwrap_or(self.scene.background);
+            let transmitted_color = self.raytrace_impl(&transmitted_ray, ray_recursion_depth + 1)
+                .unwrap_or(self.scene.background);
+
+            let k_reflected = Self::get_fresnel_factor(&reflected_ray, &transmitted_ray,
+                                                       &hitpoint.hit_normal,
+                                                       n1_current, n2_pierce);
+            let k_transmitted = 1.0 - k_reflected;
+
+            let color = reflected_color * k_reflected +
+                transmitted_color * k_transmitted;
+
+            Some(color)
+        };
+
         match &hitpoint.material.material_type {
             &MaterialType::Phong => shade_phong(),
-            &MaterialType::ReflectAndPhong => color::add_option(shade_reflect(), shade_phong())
+            &MaterialType::ReflectAndPhong => color::add_option(shade_reflect(), shade_phong()),
+            &MaterialType::ReflectAndRefract {
+                index_inner,
+                index_outer
+            } => shade_refract(index_inner, index_outer)
         }
     }
 
@@ -172,6 +209,16 @@ impl Private for Raytracer<'_> {
         *normal * 2. * (glm::dot(*normal, *to_viewer)) - *to_viewer
     }
 
+    fn create_transmitted_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3,
+                              n1_current: f32, n2_pierce: f32) -> glm::Vec3 {
+        // TODO: Check using rust safe math
+        let n = n1_current / n2_pierce;
+        let w = n * glm::dot(*to_viewer, *normal);
+        let k = glm::sqrt(1.0 + (w-n)*(w+n));
+        let t = *normal * (w-k)  - *to_viewer * n;
+        t
+    }
+
     fn get_hitpoint_to_light_unit_vector(hitpoint: &Hitpoint, light: &Light) -> glm::Vec3 {
         let is_directional_light = light.position.w.is_zero();
         let vector = {
@@ -183,6 +230,27 @@ impl Private for Raytracer<'_> {
             }
         };
         glm::normalize(vector)
+    }
+
+    fn get_fresnel_factor(reflected_ray: &Ray, transmitted_ray: &Ray,
+                          reflection_normal: &glm::Vec3,
+                          n1_current: f32, n2_pierce: f32) -> f32 {
+        let transmission_normal = -*reflection_normal;
+
+
+        // cos(ang) = (a dot b) / (len(a) *len(b))
+        // both vectors are unit vectors, therefore only the dot product is needed
+        let cos_ang_i = glm::dot(reflected_ray.direction, *reflection_normal);
+        let cos_ang_t = glm::dot(transmitted_ray.direction, transmission_normal);
+
+        let n_i = n1_current;
+        let n_t = n2_pierce;
+
+        let r_parallel = (n_t * cos_ang_i - n_i * cos_ang_t) / (n_t * cos_ang_i + n_i * cos_ang_t);
+        let r_orthogonal = (n_i * cos_ang_i - n_t * cos_ang_t) / (n_i * cos_ang_i + n_t * cos_ang_t);
+
+        let fresnel_factor_reflection = 0.5 * (r_parallel*r_parallel + r_orthogonal*r_orthogonal);
+        fresnel_factor_reflection
     }
 }
 

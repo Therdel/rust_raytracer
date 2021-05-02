@@ -194,7 +194,7 @@ fn test_spheres(materials: &[Material]) -> Vec<Sphere> {
             center: glm::vec3(0.0, -1.0, -3.0),
             radius: 0.5,
             material: materials.iter().find(|&material| {
-                material.name == "some_shiny_red"
+                material.name == "transparent"
             }).unwrap()
         },
         Sphere {

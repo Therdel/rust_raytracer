@@ -1,7 +1,9 @@
 use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material};
+use crate::raytracing::color::ColorRgb;
 
 pub struct Scene<'a> {
     pub camera: Camera,
+    pub background: ColorRgb,
     pub lights: Vec<Light>,
     pub planes: Vec<Plane<'a>>,
     pub spheres: Vec<Sphere<'a>>,

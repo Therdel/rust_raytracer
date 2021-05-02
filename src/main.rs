@@ -16,6 +16,7 @@ const IMAGE_HEIGHT: usize = 1000;
 fn main() -> std::io::Result<()> {
     let mut scene = Scene {
         camera: test_camera(IMAGE_WIDTH, IMAGE_HEIGHT),
+        background: Color::urple(),
         lights: test_lights(),
         planes: vec![],
         spheres: vec![],
@@ -27,7 +28,7 @@ fn main() -> std::io::Result<()> {
     scene.spheres = test_spheres(&scene.materials);
     scene.triangles = test_triangles(&scene.materials);
 
-    let mut canvas = Canvas::new((IMAGE_WIDTH, IMAGE_HEIGHT), Color::black());
+    let mut canvas = Canvas::new((IMAGE_WIDTH, IMAGE_HEIGHT), scene.background);
     let raytracer = Raytracer::new(&scene);
 
     for y in 0..IMAGE_HEIGHT {

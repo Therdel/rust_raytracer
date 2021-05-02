@@ -105,8 +105,8 @@ impl Private for Raytracer<'_> {
 
             let reflection_color =
                 self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
-                    .and_then(|color| Some(color * REFLECTION_DIM_FACTOR));
-            reflection_color
+                    .unwrap_or(self.scene.background);
+            Some(reflection_color * REFLECTION_DIM_FACTOR)
         };
 
         match &hitpoint.material.material_type {

@@ -9,8 +9,8 @@ pub use ray::*;
 mod hitpoint;
 pub use hitpoint::*;
 
-mod primitives;
-pub use primitives::*;
+mod geometry;
+pub use geometry::*;
 
 mod light;
 pub use light::*;

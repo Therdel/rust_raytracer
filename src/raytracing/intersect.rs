@@ -160,7 +160,7 @@ fn create_hitpoint<'material>(t: f32, hit_position: &glm::Vec3, ray: &Ray, norma
     let n_dot_rdir = glm::dot(*normal, ray.direction);
     let intersect_frontside = n_dot_rdir < 0.0;
 
-    // invert surface normal when hitting the primitives' backside | inside
+    // invert surface normal when hitting the back or inside of the geometry
     let hit_normal = if intersect_frontside { *normal } else { -*normal };
 
     // compensate numeric error on intersection.
@@ -169,7 +169,7 @@ fn create_hitpoint<'material>(t: f32, hit_position: &glm::Vec3, ray: &Ray, norma
     let offset = hit_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
     let hit_position_acne_compensated = *hit_position + offset;
 
-    // refractive ray begins on the other primitives' side.
+    // refractive ray begins on the other side of the geometry.
     // Preventing acne effects on this side, the acne compensation vector is
     // substracted from the hit position
     let hit_position_for_refraction = *hit_position - offset;

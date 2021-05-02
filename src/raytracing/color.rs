@@ -22,7 +22,11 @@ impl Color for ColorRgb {
 
 pub fn add_option(lhs: Option<ColorRgb>, rhs: Option<ColorRgb>) -> Option<ColorRgb> {
     if let Some(lhs) = lhs {
-        Some(lhs + rhs?)
+        if let Some(rhs) = rhs {
+            Some(lhs+rhs)
+        } else {
+            Some(lhs)
+        }
     } else {
         rhs
     }

@@ -10,12 +10,10 @@ use crate::raytracing::{
 };
 
 const IMAGE_PATH: &'static str = "render.png";
-const IMAGE_WIDTH: usize = 1000;
-const IMAGE_HEIGHT: usize = 1000;
 
-fn main() -> std::io::Result<()> {
+fn main() {
     let mut scene = Scene {
-        camera: test_camera(IMAGE_WIDTH, IMAGE_HEIGHT),
+        camera: test_camera(3640, 2160),
         background: Color::urple(),
         lights: test_lights(),
         planes: vec![],
@@ -28,8 +26,17 @@ fn main() -> std::io::Result<()> {
     scene.spheres = test_spheres(&scene.materials);
     scene.triangles = test_triangles(&scene.materials);
 
-    let mut canvas = Canvas::new((IMAGE_WIDTH, IMAGE_HEIGHT), scene.background);
+    let canvas = paint_scene(&scene);
+
+    let path = CString::new(IMAGE_PATH)
+        .expect(&format!("Invalid target image path: ('{}')", IMAGE_PATH));
+    canvas.write_png(path.as_c_str())
+}
+
+fn paint_scene(scene: &Scene) -> Canvas {
     let raytracer = Raytracer::new(&scene);
+    let canvas_dimensions = (scene.camera.pixel_width, scene.camera.pixel_height);
+    let mut canvas = Canvas::new(canvas_dimensions, scene.background);
 
     for y in 0..IMAGE_HEIGHT {
         for x in 0..IMAGE_WIDTH {
@@ -40,8 +47,7 @@ fn main() -> std::io::Result<()> {
             }
         }
     }
-    canvas.write_png(CString::new(IMAGE_PATH)?.as_c_str());
-    Ok(())
+    canvas
 }
 
 fn test_lights() -> Vec<Light> {

@@ -1,7 +1,7 @@
 use crate::exercise1::Scene;
 use crate::raytracing::transform::matrix;
 use crate::raytracing::{Ray, Intersect, Light, Hitpoint, MaterialType};
-use crate::raytracing::color::{ColorRgb, Color, self};
+use crate::raytracing::color::{ColorRgb, self};
 use num_traits::{Zero, zero};
 
 const MAX_RAY_RECURSION_DEPTH: usize = 10;

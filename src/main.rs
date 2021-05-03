@@ -8,6 +8,8 @@ use crate::raytracing::{
     Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*,
     raytracer::{Raytracer, Public}
 };
+use rayon::prelude::*;
+use std::time::Instant;
 
 const IMAGE_PATH: &'static str = "render.png";
 
@@ -26,7 +28,9 @@ fn main() {
     scene.spheres = test_spheres(&scene.materials);
     scene.triangles = test_triangles(&scene.materials);
 
+    let time_start = Instant::now();
     let canvas = paint_scene(&scene);
+    println!("Rendering took {:.2}s", time_start.elapsed().as_secs_f32());
 
     let path = CString::new(IMAGE_PATH)
         .expect(&format!("Invalid target image path: ('{}')", IMAGE_PATH));
@@ -38,15 +42,18 @@ fn paint_scene(scene: &Scene) -> Canvas {
     let canvas_dimensions = (scene.camera.pixel_width, scene.camera.pixel_height);
     let mut canvas = Canvas::new(canvas_dimensions, scene.background);
 
-    for y in 0..IMAGE_HEIGHT {
-        for x in 0..IMAGE_WIDTH {
-            let coordinate = glm::vec2(x as _, y as _);
-            let ray = raytracer.generate_primary_ray(&coordinate);
-            if let Some(hit_color) = raytracer.raytrace(&ray) {
-                canvas.set_pixel(x, y, &hit_color);
+    canvas.borrow_stripes_mut()
+        .par_bridge()
+        .for_each(|mut row_stripe| {
+            let y = row_stripe.get_y_coord();
+            for x in 0..scene.camera.pixel_width {
+                let coordinate = glm::vec2(x as _, y as _);
+                let ray = raytracer.generate_primary_ray(&coordinate);
+                if let Some(hit_color) = raytracer.raytrace(&ray) {
+                    row_stripe.set_pixel(x, &hit_color);
+                }
             }
-        }
-    }
+        });
     canvas
 }
 

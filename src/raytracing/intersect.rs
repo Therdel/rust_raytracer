@@ -1,4 +1,4 @@
-use crate::raytracing::{Ray, Hitpoint, Sphere, Plane, Triangle, Material};
+use crate::raytracing::{Ray, Hitpoint, Sphere, Plane, Triangle, Material, AABB};
 use crate::utils;
 use num_traits::identities::Zero;
 use num_traits::Signed;
@@ -153,6 +153,49 @@ impl<'a> Intersect for Triangle<'a> {
         }
 
         result
+    }
+}
+
+impl Intersect for AABB {
+    type Result = ();
+
+    // source: https://gamedev.stackexchange.com/a/18459
+    fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
+        let dirfrac = glm::Vec3 {
+            // r.dir is unit direction vector of ray
+            x: 1.0 / ray.direction.x,
+            y: 1.0 / ray.direction.y,
+            z: 1.0 / ray.direction.z,
+        };
+        // lb is the corner of AABB with minimal coordinates - left bottom, rt is maximal corner
+        // r.org is origin of ray
+        let lb = &self.min;
+        let rt = &self.max;
+        let t1 = (lb.x - ray.origin.x)*dirfrac.x;
+        let t2 = (rt.x - ray.origin.x)*dirfrac.x;
+        let t3 = (lb.y - ray.origin.y)*dirfrac.y;
+        let t4 = (rt.y - ray.origin.y)*dirfrac.y;
+        let t5 = (lb.z - ray.origin.z)*dirfrac.z;
+        let t6 = (rt.z - ray.origin.z)*dirfrac.z;
+
+        let tmin = f32::max(f32::max(f32::min(t1, t2), f32::min(t3, t4)), f32::min(t5, t6));
+        let tmax = f32::min(f32::min(f32::max(t1, t2), f32::max(t3, t4)), f32::max(t5, t6));
+
+        // if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
+        let _t;
+        if tmax < 0.0 {
+            _t = tmax;
+            return None;
+        }
+
+        // if tmin > tmax, ray doesn't intersect AABB
+        if tmin > tmax {
+            _t = tmax;
+            return None;
+        }
+
+        _t = tmin;
+        Some(())
     }
 }
 

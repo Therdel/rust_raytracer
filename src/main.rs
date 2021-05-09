@@ -10,6 +10,7 @@ use crate::raytracing::{
 };
 use rayon::prelude::*;
 use std::time::Instant;
+use num_traits::zero;
 
 const IMAGE_PATH: &'static str = "render.png";
 
@@ -156,21 +157,22 @@ fn test_materials() -> Vec<Material> {
 
 fn test_triangles(materials: &[Material]) -> Vec<Triangle> {
     vec![
-        Triangle::new(
-            glm::vec3(-5.0, 1.25, -5.0),
-            glm::vec3(5.0, 1.25, -5.0),
-            glm::vec3(0.0, -3.75, -5.0),
-            materials.iter().find(|&material| {
-                material.name == "some_shiny_white"
-            }).unwrap()
+        Triangle::new([glm::vec3(-5.0, 1.25, -5.0),
+                          glm::vec3(5.0, 1.25, -5.0),
+                          glm::vec3(0.0, -3.75, -5.0)],
+                      [zero(); 3],
+                      materials.iter().find(|&material| {
+                          material.name == "some_shiny_white"
+                      }).unwrap()
         ),
-        Triangle::new(
-            glm::vec3(-5.0, -2.5, -5.0),
-            glm::vec3(5.0, -2.5, -5.0),
-            glm::vec3(0.0, 2.5, -5.0),
-            materials.iter().find(|&material| {
-                material.name == "some_shiny_blue"
-            }).unwrap()
+        Triangle::new([glm::vec3(-5.0, -2.5, -5.0),
+                          glm::vec3(5.0, -2.5, -5.0),
+                          glm::vec3(0.0, 2.5, -5.0)
+                      ],
+                      [zero(); 3],
+                      materials.iter().find(|&material| {
+                          material.name == "some_shiny_blue"
+                      }).unwrap(),
         ),
     ]
 }

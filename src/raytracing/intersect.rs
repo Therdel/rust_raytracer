@@ -123,10 +123,11 @@ impl<'a> Intersect for Triangle<'a> {
 
     fn intersect(&self, ray: &Ray) -> Option<Hitpoint<'a>> {
         let mut result = None;
+        let (a, b, c) = (&self.vertices[0], &self.vertices[1], &self.vertices[2]);
 
-        let e1 = self.b - self.a;
-        let e2 = self.c - self.a;
-        let s = ray.origin - self.a;
+        let e1 = *b - *a;
+        let e2 = *c - *a;
+        let s = ray.origin - *a;
         let q = glm::cross(ray.direction, e2);
         let r = glm::cross(s, e1);
 

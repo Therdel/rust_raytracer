@@ -111,9 +111,10 @@ mod tests {
         use super::*;
 
         fn triangle(material: &Material) -> Triangle {
-            Triangle::new(glm::vec3(-1., 1., 0.),
-                          glm::vec3(1., 0., 0.),
-                          glm::vec3(-1., -1., 0.),
+            Triangle::new([glm::vec3(-1., 1., 0.),
+                              glm::vec3(1., 0., 0.),
+                              glm::vec3(-1., -1., 0.)],
+                          [zero(); 3],
                           material)
         }
 

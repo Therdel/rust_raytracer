@@ -1,4 +1,4 @@
-use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material};
+use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Instance};
 use crate::raytracing::color::ColorRgb;
 
 pub struct Scene<'a> {
@@ -8,6 +8,7 @@ pub struct Scene<'a> {
     pub planes: Vec<Plane<'a>>,
     pub spheres: Vec<Sphere<'a>>,
     pub triangles: Vec<Triangle<'a>>,
+    pub instanced_spheres: Vec<Instance<'a, 'a, Sphere<'a>>>,
 
     pub materials: Vec<Material>
 }
@@ -58,6 +59,9 @@ impl<'a> raytracing::Intersect for Scene<'a> {
         }
         for triangle in &self.triangles {
             check_hitpoint(triangle.intersect(ray));
+        }
+        for instanced_sphere in &self.instanced_spheres {
+            check_hitpoint(instanced_sphere.intersect(ray));
         }
 
         closest_hitpoint

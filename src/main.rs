@@ -5,8 +5,8 @@ mod utils;
 use std::ffi::CString;
 use crate::exercise1::{Canvas, Scene};
 use crate::raytracing::{
-    Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*,
-    raytracer::{Raytracer, Public}
+    Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance,
+    raytracer::{Raytracer, Public},
 };
 use rayon::prelude::*;
 use std::time::Instant;
@@ -22,12 +22,14 @@ fn main() {
         planes: vec![],
         spheres: vec![],
         triangles: vec![],
-        materials: vec![]
+        materials: vec![],
+        instanced_spheres: vec![]
     };
     scene.materials = test_materials();
     scene.planes = test_planes(&scene.materials);
     scene.spheres = test_spheres(&scene.materials);
     scene.triangles = test_triangles(&scene.materials);
+    scene.instanced_spheres = test_instanced_spheres(&scene.materials, &scene.spheres);
 
     let time_start = Instant::now();
     let canvas = paint_scene(&scene);
@@ -218,6 +220,42 @@ fn test_spheres(materials: &[Material]) -> Vec<Sphere> {
             material: materials.iter().find(|&material| {
                 material.name == "reflective"
             }).unwrap()
+        },
+        Sphere {
+            center: glm::vec3(0.0, 0.0, 0.0),
+            radius: 1.0,
+            material: materials.iter().find(|&material| {
+                material.name == "some_shiny_yellow"
+            }).unwrap()
+        }
+    ]
+}
+
+fn test_instanced_spheres<'a>(materials: &'a[Material], spheres: &'a[Sphere]) -> Vec<Instance<'a, 'a, Sphere<'a>>> {
+    let offset = glm::vec3(-2.0, -1.0, -5.0);
+    let orientation = glm::vec3(0.0, 0.0, 0.0);
+    let scale = glm::vec3(1.0, 1.0, 1.0);
+
+    use raytracing::transform::*;
+
+    let rotation_scale_transform = matrix::scaling(&scale) * matrix::rotation(orientation.y, orientation.x, orientation.z);
+    let rotation_scale_transform_inverse = glm::inverse(&rotation_scale_transform);
+
+    let model_transform = matrix::model(&offset, &orientation, &scale);
+    let model_transform_inverse = glm::inverse(&model_transform);
+
+    let material_override = materials.iter().find(|&material| {
+        material.name == "some_shiny_red"
+    });
+
+    vec![
+        Instance {
+            primitive: &spheres[4],
+            rotation_scale: rotation_scale_transform,
+            rotation_scale_inverse: rotation_scale_transform_inverse,
+            model: model_transform,
+            model_inverse: model_transform_inverse,
+            material_override
         }
     ]
 }

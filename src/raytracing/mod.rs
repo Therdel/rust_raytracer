@@ -26,3 +26,6 @@ pub use material::*;
 pub mod raytracer;
 
 pub mod color;
+
+mod instance;
+pub use instance::*;

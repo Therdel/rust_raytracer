@@ -1,4 +1,4 @@
-use crate::raytracing::{Ray, Hitpoint, Sphere, Plane, Triangle, Material, AABB};
+use crate::raytracing::{Ray, Hitpoint, Sphere, Plane, Triangle, Material, AABB, Instance};
 use crate::utils;
 use num_traits::identities::Zero;
 use num_traits::Signed;
@@ -197,6 +197,43 @@ impl Intersect for AABB {
 
         _t = tmin;
         Some(())
+    }
+}
+
+impl<'primitive, 'material, Primitive> Intersect for Instance<'primitive, 'material, Primitive>
+where Primitive: Intersect<Result=Hitpoint<'material>> {
+    type Result = Primitive::Result;
+
+    fn intersect(&self, ray: &Ray) -> Option<Self::Result>{
+        let transform = |vec: &glm::Vec3, mat: &glm::Mat4| -> glm::Vec3 {
+            let homogeneous_transformed = *mat * vec.extend(1.0);
+            // no perspective divide needed as we're only using translate, scale & rotate
+            homogeneous_transformed.truncate(3)
+        };
+
+        // transform ray into model-local coordinate-system
+        let transformed_origin = transform(&ray.origin, &self.model_inverse);
+        let transformed_direction = glm::normalize(
+            transform(&ray.direction, &self.rotation_scale_inverse)
+        );
+        let transformed_ray = Ray { origin: transformed_origin, direction: transformed_direction };
+
+        let mut hitpoint = self.primitive.intersect(&transformed_ray)?;
+        // transform hitpoint back into world-local coordinate-system
+        hitpoint.position = transform(&hitpoint.position, &self.model);
+        hitpoint.hit_normal = glm::normalize(
+            transform(&hitpoint.hit_normal, &self.rotation_scale)
+        );
+        hitpoint.position_for_refraction = transform(&hitpoint.position_for_refraction, &self.model);
+
+        let t_in_world = glm::distance(ray.origin, hitpoint.position);
+        hitpoint.t = t_in_world;
+
+        // TODO: Why does this work with both ```ref material``` and ```material```?
+        if let Some(material) = self.material_override {
+            hitpoint.material = material;
+        }
+        Some(hitpoint)
     }
 }
 

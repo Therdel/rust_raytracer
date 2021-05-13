@@ -3,14 +3,12 @@ mod raytracing;
 mod utils;
 
 use std::ffi::CString;
-use crate::exercise1::{Canvas, Scene};
-use crate::raytracing::{
-    Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance,
-    raytracer::{Raytracer, Public},
-};
+use crate::exercise1::{Canvas, Scene, object_file};
+use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
 use rayon::prelude::*;
 use std::time::Instant;
 use num_traits::zero;
+use std::path::PathBuf;
 
 const IMAGE_PATH: &'static str = "render.png";
 
@@ -22,14 +20,18 @@ fn main() {
         planes: vec![],
         spheres: vec![],
         triangles: vec![],
+        meshes: vec![],
+        mesh_instances: vec![],
+
         materials: vec![],
-        instanced_spheres: vec![]
+
     };
     scene.materials = test_materials();
     scene.planes = test_planes(&scene.materials);
     scene.spheres = test_spheres(&scene.materials);
     scene.triangles = test_triangles(&scene.materials);
-    scene.instanced_spheres = test_instanced_spheres(&scene.materials, &scene.spheres);
+    scene.meshes = test_meshes(&scene.materials);
+    scene.mesh_instances = test_instanced_meshes(&scene.materials, &scene.meshes);
 
     let time_start = Instant::now();
     let canvas = paint_scene(&scene);
@@ -220,28 +222,36 @@ fn test_spheres(materials: &[Material]) -> Vec<Sphere> {
             material: materials.iter().find(|&material| {
                 material.name == "reflective"
             }).unwrap()
-        },
-        Sphere {
-            center: glm::vec3(0.0, 0.0, 0.0),
-            radius: 1.0,
-            material: materials.iter().find(|&material| {
-                material.name == "some_shiny_yellow"
-            }).unwrap()
         }
     ]
 }
 
-fn test_instanced_spheres<'a>(materials: &'a[Material], spheres: &'a[Sphere]) -> Vec<Instance<'a, 'a, Sphere<'a>>> {
-    let offset = glm::vec3(-2.0, -1.0, -5.0);
+fn test_meshes(materials: &[Material]) -> Vec<Mesh> {
+    use crate::exercise1::object_file::WindingOrder;
+
+    let material = materials.iter().find(|&material| {
+        material.name == "some_shiny_white"
+    }).unwrap();
+    let path = PathBuf::from("res/models/sphere_low.obj");
+    let mesh = object_file::load_mesh("sphere_low".to_string(),
+                                      &path,
+                                      material, WindingOrder::CounterClockwise);
+    vec![
+        mesh.unwrap()
+    ]
+}
+
+fn test_instanced_meshes<'a>(materials: &'a[Material], meshes: &'a[Mesh]) -> Vec<Instance<'a, 'a, Mesh<'a>>> {
+    let material_override = materials.iter().find(|&material| {
+        material.name == "reflective"
+    });
+
+    let offset = glm::vec3(-1.0, -1.0, -2.0);
     let orientation = glm::vec3(0.0, 0.0, 0.0);
     let scale = glm::vec3(1.0, 1.0, 1.0);
 
-    let material_override = materials.iter().find(|&material| {
-        material.name == "some_shiny_red"
-    });
-
     vec![
-        Instance::new(&spheres[4], offset, orientation, scale, material_override)
+        Instance::new(&meshes[0], offset, orientation, scale, material_override)
     ]
 }
 

@@ -1,4 +1,4 @@
-use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Instance};
+use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Instance, Mesh};
 use crate::raytracing::color::ColorRgb;
 use crate::utils;
 
@@ -9,7 +9,20 @@ pub struct Scene<'a> {
     pub planes: Vec<Plane<'a>>,
     pub spheres: Vec<Sphere<'a>>,
     pub triangles: Vec<Triangle<'a>>,
-    pub instanced_spheres: Vec<Instance<'a, 'a, Sphere<'a>>>,
+
+    pub meshes: Vec<Mesh<'a>>,
+    pub mesh_instances: Vec<Instance<'a, 'a, Mesh<'a>>>,
+
+    // TODO: why can't we do this?
+    //     - Somehow Instances Primitive (dyn Intersect<_> here) size is implicitly required to be Sized.
+    //     - Then, after a '+ ?Sized' bound is added to the Intersect definition,
+    //       "`(dyn intersect::Intersect<Result = hitpoint::Hitpoint<'_>> + 'static)` cannot be shared between threads safely"
+    //       appears because of not being Sync when used with rayon
+    // pub dyn_instances: Vec<Box<Instance<'a, 'a, dyn Intersect<Result=Hitpoint<'a>>>>>,
+    // TODO: why can't we do this?
+    //     - `(dyn intersect::Intersect<Result = hitpoint::Hitpoint<'_>> + 'static)` cannot be shared between threads safely
+    //       appears because of not being Sync when used with rayon
+    // pub dyn_intersectables: Vec<Box<dyn Intersect<Result=Hitpoint<'a>> >>,
 
     pub materials: Vec<Material>
 }
@@ -52,8 +65,8 @@ impl<'a> raytracing::Intersect for Scene<'a> {
         for triangle in &self.triangles {
             check_hitpoint(triangle.intersect(ray));
         }
-        for instanced_sphere in &self.instanced_spheres {
-            check_hitpoint(instanced_sphere.intersect(ray));
+        for mesh_instance in &self.mesh_instances {
+            check_hitpoint(mesh_instance.intersect(ray));
         }
 
         closest_hitpoint

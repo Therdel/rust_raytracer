@@ -12,6 +12,7 @@ glm = "0.2.3"
 float_eq = "^0.5"
 num-traits = "^0.2"
 rayon = "1.5.0"
+tobj = "3.0.0"
 
 [profile.dev]
 opt-level = 0

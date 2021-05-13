@@ -1,5 +1,6 @@
 use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Instance};
 use crate::raytracing::color::ColorRgb;
+use crate::utils;
 
 pub struct Scene<'a> {
     pub camera: Camera,
@@ -39,17 +40,8 @@ impl<'a> raytracing::Intersect for Scene<'a> {
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
         let mut closest_hitpoint: Option<Self::Result> = None;
 
-        let mut check_hitpoint = |hitpoint: Option<Self::Result>| {
-            if let Some(hitpoint) = hitpoint {
-                if let Some(ref mut closest_hitpoint) = closest_hitpoint {
-                    if hitpoint.t < closest_hitpoint.t {
-                        *closest_hitpoint = hitpoint;
-                    }
-                } else {
-                    closest_hitpoint = Some(hitpoint);
-                }
-            }
-        };
+        let mut check_hitpoint =
+            |hitpoint| utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
 
         for plane in &self.planes {
             check_hitpoint(plane.intersect(ray));

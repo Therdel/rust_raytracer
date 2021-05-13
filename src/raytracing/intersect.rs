@@ -1,4 +1,4 @@
-use crate::raytracing::{Ray, Hitpoint, Sphere, Plane, Triangle, Material, AABB, Instance};
+use crate::raytracing::{Ray, Hitpoint, Sphere, Plane, Triangle, Material, AABB, Instance, Mesh};
 use crate::utils;
 use num_traits::identities::Zero;
 use num_traits::Signed;
@@ -197,6 +197,23 @@ impl Intersect for AABB {
 
         _t = tmin;
         Some(())
+    }
+}
+
+impl<'material> Intersect for Mesh<'material> {
+    type Result = Hitpoint<'material>;
+
+    fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
+        let mut closest_hitpoint = None;
+
+        let mut check_hitpoint =
+            |hitpoint| utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
+
+        for triangle in &self.triangles {
+            check_hitpoint(triangle.intersect(ray));
+        }
+
+        closest_hitpoint
     }
 }
 

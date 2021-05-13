@@ -236,27 +236,12 @@ fn test_instanced_spheres<'a>(materials: &'a[Material], spheres: &'a[Sphere]) ->
     let orientation = glm::vec3(0.0, 0.0, 0.0);
     let scale = glm::vec3(1.0, 1.0, 1.0);
 
-    use raytracing::transform::*;
-
-    let rotation_scale_transform = matrix::scaling(&scale) * matrix::rotation(orientation.y, orientation.x, orientation.z);
-    let rotation_scale_transform_inverse = glm::inverse(&rotation_scale_transform);
-
-    let model_transform = matrix::model(&offset, &orientation, &scale);
-    let model_transform_inverse = glm::inverse(&model_transform);
-
     let material_override = materials.iter().find(|&material| {
         material.name == "some_shiny_red"
     });
 
     vec![
-        Instance {
-            primitive: &spheres[4],
-            rotation_scale: rotation_scale_transform,
-            rotation_scale_inverse: rotation_scale_transform_inverse,
-            model: model_transform,
-            model_inverse: model_transform_inverse,
-            material_override
-        }
+        Instance::new(&spheres[4], offset, orientation, scale, material_override)
     ]
 }
 

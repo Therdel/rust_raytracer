@@ -1,13 +1,15 @@
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
     use num_traits::zero;
     use crate::raytracing::{Material, MaterialType};
     use crate::raytracing::{Intersect, Plane, Ray, Sphere, Triangle};
     use nalgebra_glm as glm;
     use crate::utils;
+    use crate::utils::AliasArc;
 
-    fn test_material() -> Material {
-        Material {
+    fn test_material() -> AliasArc<Vec<Material>, Material> {
+        let arc = Arc::new(vec![Material {
             name: String::from("marriage_material"),
             emissive: zero(),
             ambient: zero(),
@@ -15,13 +17,14 @@ mod tests {
             specular: zero(),
             shininess: 0.0,
             material_type: MaterialType::Phong
-        }
+        }]);
+        AliasArc::new(arc, |vec|vec.first().unwrap())
     }
 
     mod ray_sphere_intersection {
         use super::*;
 
-        fn sphere(material: &Material) -> Sphere {
+        fn sphere(material: AliasArc<Vec<Material>, Material>) -> Sphere {
             Sphere {
                 center: glm::vec3(0., 0., 0.),
                 radius: 1.,
@@ -32,7 +35,7 @@ mod tests {
         #[test]
         fn ray_origin_more_than_4096_times_r_units_away() {
             let material = test_material();
-            let sphere = sphere(&material);
+            let sphere = sphere(material);
 
             let ray = Ray {
                 origin: glm::vec3(0., 0., -4100.),
@@ -46,7 +49,7 @@ mod tests {
         #[test]
         fn ray_missing_sphere() {
             let material = test_material();
-            let sphere = sphere(&material);
+            let sphere = sphere(material);
 
             let ray = Ray {
                 origin: glm::vec3(0., 0., -2.),
@@ -58,7 +61,7 @@ mod tests {
         #[test]
         fn ray_hits_sphere() {
             let material = test_material();
-            let sphere = sphere(&material);
+            let sphere = sphere(material);
 
             let ray = Ray {
                 origin: glm::vec3(0., 0., -2.),
@@ -72,7 +75,7 @@ mod tests {
         #[test]
         fn ray_inside_sphere() {
             let material = test_material();
-            let sphere = sphere(&material);
+            let sphere = sphere(material);
 
             let ray = Ray {
                 origin: glm::vec3(0., 0., 0.),
@@ -85,7 +88,7 @@ mod tests {
         #[test]
         fn ray_hits_sphere_tangentially() {
             let material = test_material();
-            let sphere = sphere(&material);
+            let sphere = sphere(material);
 
             let ray = Ray {
                 origin: glm::vec3(-1., 0., -1.),
@@ -98,7 +101,7 @@ mod tests {
         #[test]
         fn ray_points_away_from_sphere() {
             let material = test_material();
-            let sphere = sphere(&material);
+            let sphere = sphere(material);
 
             let ray = Ray {
                 origin: glm::vec3(0., 0., -1.1),
@@ -111,7 +114,7 @@ mod tests {
     mod ray_triangle_intersection {
         use super::*;
 
-        fn triangle(material: &Material) -> Triangle {
+        fn triangle(material: AliasArc<Vec<Material>, Material>) -> Triangle {
             Triangle::new([glm::vec3(-1., 1., 0.),
                               glm::vec3(1., 0., 0.),
                               glm::vec3(-1., -1., 0.)],
@@ -122,7 +125,7 @@ mod tests {
         #[test]
         fn ray_hits_triangle() {
             let material = test_material();
-            let triangle = triangle(&material);
+            let triangle = triangle(material);
 
             let ray = Ray{origin: glm::vec3(0., 0., -2.), direction: glm::vec3(0., 0., 1.)};
             let hitpoint = triangle.intersect(&ray).expect("Ray didn't hit triangle!");
@@ -132,7 +135,7 @@ mod tests {
         #[test]
         fn ray_points_away_from_triangle() {
             let material = test_material();
-            let triangle = triangle(&material);
+            let triangle = triangle(material);
 
             let ray = Ray{origin: glm::vec3(0., 0., -2.), direction: glm::vec3(0., 0., -1.)};
             assert!(triangle.intersect(&ray).is_none());
@@ -141,7 +144,7 @@ mod tests {
         #[test]
         fn ray_missing_triangle() {
             let material = test_material();
-            let triangle = triangle(&material);
+            let triangle = triangle(material);
 
             let ray = Ray{origin: glm::vec3(0., 0., -2.), direction: glm::vec3(0., 1., 0.)};
             assert!(triangle.intersect(&ray).is_none());
@@ -151,18 +154,18 @@ mod tests {
     mod ray_plane_intersection {
         use super::*;
 
-        fn plane(material: &Material) -> Plane {
+        fn plane(material: AliasArc<Vec<Material>, Material>) -> Plane {
             Plane {
                 normal: glm::vec3(0., 0., -1.),
                 distance: 1.,
-                material: &material
+                material: material
             }
         }
 
         #[test]
         fn ray_missing_plane() {
             let material = test_material();
-            let plane = plane(&material);
+            let plane = plane(material);
 
             let ray = Ray{origin: glm::vec3(0., 0., -2.), direction: glm::vec3(0., 1., 0.)};
             assert!(plane.intersect(&ray).is_none());
@@ -171,7 +174,7 @@ mod tests {
         #[test]
         fn ray_hits_plane() {
             let material = test_material();
-            let plane = plane(&material);
+            let plane = plane(material);
 
             let ray = Ray{origin: glm::vec3(0., 0., -2.), direction: glm::vec3(0., 0., 1.)};
             let hitpoint = plane.intersect(&ray).expect("Ray didn't hit plane!");
@@ -181,7 +184,7 @@ mod tests {
         #[test]
         fn ray_starts_behind_plane() {
             let material = test_material();
-            let plane = plane(&material);
+            let plane = plane(material);
 
             let ray = Ray{origin: glm::vec3(0., 0., 0.), direction: glm::vec3(0., 0., 1.)};
             assert!(plane.intersect(&ray).is_none());

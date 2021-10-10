@@ -1,15 +1,14 @@
-mod exercise1;
-mod raytracing;
-mod utils;
+mod write_png;
 
 use std::ffi::CString;
-use crate::exercise1::{Canvas, Scene, object_file};
-use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
+use lib_raytracer::exercise1::{Canvas, Scene, object_file};
+use lib_raytracer::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
 use nalgebra_glm as glm;
 use rayon::prelude::*;
 use std::time::Instant;
 use num_traits::zero;
 use std::path::PathBuf;
+use write_png::*;
 
 const IMAGE_PATH: &'static str = "render.png";
 
@@ -228,7 +227,7 @@ fn test_spheres(materials: &[Material]) -> Vec<Sphere> {
 }
 
 fn test_meshes(materials: &[Material]) -> Vec<Mesh> {
-    use crate::exercise1::object_file::WindingOrder;
+    use lib_raytracer::exercise1::object_file::WindingOrder;
 
     let material = materials.iter().find(|&material| {
         material.name == "some_shiny_white"

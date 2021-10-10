@@ -1,4 +1,5 @@
 use crate::raytracing::Material;
+use nalgebra_glm as glm;
 
 pub struct Hitpoint<'material> {
     pub t: f32, // ray distance

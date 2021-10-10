@@ -1,4 +1,5 @@
 use crate::raytracing::{Ray, Hitpoint};
+use nalgebra_glm as glm;
 
 #[cfg(test)]
 pub fn assert_approx_eq(a: f32, b: f32) {

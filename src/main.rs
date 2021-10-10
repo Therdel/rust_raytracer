@@ -5,6 +5,7 @@ mod utils;
 use std::ffi::CString;
 use crate::exercise1::{Canvas, Scene, object_file};
 use crate::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
+use nalgebra_glm as glm;
 use rayon::prelude::*;
 use std::time::Instant;
 use num_traits::zero;

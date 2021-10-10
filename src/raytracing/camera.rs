@@ -1,3 +1,5 @@
+use nalgebra_glm as glm;
+
 pub struct Camera {
     pub position: glm::Vec3,
     pub orientation: glm::Vec3,

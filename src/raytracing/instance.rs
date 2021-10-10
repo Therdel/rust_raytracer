@@ -1,4 +1,5 @@
 use crate::raytracing::{Material, Intersect, transform::matrix};
+use nalgebra_glm as glm;
 
 pub struct Instance<'primitive, 'material, Primitive: Intersect> {
     pub primitive: &'primitive Primitive,

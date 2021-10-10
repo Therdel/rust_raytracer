@@ -1,3 +1,5 @@
+use nalgebra_glm as glm;
+
 pub struct AABB {
     pub min: glm::Vec3,
     pub max: glm::Vec3

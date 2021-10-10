@@ -1,4 +1,5 @@
 use crate::raytracing::Material;
+use nalgebra_glm as glm;
 
 pub struct Sphere<'a> {
     pub center: glm::Vec3,
@@ -10,6 +11,6 @@ pub struct Sphere<'a> {
 impl Sphere<'_> {
     pub fn normal(&self, surface_point: &glm::Vec3) -> glm::Vec3 {
         let surface_normal = *surface_point - self.center;
-        glm::normalize(surface_normal)
+        glm::normalize(&surface_normal)
     }
 }

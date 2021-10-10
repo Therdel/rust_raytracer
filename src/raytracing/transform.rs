@@ -1,51 +1,24 @@
 pub mod matrix {
-    use glm::{BaseFloat, GenFloat};
+    use nalgebra_glm as glm;
+    use num_traits::{zero, one};
     use crate::raytracing::Camera;
 
     pub fn translation(offset: &glm::Vec3) -> glm::Mat4 {
-        glm::ext::translate(&num_traits::one(), *offset)
+        glm::translation(offset)
     }
 
     pub fn scaling(scale: &glm::Vec3) -> glm::Mat4 {
-        glm::ext::scale(&num_traits::one(), *scale)
+        glm::scaling(scale)
     }
 
-    /// taken from [glm lib](https://github.com/g-truc/glm/blob/master/glm/gtx/euler_angles.inl)
     pub fn rotation(yaw: f32,
                     pitch: f32,
                     roll: f32) -> glm::Mat4 {
-        fn glm_ext_eulerangle_xyz<T>(yaw: &T,
-                                     pitch: &T,
-                                     roll: &T) -> glm::Matrix4<T>
-            where T: BaseFloat + GenFloat<T> {
-            let tmp_ch = glm::cos(*yaw);
-            let tmp_sh = glm::sin(*yaw);
-            let tmp_cp = glm::cos(*pitch);
-            let tmp_sp = glm::sin(*pitch);
-            let tmp_cb = glm::cos(*roll);
-            let tmp_sb = glm::sin(*roll);
-
-            let mut result: glm::Matrix4<T> = num_traits::one();
-            result[0][0] = tmp_ch * tmp_cb + tmp_sh * tmp_sp * tmp_sb;
-            result[0][1] = tmp_sb * tmp_cp;
-            result[0][2] = -tmp_sh * tmp_cb + tmp_ch * tmp_sp * tmp_sb;
-            result[0][3] = T::zero();
-            result[1][0] = -tmp_ch * tmp_sb + tmp_sh * tmp_sp * tmp_cb;
-            result[1][1] = tmp_cb * tmp_cp;
-            result[1][2] = tmp_sb * tmp_sh + tmp_ch * tmp_sp * tmp_cb;
-            result[1][3] = T::zero();
-            result[2][0] = tmp_sh * tmp_cp;
-            result[2][1] = -tmp_sp;
-            result[2][2] = tmp_ch * tmp_cp;
-            result[2][3] = T::zero();
-            result[3][0] = T::zero();
-            result[3][1] = T::zero();
-            result[3][2] = T::zero();
-            result[3][3] = T::one();
-
-            result
-        }
-        glm_ext_eulerangle_xyz(&yaw, &pitch, &roll)
+        let mat = one();
+        let mat = glm::rotate_y(&mat, yaw);
+        let mat = glm::rotate_x(&mat, pitch);
+        let mat = glm::rotate_z(&mat, roll);
+        mat
     }
 
     pub fn model(position: &glm::Vec3,
@@ -63,24 +36,20 @@ pub mod matrix {
                     width: f32, height: f32,
                     z_near: f32, z_far: f32) -> glm::Mat4 {
 
-        let column0 = glm::vec4(width/2.0, 0.0, 0.0, 0.0);
-        let column1 = glm::vec4(0.0, height/2.0, 0.0, 0.0);
-        let column2 = glm::vec4(0.0, 0.0, (z_far - z_near) / 2.0, 0.0);
-        let column3 = glm::vec4(x + width/2.0, y + height/2.0, (z_far + z_near) / 2.0, 1.0);
+        let column0 = [width/2.0, 0.0, 0.0, 0.0];
+        let column1 = [0.0, height/2.0, 0.0, 0.0];
+        let column2 = [0.0, 0.0, (z_far - z_near) / 2.0, 0.0];
+        let column3 = [x + width/2.0, y + height/2.0, (z_far + z_near) / 2.0, 1.0];
 
-        glm::Mat4 {
-            c0: column0,
-            c1: column1,
-            c2: column2,
-            c3: column3
-        }
+        glm::Mat4::from([column0, column1, column2, column3])
     }
 
     pub fn projection(y_fov_degrees: f32,
                       aspect: f32,
                       z_near: f32, z_far: f32) -> glm::Mat4 {
-        glm::ext::perspective(y_fov_degrees.to_radians(),
-                              aspect, z_near, z_far)
+        glm::perspective(aspect,
+                         y_fov_degrees.to_radians(),
+                         z_near, z_far)
     }
 
     pub fn view(orientation: &glm::Vec3,

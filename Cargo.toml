@@ -8,7 +8,7 @@ edition = "2018"
 
 [dependencies]
 stb = { version = "0.3.2", default-features = false, features = ["stb_image_write"] }
-glm = "0.2.3"
+nalgebra-glm = "0.15"
 float_eq = "^0.5"
 num-traits = "^0.2"
 rayon = "1.5.0"

@@ -2,6 +2,7 @@ use std::path::Path;
 use crate::raytracing::{Material, Mesh, Triangle};
 use tobj::{LoadOptions, Model};
 use std::ops::Neg;
+use nalgebra_glm as glm;
 
 pub enum WindingOrder {
     Clockwise,

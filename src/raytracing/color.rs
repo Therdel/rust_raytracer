@@ -1,3 +1,6 @@
+use nalgebra_glm as glm;
+use num_traits::{zero, one};
+
 pub type ColorRgb = glm::Vec3;
 pub type ColorRgbU8 = [u8; 3];
 
@@ -38,7 +41,7 @@ pub trait QuantizeToU8 {
 
 impl QuantizeToU8 for ColorRgb {
     fn quantize(&self) -> ColorRgbU8 {
-        let mut clamped_color = glm::clamp(*self, glm::vec3(0., 0., 0.), glm::vec3(1., 1., 1.));
+        let mut clamped_color = glm::clamp(self, zero(), one());
         clamped_color = clamped_color * 255.;
 
         [

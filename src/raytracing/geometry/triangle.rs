@@ -1,4 +1,5 @@
 use crate::raytracing::Material;
+use nalgebra_glm as glm;
 
 pub struct Triangle<'a> {
     pub vertices: [glm::Vec3; 3],
@@ -27,6 +28,6 @@ impl Triangle<'_> {
         let (a, b, c) = (&vertices[0], &vertices[1], &vertices[2]);
         let ac = *c - *a;
         let ab = *b - *a;
-        glm::normalize(glm::cross(ac, ab))
+        glm::normalize(&glm::cross(&ac, &ab))
     }
 }

@@ -2,6 +2,7 @@ use crate::exercise1::Scene;
 use crate::raytracing::transform::matrix;
 use crate::raytracing::{Ray, Intersect, Light, Hitpoint, MaterialType};
 use crate::raytracing::color::{ColorRgb, self};
+use nalgebra_glm as glm;
 use num_traits::{Zero, zero};
 
 const MAX_RAY_RECURSION_DEPTH: usize = 10;
@@ -57,7 +58,6 @@ impl Public for Raytracer<'_> {
     }
 
     fn generate_primary_ray(&self, screen_coordinate: &glm::Vec2) -> Ray {
-        screen_coordinate.extend(0.0).extend(1.);
         let p_screen = glm::vec4(screen_coordinate.x, screen_coordinate.y, 0.0, 1.0);
         // TODO: Document that NDC "looks" in *positive* z-axis. Document wrong viewing direction
         //       Erklärung: Hat was mit der z-Range zutun, wie man die definiert.
@@ -67,11 +67,11 @@ impl Public for Raytracer<'_> {
         let p_world = self.screen_to_world * p_screen;
         let p_world_forward = self.screen_to_world * p_screen_forward;
 
-        let p_world_inhomogeneous = (p_world / p_world.w).truncate(3);
-        let p_world_forward_inhomogeneous = (p_world_forward / p_world_forward.w).truncate(3);
+        let p_world_inhomogeneous = (p_world / p_world.w).xyz();
+        let p_world_forward_inhomogeneous = (p_world_forward / p_world_forward.w).xyz();
 
         let direction = p_world_forward_inhomogeneous - p_world_inhomogeneous;
-        let direction_normalized = glm::normalize(direction);
+        let direction_normalized = glm::normalize(&direction);
 
         Ray {
             origin: p_world_inhomogeneous,
@@ -105,7 +105,7 @@ impl Private for Raytracer<'_> {
         let shade_reflect = || {
             // TODO: why can't we do ```-&ray.direction``` here?
             let direction = Self::create_reflected_ray(&-ray.direction, &hitpoint.hit_normal);
-            let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(direction), };
+            let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(&direction), };
 
             let reflection_color =
                 self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
@@ -122,9 +122,9 @@ impl Private for Raytracer<'_> {
             };
             let direction_transmitted = Self::create_transmitted_ray(&-ray.direction, &hitpoint.hit_normal, n1_current, n2_pierce);
 
-            let transmitted_ray = Ray { origin: *origin_transmitted, direction: glm::normalize(direction_transmitted)};
+            let transmitted_ray = Ray { origin: *origin_transmitted, direction: glm::normalize(&direction_transmitted)};
             let direction_reflected = Self::create_reflected_ray(&-ray.direction, &hitpoint.hit_normal);
-            let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(direction_reflected) };
+            let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(&direction_reflected) };
 
             let reflected_color = self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
                 .unwrap_or(self.scene.background);
@@ -158,13 +158,13 @@ impl Private for Raytracer<'_> {
         let v = -ray.direction;
         let r = Self::create_reflected_ray(&l, &n);
 
-        let l_dot_n = glm::max(glm::dot(l, n), 0.0);
-        let r_dot_v = glm::max(glm::dot(r, v), 0.0);
+        let l_dot_n = f32::max(glm::dot(&l,&n), 0.0);
+        let r_dot_v = f32::max(glm::dot(&r, &v), 0.0);
 
         let emissive = hitpoint.material.emissive;
         let ambient = light.color.ambient + hitpoint.material.ambient;
-        let diffuse = if is_shadow { zero() } else { light.color.diffuse * hitpoint.material.diffuse * l_dot_n };
-        let specular = if is_shadow { zero() } else { light.color.specular * hitpoint.material.specular * glm::pow(r_dot_v, hitpoint.material.shininess) };
+        let diffuse = if is_shadow { zero() } else { light.color.diffuse.component_mul(&hitpoint.material.diffuse) * l_dot_n };
+        let specular = if is_shadow { zero() } else { light.color.specular.component_mul(&hitpoint.material.specular) * r_dot_v.powf(hitpoint.material.shininess) };
 
         let radiance = emissive + ambient + diffuse + specular;
         radiance
@@ -175,14 +175,14 @@ impl Private for Raytracer<'_> {
 
         let direction = {
             if is_directional_light {
-                light.position.truncate(3)
+                light.position.xyz()
             } else {
-                let light_world_pos = (light.position / light.position.w).truncate(3);
+                let light_world_pos = (light.position / light.position.w).xyz();
                 light_world_pos - *world_pos
             }
         };
 
-        let direction = glm::normalize(direction);
+        let direction = glm::normalize(&direction);
 
         let ray = Ray { origin: *world_pos, direction };
 
@@ -192,8 +192,8 @@ impl Private for Raytracer<'_> {
                 // any intersection puts shadow of infinitely distant (directional light)
                 is_shadow = true;
             } else {
-                let light_world_pos = (light.position / light.position.w).truncate(3);
-                let distance_to_light = glm::distance(ray.origin, light_world_pos);
+                let light_world_pos = (light.position / light.position.w).xyz();
+                let distance_to_light = glm::distance(&ray.origin, &light_world_pos);
                 let ray_distance_travelled = hitpoint.t;
 
                 is_shadow = ray_distance_travelled < distance_to_light;
@@ -206,15 +206,15 @@ impl Private for Raytracer<'_> {
     }
 
     fn create_reflected_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3) -> glm::Vec3 {
-        *normal * 2. * (glm::dot(*normal, *to_viewer)) - *to_viewer
+        *normal * 2. * (glm::dot(normal, to_viewer)) - *to_viewer
     }
 
     fn create_transmitted_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3,
                               n1_current: f32, n2_pierce: f32) -> glm::Vec3 {
         // TODO: Check using rust safe math
         let n = n1_current / n2_pierce;
-        let w = n * glm::dot(*to_viewer, *normal);
-        let k = glm::sqrt(1.0 + (w-n)*(w+n));
+        let w = n * glm::dot(to_viewer, normal);
+        let k = f32::sqrt(1.0 + (w-n)*(w+n));
         let t = *normal * (w-k)  - *to_viewer * n;
         t
     }
@@ -223,13 +223,13 @@ impl Private for Raytracer<'_> {
         let is_directional_light = light.position.w.is_zero();
         let vector = {
             if is_directional_light {
-                light.position.truncate(3)
+                light.position.xyz()
             } else {
-                let light_world_pos = (light.position / light.position.w).truncate(3);
+                let light_world_pos = (light.position / light.position.w).xyz();
                 light_world_pos - hitpoint.position
             }
         };
-        glm::normalize(vector)
+        glm::normalize(&vector)
     }
 
     fn get_fresnel_factor(reflected_ray: &Ray, transmitted_ray: &Ray,
@@ -240,8 +240,8 @@ impl Private for Raytracer<'_> {
 
         // cos(ang) = (a dot b) / (len(a) *len(b))
         // both vectors are unit vectors, therefore only the dot product is needed
-        let cos_ang_i = glm::dot(reflected_ray.direction, *reflection_normal);
-        let cos_ang_t = glm::dot(transmitted_ray.direction, transmission_normal);
+        let cos_ang_i = glm::dot(&reflected_ray.direction, reflection_normal);
+        let cos_ang_t = glm::dot(&transmitted_ray.direction, &transmission_normal);
 
         let n_i = n1_current;
         let n_t = n2_pierce;

@@ -1,4 +1,4 @@
-(async () => {
+window.onload = async () => {
     let response = await fetch('wasm_interface.wasm');
     let bytes = await response.arrayBuffer();
     let { instance } = await WebAssembly.instantiate(bytes, { });
@@ -35,4 +35,4 @@
             window.requestAnimationFrame(render);
         });
     }
-})();
+};

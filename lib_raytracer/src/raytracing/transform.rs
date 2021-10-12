@@ -1,6 +1,6 @@
 pub mod matrix {
     use nalgebra_glm as glm;
-    use num_traits::{zero, one};
+    use num_traits::one;
     use crate::raytracing::Camera;
 
     pub fn translation(offset: &glm::Vec3) -> glm::Mat4 {

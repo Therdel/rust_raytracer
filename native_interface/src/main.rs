@@ -1,13 +1,15 @@
 mod write_png;
 
 use std::ffi::CString;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::PathBuf;
 use lib_raytracer::exercise1::{Canvas, Scene, object_file};
 use lib_raytracer::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
 use nalgebra_glm as glm;
 use rayon::prelude::*;
 use std::time::Instant;
 use num_traits::zero;
-use std::path::PathBuf;
 use write_png::*;
 
 const IMAGE_PATH: &'static str = "render.png";
@@ -233,8 +235,9 @@ fn test_meshes(materials: &[Material]) -> Vec<Mesh> {
         material.name == "some_shiny_white"
     }).unwrap();
     let path = PathBuf::from("res/models/sphere_low.obj");
+    let mut obj_file = BufReader::new(File::open(path).unwrap());
     let mesh = object_file::load_mesh("sphere_low".to_string(),
-                                      &path,
+                                      &mut obj_file,
                                       material, WindingOrder::CounterClockwise);
     vec![
         mesh.unwrap()

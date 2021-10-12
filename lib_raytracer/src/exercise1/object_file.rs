@@ -1,6 +1,7 @@
+use std::io::BufRead;
 use std::path::Path;
 use crate::raytracing::{Material, Mesh, Triangle};
-use tobj::{LoadOptions, Model};
+use tobj::{LoadError, LoadOptions, Model, MTLLoadResult};
 use std::ops::Neg;
 use nalgebra_glm as glm;
 
@@ -10,10 +11,10 @@ pub enum WindingOrder {
 }
 
 pub fn load_mesh<'a>(id: String,
-                     path: &Path,
+                     obj_buffer: &mut impl BufRead,
                      material: &'a Material,
                      winding_order: WindingOrder) -> Result<Mesh<'a>, String> {
-    let models = parse_models_from_obj(path)?;
+    let models = parse_models_from_obj_buffer(obj_buffer)?;
 
     let mut mesh = Mesh {
         id,
@@ -46,17 +47,19 @@ pub fn load_mesh<'a>(id: String,
     Ok(mesh)
 }
 
-fn parse_models_from_obj(path: &Path) -> Result<Vec<Model>, String> {
+fn parse_models_from_obj_buffer(obj_buffer: &mut impl BufRead) -> Result<Vec<Model>, String> {
     // triangulate meshes, resulting in triangles only
     // also build single/unified index for vertices and normals -> shorter code
     let mut load_options = LoadOptions::default();
     load_options.triangulate = true;
     load_options.single_index = true;
 
+    /// throws an error on any requested material - material files are *unsupported*
+    fn material_loader(_path: &Path) -> MTLLoadResult { Err(LoadError::OpenFileFailed) }
     // TODO: Beautify
-    match tobj::load_obj(path, &load_options) {
+    match tobj::load_obj_buf(obj_buffer, &load_options, material_loader) {
         Ok((models, _)) => Ok(models),
-        Err(error) => Err(format!("Failed to load .obj file: {}", error.to_string()))
+        Err(error) => Err(format!("Failed to parse .obj buffer: {}", error.to_string()))
     }
 }
 

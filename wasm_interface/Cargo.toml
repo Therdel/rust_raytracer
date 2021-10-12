@@ -7,3 +7,6 @@ edition = "2021"
 
 [dependencies]
 lib_raytracer = { path = "../lib_raytracer" }
+
+[lib]
+crate-type = ["cdylib"]

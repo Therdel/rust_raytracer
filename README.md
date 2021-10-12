@@ -1,5 +1,7 @@
 # Whitted Raytracer in Rust
-- learning project
-- translate previously built university project from C++ to Rust  
+### Try it on [Github Pages](https://therdel.github.io/rust_raytracer)!
+- translated previously built university project from C++ to Rust
+- native app and webapp (WASM)
+
 
 ![](render.png)

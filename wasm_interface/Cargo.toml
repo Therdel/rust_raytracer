@@ -7,6 +7,8 @@ edition = "2021"
 
 [dependencies]
 lib_raytracer = { path = "../lib_raytracer" }
+nalgebra-glm = "0.15"
+num-traits = "^0.2"
 
 [lib]
 crate-type = ["cdylib"]

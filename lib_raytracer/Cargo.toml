@@ -8,6 +8,6 @@ edition = "2018"
 
 [dependencies]
 nalgebra-glm = "0.15"
-float_eq = "^0.5"
-num-traits = "^0.2"
+float_eq = "0.5"
+num-traits = "0.2"
 tobj = "3.0.0"

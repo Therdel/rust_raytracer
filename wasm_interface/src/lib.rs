@@ -1,6 +1,7 @@
+use std::io::Cursor;
 use std::os::raw::c_void;
 use std::mem;
-use lib_raytracer::exercise1::{Scene};
+use lib_raytracer::exercise1::{Scene, object_file};
 use lib_raytracer::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
 use num_traits::zero;
 
@@ -46,9 +47,13 @@ impl QuantizeToU8 for ColorRgba {
 
 
 #[no_mangle]
-pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize) {
+pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize, mesh_obj_buf: *const u8, mesh_obj_buf_len: usize) {
     let ptr_color = ptr as *mut ColorRgbaU8;
     let slice = unsafe { slice::from_raw_parts_mut(ptr_color, width*height  ) };
+
+    let mesh_obj = unsafe {
+        slice::from_raw_parts(mesh_obj_buf, mesh_obj_buf_len)
+    };
 
     let background = Color::urple();
     let mut scene = Scene {
@@ -68,6 +73,8 @@ pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize) {
     scene.planes = test_planes(&scene.materials);
     scene.spheres = test_spheres(&scene.materials);
     scene.triangles = test_triangles(&scene.materials);
+    scene.meshes = test_meshes(&scene.materials, mesh_obj);
+    scene.mesh_instances = test_instanced_meshes(&scene.materials, &scene.meshes);
 
     let raytracer = Raytracer::new(&scene);
     for y in 0..height {
@@ -251,5 +258,35 @@ fn test_spheres(materials: &[Material]) -> Vec<Sphere> {
                 material.name == "reflective"
             }).unwrap()
         }
+    ]
+}
+
+fn test_meshes<'a>(materials: &'a[Material], mesh_obj: &[u8]) -> Vec<Mesh<'a>> {
+    use lib_raytracer::exercise1::object_file::WindingOrder;
+
+    let material = materials.iter().find(|&material| {
+        material.name == "some_shiny_white"
+    }).unwrap();
+
+    let mut mesh_obj_bufread = Cursor::new(mesh_obj);
+    let mesh = object_file::load_mesh("sphere_low".to_string(),
+                                      &mut mesh_obj_bufread,
+                                      material, WindingOrder::CounterClockwise);
+    vec![
+        mesh.unwrap()
+    ]
+}
+
+fn test_instanced_meshes<'a>(materials: &'a[Material], meshes: &'a[Mesh]) -> Vec<Instance<'a, 'a, Mesh<'a>>> {
+    let material_override = materials.iter().find(|&material| {
+        material.name == "reflective"
+    });
+
+    let offset = glm::vec3(-1.0, -1.0, -2.0);
+    let orientation = glm::vec3(0.0, 0.0, 0.0);
+    let scale = glm::vec3(1.0, 1.0, 1.0);
+
+    vec![
+        Instance::new(&meshes[0], offset, orientation, scale, material_override)
     ]
 }

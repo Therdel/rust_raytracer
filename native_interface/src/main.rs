@@ -4,36 +4,39 @@ use std::ffi::CString;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
+use std::rc::Rc;
 use lib_raytracer::exercise1::{Canvas, Scene, object_file};
 use lib_raytracer::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
 use nalgebra_glm as glm;
 use rayon::prelude::*;
 use std::time::Instant;
 use num_traits::zero;
+use lib_raytracer::utils::AliasRc;
 use write_png::*;
 
 const IMAGE_PATH: &'static str = "render.png";
 
 fn main() {
+    let materials = test_materials();
+    let planes = test_planes(&materials);
+    let spheres = test_spheres(&materials);
+    let triangles = test_triangles(&materials);
+    let meshes = test_meshes(&materials);
+    let mesh_instances = test_instanced_meshes(&materials, &meshes);
+
     let mut scene = Scene {
         camera: test_camera(3640, 2160),
         background: Color::urple(),
         lights: test_lights(),
-        planes: vec![],
-        spheres: vec![],
-        triangles: vec![],
-        meshes: vec![],
-        mesh_instances: vec![],
+        planes,
+        spheres,
+        triangles,
+        meshes,
+        mesh_instances,
 
-        materials: vec![],
+        materials,
 
     };
-    scene.materials = test_materials();
-    scene.planes = test_planes(&scene.materials);
-    scene.spheres = test_spheres(&scene.materials);
-    scene.triangles = test_triangles(&scene.materials);
-    scene.meshes = test_meshes(&scene.materials);
-    scene.mesh_instances = test_instanced_meshes(&scene.materials, &scene.meshes);
 
     let time_start = Instant::now();
     let canvas = paint_scene(&scene);
@@ -50,7 +53,7 @@ fn paint_scene(scene: &Scene) -> Canvas {
     let mut canvas = Canvas::new(canvas_dimensions, scene.background);
 
     canvas.borrow_stripes_mut()
-        .par_bridge()
+        //.par_bridge()
         .for_each(|mut row_stripe| {
             let y = row_stripe.get_y_coord();
             for x in 0..scene.camera.pixel_width {
@@ -64,8 +67,8 @@ fn paint_scene(scene: &Scene) -> Canvas {
     canvas
 }
 
-fn test_lights() -> Vec<Light> {
-    vec![
+fn test_lights() -> AliasRc<Vec<Light>, [Light]> {
+    let rc = Rc::new(vec![
         Light {
             position: glm::vec4(1.0, 5.0, 1.0, 1.0), // directional
             color: LightColor {
@@ -74,7 +77,8 @@ fn test_lights() -> Vec<Light> {
                 specular: glm::vec3(0.5, 0.5, 0.5),
             }
         }
-    ]
+    ]);
+    AliasRc::new(rc, |vec|vec.as_slice())
 }
 
 fn test_camera(width: usize, height: usize) -> Camera {
@@ -90,8 +94,8 @@ fn test_camera(width: usize, height: usize) -> Camera {
     }
 }
 
-fn test_materials() -> Vec<Material> {
-    vec![
+fn test_materials() -> AliasRc<Vec<Material>, [Material]> {
+    let rc = Rc::new(vec![
         Material {
             name: String::from("some_shiny_red"),
             emissive: glm::vec3(0.1, 0.0, 0.0),
@@ -158,195 +162,121 @@ fn test_materials() -> Vec<Material> {
                 index_outer: 1.0
             },
         },
-    ]
+    ]);
+    AliasRc::new(rc, |vec|vec.as_slice())
 }
 
-fn test_triangles(materials: &[Material]) -> Vec<Triangle> {
-    vec![
+fn get_material(materials: AliasRc<Vec<Material>, [Material]>, name: &str) -> Option<AliasRc<Vec<Material>, Material>> {
+    let index = materials
+        .iter()
+        .enumerate()
+        .find(|&(index, material)| {
+            material.name == name
+        })
+        .map(|(index, _)|index)?;
+
+    let materials_rc = AliasRc::into_parent(materials);
+    let alias_rc = AliasRc::new(materials_rc, |vec|&vec[index]);
+    Some(alias_rc)
+}
+
+fn get_mesh(meshes: AliasRc<Vec<Mesh>, [Mesh]>, name: &str) -> Option<AliasRc<Vec<Mesh>, Mesh>> {
+    let index = meshes
+        .iter()
+        .enumerate()
+        .find(|&(index, mesh)| {
+            mesh.id == name
+        })
+        .map(|(index, _)|index)?;
+
+    let mesh_rc = AliasRc::into_parent(meshes);
+    let alias_rc = AliasRc::new(mesh_rc, |vec|&vec[index]);
+    Some(alias_rc)
+}
+
+fn test_triangles(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<Triangle>, [Triangle]> {
+    let rc = Rc::new(vec![
         Triangle::new([glm::vec3(-5.0, 1.25, -5.0),
                           glm::vec3(5.0, 1.25, -5.0),
                           glm::vec3(0.0, -3.75, -5.0)],
                       [zero(); 3],
-                      materials.iter().find(|&material| {
-                          material.name == "some_shiny_white"
-                      }).unwrap()
+                      get_material(materials.clone(), "some_shiny_white").unwrap()
         ),
         Triangle::new([glm::vec3(-5.0, -2.5, -5.0),
                           glm::vec3(5.0, -2.5, -5.0),
                           glm::vec3(0.0, 2.5, -5.0)
                       ],
                       [zero(); 3],
-                      materials.iter().find(|&material| {
-                          material.name == "some_shiny_blue"
-                      }).unwrap(),
+                      get_material(materials.clone(), "some_shiny_blue").unwrap(),
         ),
-    ]
+    ]);
+    AliasRc::new(rc, Vec::as_slice)
 }
 
-fn test_planes(materials: &[Material]) -> Vec<Plane> {
-    vec![
+fn test_planes(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<Plane>, [Plane]> {
+    let rc = Rc::new(vec![
         Plane {
             normal: glm::vec3(0.0, -1.0, 0.0),
             distance: 5.0,
-            material: materials.iter().find(|&material| {
-                material.name == "some_shiny_green"
-            }).unwrap()
+            material: get_material(materials.clone(), "some_shiny_green").unwrap(),
         }
-    ]
+    ]);
+    AliasRc::new(rc, Vec::as_slice)
 }
 
-fn test_spheres(materials: &[Material]) -> Vec<Sphere> {
-    vec![
+fn test_spheres(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<Sphere>, [Sphere]> {
+    let rc = Rc::new(vec![
         Sphere {
             center: glm::vec3(0.0, 1.0, -5.0),
             radius: 0.5,
-            material: materials.iter().find(|&material| {
-                material.name == "some_shiny_red"
-            }).unwrap()
+            material: get_material(materials.clone(), "some_shiny_red").unwrap(),
         },
         Sphere {
             center: glm::vec3(0.0, 0.0, -4.0),
             radius: 0.5,
-            material: materials.iter().find(|&material| {
-                material.name == "some_shiny_red"
-            }).unwrap()
+            material: get_material(materials.clone(), "some_shiny_red").unwrap(),
         },
         Sphere {
             center: glm::vec3(0.0, -1.0, -3.0),
             radius: 0.5,
-            material: materials.iter().find(|&material| {
-                material.name == "transparent"
-            }).unwrap()
+            material: get_material(materials.clone(), "transparent").unwrap(),
         },
         Sphere {
             center: glm::vec3(0.0, 2.5, -5.0),
             radius: 1.0,
-            material: materials.iter().find(|&material| {
-                material.name == "reflective"
-            }).unwrap()
+            material: get_material(materials.clone(), "reflective").unwrap(),
         }
-    ]
+    ]);
+    AliasRc::new(rc, Vec::as_slice)
 }
 
-fn test_meshes(materials: &[Material]) -> Vec<Mesh> {
+fn test_meshes(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<Mesh>, [Mesh]> {
     use lib_raytracer::exercise1::object_file::WindingOrder;
 
-    let material = materials.iter().find(|&material| {
-        material.name == "some_shiny_white"
-    }).unwrap();
+
+    let material = get_material(materials.clone(), "some_shiny_white").unwrap();
     let path = PathBuf::from("res/models/sphere_low.obj");
     let mut obj_file = BufReader::new(File::open(path).unwrap());
     let mesh = object_file::load_mesh("sphere_low".to_string(),
                                       &mut obj_file,
                                       material, WindingOrder::CounterClockwise);
-    vec![
+    let rc = Rc::new(vec![
         mesh.unwrap()
-    ]
+    ]);
+    AliasRc::new(rc, Vec::as_slice)
 }
 
-fn test_instanced_meshes<'a>(materials: &'a[Material], meshes: &'a[Mesh]) -> Vec<Instance<'a, 'a, Mesh<'a>>> {
-    let material_override = materials.iter().find(|&material| {
-        material.name == "reflective"
-    });
+fn test_instanced_meshes(materials: &AliasRc<Vec<Material>, [Material]>,
+                         meshes: &AliasRc<Vec<Mesh>, [Mesh]>) -> AliasRc<Vec<Instance<Mesh>>, [Instance<Mesh>]> {
+    let material_override = get_material(materials.clone(), "reflective");
+    let mesh = get_mesh(meshes.clone(), "sphere_low").unwrap();
 
     let offset = glm::vec3(-1.0, -1.0, -2.0);
     let orientation = glm::vec3(0.0, 0.0, 0.0);
     let scale = glm::vec3(1.0, 1.0, 1.0);
 
-    vec![
-        Instance::new(&meshes[0], offset, orientation, scale, material_override)
-    ]
+    let rc = Rc::new(vec![
+        Instance::new(mesh, offset, orientation, scale, material_override)
+    ]);
+    AliasRc::new(rc, Vec::as_slice)
 }
-
-// TODO: Can I ever return this?
-// fn test_scene() -> Box<Scene<'static>> {
-//     let materials = vec![
-//         Material {
-//             name: String::from("some_shiny_red"),
-//             emissive: glm::vec3(0.1, 0.0, 0.0),
-//             ambient: glm::vec3(0.4, 0.0, 0.0),
-//             diffuse: glm::vec3(0.4, 0.0, 0.0),
-//             specular: glm::vec3(0.6, 0.6, 0.6),
-//             shininess: 10.0
-//         },
-//         Material {
-//             name: String::from("some_shiny_yellow"),
-//             emissive: glm::vec3(0.1, 0.1, 0.0),
-//             ambient: glm::vec3(0.4, 0.4, 0.0),
-//             diffuse: glm::vec3(0.4, 0.4, 0.0),
-//             specular: glm::vec3(0.6, 0.6, 0.6),
-//             shininess: 10.0
-//         },
-//         Material {
-//             name: String::from("some_shiny_green"),
-//             emissive: glm::vec3(0.0, 0.1, 0.0),
-//             ambient: glm::vec3(0.0, 0.4, 0.0),
-//             diffuse: glm::vec3(0.0, 0.4, 0.0),
-//             specular: glm::vec3(0.6, 0.6, 0.6),
-//             shininess: 10.0
-//         },
-//     ];
-//
-//     let scene = Box::from(Scene {
-//         camera: Camera {
-//             position: glm::vec3(0.0, 0.0, -1.0),
-//             orientation: glm::vec3(0.0f32.to_radians(),
-//                                    0.0f32.to_radians(),
-//                                    0.0f32.to_radians()),
-//             pixel_width: 1000,
-//             pixel_height: 1000,
-//             y_fov_degrees: 90.0,
-//             z_near: 0.1, z_far: 25.0,
-//         },
-//         lights: vec![
-//             Light {
-//                 position: glm::vec4(1.0, 1.0, 1.0, 0.0), // directional
-//                 color: LightColor {
-//                     ambient: glm::vec3(0.1, 0.1, 0.1),
-//                     diffuse: glm::vec3(0.2, 0.2, 0.2),
-//                     specular: glm::vec3(0.5, 0.5, 0.5),
-//                 }
-//             }
-//         ],
-//         planes: vec![],
-//         spheres: vec![],
-//         triangles: vec![],
-//         materials: materials
-//     });
-//
-//     scene.planes = vec![
-//         Plane {
-//             normal: glm::vec3(0.0, -1.0, 0.0),
-//             distance: 5.0,
-//             material: scene.get_material("some_shiny_red").unwrap()
-//         }
-//     ];
-//     scene.spheres = vec![
-//         Sphere {
-//             center: glm::vec3(0.0, 0.0, -2.0),
-//             radius: 0.5,
-//             material: scene.get_material("some_shiny_yellow").unwrap()
-//         }
-//     ];
-//     scene.triangles = vec![
-//         Triangle::new(
-//             glm::vec3(-5.0, -2.5, -5.0),
-//             glm::vec3(5.0, -2.5, -5.0),
-//             glm::vec3(0.0, 2.5, -5.0),
-//             scene.get_material("some_shiny_red").unwrap()
-//         )
-//     ];
-//
-//     scene
-// }
-
-// scene.triangles = vec![
-//     Triangle::new(
-//         glm::vec3(-5.0, -2.5, -5.0),
-//         glm::vec3(5.0, -2.5, -5.0),
-//         glm::vec3(0.0, 2.5, -5.0),
-//         scene.materials.iter().find(|&material| {
-//             material.name == "some_shiny_red"
-//         }).unwrap()
-//     )
-// ];

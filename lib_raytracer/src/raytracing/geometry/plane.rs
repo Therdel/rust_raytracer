@@ -1,9 +1,10 @@
 use crate::raytracing::Material;
 use nalgebra_glm as glm;
+use crate::utils::AliasRc;
 
-pub struct Plane<'a> {
+pub struct Plane {
     pub normal: glm::Vec3,
     pub distance: f32,
 
-    pub material: &'a Material,
+    pub material: AliasRc<Vec<Material>, Material>,
 }

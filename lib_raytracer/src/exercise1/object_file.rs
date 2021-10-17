@@ -4,6 +4,7 @@ use crate::raytracing::{Material, Mesh, Triangle};
 use tobj::{LoadError, LoadOptions, Model, MTLLoadResult};
 use std::ops::Neg;
 use nalgebra_glm as glm;
+use crate::utils::AliasRc;
 
 pub enum WindingOrder {
     Clockwise,
@@ -12,8 +13,8 @@ pub enum WindingOrder {
 
 pub fn load_mesh<'a>(id: String,
                      obj_buffer: &mut impl BufRead,
-                     material: &'a Material,
-                     winding_order: WindingOrder) -> Result<Mesh<'a>, String> {
+                     material: AliasRc<Vec<Material>, Material>,
+                     winding_order: WindingOrder) -> Result<Mesh, String> {
     let models = parse_models_from_obj_buffer(obj_buffer)?;
 
     let mut mesh = Mesh {
@@ -39,7 +40,7 @@ pub fn load_mesh<'a>(id: String,
                 }
             }
 
-            let triangle = Triangle::new(vertices, normals, material);
+            let triangle = Triangle::new(vertices, normals, material.clone());
             mesh.triangles.push(triangle);
         }
     }

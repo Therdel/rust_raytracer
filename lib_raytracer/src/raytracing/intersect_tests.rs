@@ -3,6 +3,7 @@ mod tests {
     use num_traits::zero;
     use crate::raytracing::{Material, MaterialType};
     use crate::raytracing::{Intersect, Plane, Ray, Sphere, Triangle};
+    use nalgebra_glm as glm;
     use crate::utils;
 
     fn test_material() -> Material {

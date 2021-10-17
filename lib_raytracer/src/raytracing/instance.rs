@@ -1,23 +1,24 @@
 use crate::raytracing::{Material, Intersect, transform::matrix};
 use nalgebra_glm as glm;
+use crate::utils::AliasRc;
 
-pub struct Instance<'primitive, 'material, Primitive: Intersect> {
-    pub primitive: &'primitive Primitive,
+pub struct Instance<Primitive: Intersect> {
+    pub primitive: AliasRc<Vec<Primitive>, Primitive>,
     pub rotation_scale: glm::Mat4,
     pub rotation_scale_inverse: glm::Mat4,
     pub model: glm::Mat4,
     pub model_inverse: glm::Mat4,
-    pub material_override: Option<&'material Material>,
+    pub material_override: Option<AliasRc<Vec<Material>, Material>>,
 }
 
-impl<'primitive, 'material, Primitive: Intersect> Instance<'_, '_, Primitive> {
+impl<Primitive: Intersect> Instance<Primitive> {
     pub fn new(
-        primitive: &'primitive Primitive,
+        primitive: AliasRc<Vec<Primitive>, Primitive>,
         position: glm::Vec3,
         orientation: glm::Vec3,
         scale: glm::Vec3,
-        material_override: Option<&'material Material>,
-    ) -> Instance<'primitive, 'material, Primitive> {
+        material_override: Option<AliasRc<Vec<Material>, Material>>,
+    ) -> Instance<Primitive> {
         let rotation_scale_transform = matrix::scaling(&scale) * matrix::rotation(orientation.y, orientation.x, orientation.z);
         let rotation_scale_transform_inverse = glm::inverse(&rotation_scale_transform);
 

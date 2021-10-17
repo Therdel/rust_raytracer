@@ -3,6 +3,7 @@ use crate::utils;
 use nalgebra_glm as glm;
 use num_traits::identities::Zero;
 use num_traits::Signed;
+use crate::utils::AliasRc;
 
 const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-5;
 
@@ -15,10 +16,10 @@ pub trait Intersect {
     fn intersect(&self, ray: &Ray) -> Option<Self::Result>;
 }
 
-impl<'a> Intersect for Sphere<'a> {
-    type Result = Hitpoint<'a>;
+impl Intersect for Sphere {
+    type Result = Hitpoint;
 
-    fn intersect(&self, ray: &Ray) -> Option<Hitpoint<'a>> {
+    fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
         let mut result = None;
 
         // m = rOrg - C
@@ -83,7 +84,7 @@ impl<'a> Intersect for Sphere<'a> {
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
                 let normal = self.normal(&hit_position);
-                let hitpoint = create_hitpoint(t, &hit_position, ray, &normal, self.material);
+                let hitpoint = create_hitpoint(t, &hit_position, ray, &normal, self.material.clone());
 
                 result = Some(hitpoint);
             }
@@ -92,10 +93,10 @@ impl<'a> Intersect for Sphere<'a> {
     }
 }
 
-impl<'a> Intersect for Plane<'a> {
-    type Result = Hitpoint<'a>;
+impl Intersect for Plane {
+    type Result = Hitpoint;
 
-    fn intersect(&self, ray: &Ray) -> Option<Hitpoint<'a>> {
+    fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
         let mut result = None;
 
         let n_dot_rdir = glm::dot(&self.normal, &ray.direction);
@@ -110,7 +111,7 @@ impl<'a> Intersect for Plane<'a> {
             let does_intersect_in_ray_direction = t >= 0.0;
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
-                let hitpoint = create_hitpoint(t, &hit_position, ray, &self.normal, self.material);
+                let hitpoint = create_hitpoint(t, &hit_position, ray, &self.normal, self.material.clone());
 
                 result = Some(hitpoint);
             }
@@ -119,10 +120,10 @@ impl<'a> Intersect for Plane<'a> {
     }
 }
 
-impl<'a> Intersect for Triangle<'a> {
-    type Result = Hitpoint<'a>;
+impl Intersect for Triangle {
+    type Result = Hitpoint;
 
-    fn intersect(&self, ray: &Ray) -> Option<Hitpoint<'a>> {
+    fn intersect(&self, ray: &Ray) -> Option<Hitpoint> {
         let mut result = None;
         let (a, b, c) = (&self.vertices[0], &self.vertices[1], &self.vertices[2]);
 
@@ -149,7 +150,7 @@ impl<'a> Intersect for Triangle<'a> {
             !is_hit_point_outside;
         if does_intersect {
             let hit_position = utils::ray_equation(ray, t);
-            let hitpoint = create_hitpoint(t, &hit_position, ray, self.normal(), self.material);
+            let hitpoint = create_hitpoint(t, &hit_position, ray, self.normal(), self.material.clone());
 
             result = Some(hitpoint);
         }
@@ -201,8 +202,8 @@ impl Intersect for AABB {
     }
 }
 
-impl<'material> Intersect for Mesh<'material> {
-    type Result = Hitpoint<'material>;
+impl Intersect for Mesh {
+    type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
         let mut closest_hitpoint = None;
@@ -218,8 +219,8 @@ impl<'material> Intersect for Mesh<'material> {
     }
 }
 
-impl<'primitive, 'material, Primitive> Intersect for Instance<'primitive, 'material, Primitive>
-where Primitive: Intersect<Result=Hitpoint<'material>> {
+impl<Primitive> Intersect for Instance<Primitive>
+where Primitive: Intersect<Result=Hitpoint> {
     type Result = Primitive::Result;
 
     fn intersect(&self, ray: &Ray) -> Option<Self::Result>{
@@ -248,14 +249,15 @@ where Primitive: Intersect<Result=Hitpoint<'material>> {
         hitpoint.t = t_in_world;
 
         // TODO: Why does this work with both ```ref material``` and ```material```?
-        if let Some(material) = self.material_override {
-            hitpoint.material = material;
+        if let Some(ref material) = self.material_override {
+            hitpoint.material = material.clone();
         }
         Some(hitpoint)
     }
 }
 
-fn create_hitpoint<'material>(t: f32, hit_position: &glm::Vec3, ray: &Ray, normal: &glm::Vec3, material: &'material Material) -> Hitpoint<'material> {
+fn create_hitpoint(t: f32, hit_position: &glm::Vec3, ray: &Ray, normal: &glm::Vec3,
+                   material: AliasRc<Vec<Material>, Material>) -> Hitpoint {
     let n_dot_rdir = glm::dot(normal, &ray.direction);
     let intersect_frontside = n_dot_rdir < 0.0;
 

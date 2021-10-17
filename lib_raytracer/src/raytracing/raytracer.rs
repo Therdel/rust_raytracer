@@ -9,7 +9,7 @@ const MAX_RAY_RECURSION_DEPTH: usize = 10;
 const REFLECTION_DIM_FACTOR: f32 = 0.8;
 
 pub struct Raytracer<'scene> {
-    scene: &'scene Scene<'scene>,
+    scene: &'scene Scene,
     screen_to_world: glm::Mat4
 }
 
@@ -93,7 +93,7 @@ impl Private for Raytracer<'_> {
     fn shade(&self, ray: &Ray, hitpoint: &Hitpoint, ray_recursion_depth: usize) -> Option<ColorRgb> {
         let shade_phong = || {
             let mut current_color = None;
-            for light in &self.scene.lights {
+            for light in self.scene.lights.iter() {
                 let is_shadow = self.trace_shadow_ray(&hitpoint.position, light);
                 let radiance_color = self.radiance(ray, hitpoint, light, is_shadow);
 

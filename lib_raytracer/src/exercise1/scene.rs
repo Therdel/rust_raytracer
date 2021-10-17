@@ -1,18 +1,18 @@
 use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Instance, Mesh};
 use crate::raytracing::color::ColorRgb;
 use crate::utils;
-use crate::utils::AliasRc;
+use crate::utils::AliasArc;
 
 pub struct Scene {
     pub camera: Camera,
     pub background: ColorRgb,
-    pub lights: AliasRc<Vec<Light>, [Light]>,
-    pub planes: AliasRc<Vec<Plane>, [Plane]>,
-    pub spheres: AliasRc<Vec<Sphere>, [Sphere]>,
-    pub triangles: AliasRc<Vec<Triangle>, [Triangle]>,
+    pub lights: AliasArc<Vec<Light>, [Light]>,
+    pub planes: AliasArc<Vec<Plane>, [Plane]>,
+    pub spheres: AliasArc<Vec<Sphere>, [Sphere]>,
+    pub triangles: AliasArc<Vec<Triangle>, [Triangle]>,
 
-    pub meshes: AliasRc<Vec<Mesh>, [Mesh]>,
-    pub mesh_instances: AliasRc<Vec<Instance<Mesh>>, [Instance<Mesh>]>,
+    pub meshes: AliasArc<Vec<Mesh>, [Mesh]>,
+    pub mesh_instances: AliasArc<Vec<Instance<Mesh>>, [Instance<Mesh>]>,
 
     // TODO: why can't we do this?
     //     - Somehow Instances Primitive (dyn Intersect<_> here) size is implicitly required to be Sized.
@@ -25,7 +25,7 @@ pub struct Scene {
     //       appears because of not being Sync when used with rayon
     // pub dyn_intersectables: Vec<Box<dyn Intersect<Result=Hitpoint<'a>> >>,
 
-    pub materials: AliasRc<Vec<Material>, [Material]>
+    pub materials: AliasArc<Vec<Material>, [Material]>
 }
 
 // impl<'a> Scene<'a> {

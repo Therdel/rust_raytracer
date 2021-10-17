@@ -4,14 +4,14 @@ use std::ffi::CString;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::PathBuf;
-use std::rc::Rc;
+use std::sync::Arc;
 use lib_raytracer::exercise1::{Canvas, Scene, object_file};
 use lib_raytracer::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
 use nalgebra_glm as glm;
 use rayon::prelude::*;
 use std::time::Instant;
 use num_traits::zero;
-use lib_raytracer::utils::AliasRc;
+use lib_raytracer::utils::AliasArc;
 use write_png::*;
 
 const IMAGE_PATH: &'static str = "render.png";
@@ -33,9 +33,7 @@ fn main() {
         triangles,
         meshes,
         mesh_instances,
-
         materials,
-
     };
 
     let time_start = Instant::now();
@@ -53,7 +51,7 @@ fn paint_scene(scene: &Scene) -> Canvas {
     let mut canvas = Canvas::new(canvas_dimensions, scene.background);
 
     canvas.borrow_stripes_mut()
-        //.par_bridge()
+        .par_bridge()
         .for_each(|mut row_stripe| {
             let y = row_stripe.get_y_coord();
             for x in 0..scene.camera.pixel_width {
@@ -67,8 +65,8 @@ fn paint_scene(scene: &Scene) -> Canvas {
     canvas
 }
 
-fn test_lights() -> AliasRc<Vec<Light>, [Light]> {
-    let rc = Rc::new(vec![
+fn test_lights() -> AliasArc<Vec<Light>, [Light]> {
+    let arc = Arc::new(vec![
         Light {
             position: glm::vec4(1.0, 5.0, 1.0, 1.0), // directional
             color: LightColor {
@@ -78,7 +76,7 @@ fn test_lights() -> AliasRc<Vec<Light>, [Light]> {
             }
         }
     ]);
-    AliasRc::new(rc, |vec|vec.as_slice())
+    AliasArc::new(arc, |vec|vec.as_slice())
 }
 
 fn test_camera(width: usize, height: usize) -> Camera {
@@ -94,8 +92,8 @@ fn test_camera(width: usize, height: usize) -> Camera {
     }
 }
 
-fn test_materials() -> AliasRc<Vec<Material>, [Material]> {
-    let rc = Rc::new(vec![
+fn test_materials() -> AliasArc<Vec<Material>, [Material]> {
+    let arc = Arc::new(vec![
         Material {
             name: String::from("some_shiny_red"),
             emissive: glm::vec3(0.1, 0.0, 0.0),
@@ -163,10 +161,10 @@ fn test_materials() -> AliasRc<Vec<Material>, [Material]> {
             },
         },
     ]);
-    AliasRc::new(rc, |vec|vec.as_slice())
+    AliasArc::new(arc, |vec|vec.as_slice())
 }
 
-fn get_material(materials: AliasRc<Vec<Material>, [Material]>, name: &str) -> Option<AliasRc<Vec<Material>, Material>> {
+fn get_material(materials: AliasArc<Vec<Material>, [Material]>, name: &str) -> Option<AliasArc<Vec<Material>, Material>> {
     let index = materials
         .iter()
         .enumerate()
@@ -175,12 +173,12 @@ fn get_material(materials: AliasRc<Vec<Material>, [Material]>, name: &str) -> Op
         })
         .map(|(index, _)|index)?;
 
-    let materials_rc = AliasRc::into_parent(materials);
-    let alias_rc = AliasRc::new(materials_rc, |vec|&vec[index]);
-    Some(alias_rc)
+    let materials_arc = AliasArc::into_parent(materials);
+    let alias_arc = AliasArc::new(materials_arc, |vec|&vec[index]);
+    Some(alias_arc)
 }
 
-fn get_mesh(meshes: AliasRc<Vec<Mesh>, [Mesh]>, name: &str) -> Option<AliasRc<Vec<Mesh>, Mesh>> {
+fn get_mesh(meshes: AliasArc<Vec<Mesh>, [Mesh]>, name: &str) -> Option<AliasArc<Vec<Mesh>, Mesh>> {
     let index = meshes
         .iter()
         .enumerate()
@@ -189,13 +187,13 @@ fn get_mesh(meshes: AliasRc<Vec<Mesh>, [Mesh]>, name: &str) -> Option<AliasRc<Ve
         })
         .map(|(index, _)|index)?;
 
-    let mesh_rc = AliasRc::into_parent(meshes);
-    let alias_rc = AliasRc::new(mesh_rc, |vec|&vec[index]);
-    Some(alias_rc)
+    let mesh_arc = AliasArc::into_parent(meshes);
+    let alias_arc = AliasArc::new(mesh_arc, |vec|&vec[index]);
+    Some(alias_arc)
 }
 
-fn test_triangles(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<Triangle>, [Triangle]> {
-    let rc = Rc::new(vec![
+fn test_triangles(materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Triangle>, [Triangle]> {
+    let arc = Arc::new(vec![
         Triangle::new([glm::vec3(-5.0, 1.25, -5.0),
                           glm::vec3(5.0, 1.25, -5.0),
                           glm::vec3(0.0, -3.75, -5.0)],
@@ -210,22 +208,22 @@ fn test_triangles(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec
                       get_material(materials.clone(), "some_shiny_blue").unwrap(),
         ),
     ]);
-    AliasRc::new(rc, Vec::as_slice)
+    AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_planes(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<Plane>, [Plane]> {
-    let rc = Rc::new(vec![
+fn test_planes(materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Plane>, [Plane]> {
+    let arc = Arc::new(vec![
         Plane {
             normal: glm::vec3(0.0, -1.0, 0.0),
             distance: 5.0,
             material: get_material(materials.clone(), "some_shiny_green").unwrap(),
         }
     ]);
-    AliasRc::new(rc, Vec::as_slice)
+    AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_spheres(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<Sphere>, [Sphere]> {
-    let rc = Rc::new(vec![
+fn test_spheres(materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Sphere>, [Sphere]> {
+    let arc = Arc::new(vec![
         Sphere {
             center: glm::vec3(0.0, 1.0, -5.0),
             radius: 0.5,
@@ -247,10 +245,10 @@ fn test_spheres(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<S
             material: get_material(materials.clone(), "reflective").unwrap(),
         }
     ]);
-    AliasRc::new(rc, Vec::as_slice)
+    AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_meshes(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<Mesh>, [Mesh]> {
+fn test_meshes(materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Mesh>, [Mesh]> {
     use lib_raytracer::exercise1::object_file::WindingOrder;
 
 
@@ -260,14 +258,14 @@ fn test_meshes(materials: &AliasRc<Vec<Material>, [Material]>) -> AliasRc<Vec<Me
     let mesh = object_file::load_mesh("sphere_low".to_string(),
                                       &mut obj_file,
                                       material, WindingOrder::CounterClockwise);
-    let rc = Rc::new(vec![
+    let arc = Arc::new(vec![
         mesh.unwrap()
     ]);
-    AliasRc::new(rc, Vec::as_slice)
+    AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_instanced_meshes(materials: &AliasRc<Vec<Material>, [Material]>,
-                         meshes: &AliasRc<Vec<Mesh>, [Mesh]>) -> AliasRc<Vec<Instance<Mesh>>, [Instance<Mesh>]> {
+fn test_instanced_meshes(materials: &AliasArc<Vec<Material>, [Material]>,
+                         meshes: &AliasArc<Vec<Mesh>, [Mesh]>) -> AliasArc<Vec<Instance<Mesh>>, [Instance<Mesh>]> {
     let material_override = get_material(materials.clone(), "reflective");
     let mesh = get_mesh(meshes.clone(), "sphere_low").unwrap();
 
@@ -275,8 +273,8 @@ fn test_instanced_meshes(materials: &AliasRc<Vec<Material>, [Material]>,
     let orientation = glm::vec3(0.0, 0.0, 0.0);
     let scale = glm::vec3(1.0, 1.0, 1.0);
 
-    let rc = Rc::new(vec![
+    let arc = Arc::new(vec![
         Instance::new(mesh, offset, orientation, scale, material_override)
     ]);
-    AliasRc::new(rc, Vec::as_slice)
+    AliasArc::new(arc, Vec::as_slice)
 }

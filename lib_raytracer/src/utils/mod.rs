@@ -1,8 +1,11 @@
-mod alias_rc;
-pub use alias_rc::*;
-
-use crate::raytracing::{Ray, Hitpoint};
 use nalgebra_glm as glm;
+use crate::raytracing::{Hitpoint, Ray};
+
+mod alias_rc;
+mod alias_arc;
+
+pub use alias_arc::*;
+pub use alias_rc::*;
 
 #[cfg(test)]
 pub fn assert_approx_eq(a: f32, b: f32) {

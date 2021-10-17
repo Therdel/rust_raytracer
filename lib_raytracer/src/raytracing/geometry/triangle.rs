@@ -1,18 +1,18 @@
 use crate::raytracing::Material;
 use nalgebra_glm as glm;
-use crate::utils::AliasRc;
+use crate::utils::AliasArc;
 
 pub struct Triangle {
     pub vertices: [glm::Vec3; 3],
     pub normals: [glm::Vec3; 3],
     normal: glm::Vec3,
 
-    pub material: AliasRc<Vec<Material>, Material>,
+    pub material: AliasArc<Vec<Material>, Material>,
 }
 
 impl Triangle {
     pub fn new(vertices: [glm::Vec3; 3], normals: [glm::Vec3; 3],
-               material: AliasRc<Vec<Material>, Material>) -> Triangle {
+               material: AliasArc<Vec<Material>, Material>) -> Triangle {
         Triangle {
             vertices,
             normals,

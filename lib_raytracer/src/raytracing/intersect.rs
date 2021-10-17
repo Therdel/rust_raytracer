@@ -3,7 +3,7 @@ use crate::utils;
 use nalgebra_glm as glm;
 use num_traits::identities::Zero;
 use num_traits::Signed;
-use crate::utils::AliasRc;
+use crate::utils::AliasArc;
 
 const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-5;
 
@@ -257,7 +257,7 @@ where Primitive: Intersect<Result=Hitpoint> {
 }
 
 fn create_hitpoint(t: f32, hit_position: &glm::Vec3, ray: &Ray, normal: &glm::Vec3,
-                   material: AliasRc<Vec<Material>, Material>) -> Hitpoint {
+                   material: AliasArc<Vec<Material>, Material>) -> Hitpoint {
     let n_dot_rdir = glm::dot(normal, &ray.direction);
     let intersect_frontside = n_dot_rdir < 0.0;
 

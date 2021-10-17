@@ -1,12 +1,12 @@
 use crate::raytracing::Material;
 use nalgebra_glm as glm;
-use crate::utils::AliasRc;
+use crate::utils::AliasArc;
 
 pub struct Sphere {
     pub center: glm::Vec3,
     pub radius: f32,
 
-    pub material: AliasRc<Vec<Material>, Material>,
+    pub material: AliasArc<Vec<Material>, Material>,
 }
 
 impl Sphere {

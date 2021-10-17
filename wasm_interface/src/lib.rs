@@ -1,8 +1,10 @@
 use std::io::Cursor;
 use std::os::raw::c_void;
 use std::mem;
+use std::sync::Arc;
 use lib_raytracer::exercise1::{Scene, object_file};
 use lib_raytracer::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
+use lib_raytracer::utils::AliasArc;
 use num_traits::zero;
 
 // In order to work with the memory we expose (de)allocation methods
@@ -45,6 +47,9 @@ impl QuantizeToU8 for ColorRgba {
     }
 }
 
+fn empty_alias_vec<T>() -> AliasArc<Vec<T>, [T]> {
+    AliasArc::new(Default::default(), Vec::as_slice)
+}
 
 #[no_mangle]
 pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize, mesh_obj_buf: *const u8, mesh_obj_buf_len: usize) {
@@ -56,25 +61,24 @@ pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize, mesh_obj_buf
     };
 
     let background = Color::urple();
-    let mut scene = Scene {
+    let materials = test_materials();
+    let planes = test_planes(&materials);
+    let spheres = test_spheres(&materials);
+    let triangles = test_triangles(&materials);
+    let meshes = test_meshes(&materials, mesh_obj);
+    let mesh_instances = empty_alias_vec();//test_instanced_meshes(&materials, &meshes);
+
+    let scene = Scene {
         camera: test_camera(width, height),
         background,
         lights: test_lights(),
-        planes: vec![],
-        spheres: vec![],
-        triangles: vec![],
-        meshes: vec![],
-        mesh_instances: vec![],
-
-        materials: vec![],
-
+        planes,
+        spheres,
+        triangles,
+        meshes,
+        mesh_instances,
+        materials,
     };
-    scene.materials = test_materials();
-    scene.planes = test_planes(&scene.materials);
-    scene.spheres = test_spheres(&scene.materials);
-    scene.triangles = test_triangles(&scene.materials);
-    scene.meshes = test_meshes(&scene.materials, mesh_obj);
-    scene.mesh_instances = test_instanced_meshes(&scene.materials, &scene.meshes);
 
     let raytracer = Raytracer::new(&scene);
     for y in 0..height {
@@ -97,8 +101,8 @@ pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize, mesh_obj_buf
     }
 }
 
-fn test_lights() -> Vec<Light> {
-    vec![
+fn test_lights() -> AliasArc<Vec<Light>, [Light]> {
+    let arc = Arc::new(vec![
         Light {
             position: glm::vec4(1.0, 5.0, 1.0, 1.0), // directional
             color: LightColor {
@@ -107,7 +111,8 @@ fn test_lights() -> Vec<Light> {
                 specular: glm::vec3(0.5, 0.5, 0.5),
             }
         }
-    ]
+    ]);
+    AliasArc::new(arc, Vec::as_slice)
 }
 
 fn test_camera(width: usize, height: usize) -> Camera {
@@ -123,8 +128,8 @@ fn test_camera(width: usize, height: usize) -> Camera {
     }
 }
 
-fn test_materials() -> Vec<Material> {
-    vec![
+fn test_materials() -> AliasArc<Vec<Material>, [Material]> {
+    let arc = Arc::new(vec![
         Material {
             name: String::from("some_shiny_red"),
             emissive: glm::vec3(0.1, 0.0, 0.0),
@@ -191,102 +196,120 @@ fn test_materials() -> Vec<Material> {
                 index_outer: 1.0
             },
         },
-    ]
+    ]);
+    AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_triangles(materials: &[Material]) -> Vec<Triangle> {
-    vec![
+fn get_material(materials: AliasArc<Vec<Material>, [Material]>, name: &str) -> Option<AliasArc<Vec<Material>, Material>> {
+    let index = materials
+        .iter()
+        .enumerate()
+        .find(|&(_, material)| {
+            material.name == name
+        })
+        .map(|(index, _)|index)?;
+
+    let materials_arc = AliasArc::into_parent(materials);
+    let alias_arc = AliasArc::new(materials_arc, |vec|&vec[index]);
+    Some(alias_arc)
+}
+
+fn get_mesh(meshes: AliasArc<Vec<Mesh>, [Mesh]>, name: &str) -> Option<AliasArc<Vec<Mesh>, Mesh>> {
+    let index = meshes
+        .iter()
+        .enumerate()
+        .find(|&(_, mesh)| {
+            mesh.id == name
+        })
+        .map(|(index, _)|index)?;
+
+    let mesh_arc = AliasArc::into_parent(meshes);
+    let alias_arc = AliasArc::new(mesh_arc, |vec|&vec[index]);
+    Some(alias_arc)
+}
+
+fn test_triangles(materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Triangle>, [Triangle]> {
+    let arc = Arc::new(vec![
         Triangle::new([glm::vec3(-5.0, 1.25, -5.0),
                           glm::vec3(5.0, 1.25, -5.0),
                           glm::vec3(0.0, -3.75, -5.0)],
                       [zero(); 3],
-                      materials.iter().find(|&material| {
-                          material.name == "some_shiny_white"
-                      }).unwrap()
+                      get_material(materials.clone(), "some_shiny_white").unwrap()
         ),
         Triangle::new([glm::vec3(-5.0, -2.5, -5.0),
                           glm::vec3(5.0, -2.5, -5.0),
                           glm::vec3(0.0, 2.5, -5.0)
                       ],
                       [zero(); 3],
-                      materials.iter().find(|&material| {
-                          material.name == "some_shiny_blue"
-                      }).unwrap(),
+                      get_material(materials.clone(), "some_shiny_blue").unwrap(),
         ),
-    ]
+    ]);
+    AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_planes(materials: &[Material]) -> Vec<Plane> {
-    vec![
+fn test_planes(materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Plane>, [Plane]> {
+    let arc = Arc::new(vec![
         Plane {
             normal: glm::vec3(0.0, -1.0, 0.0),
             distance: 5.0,
-            material: materials.iter().find(|&material| {
-                material.name == "some_shiny_green"
-            }).unwrap()
+            material: get_material(materials.clone(), "some_shiny_green").unwrap(),
         }
-    ]
+    ]);
+    AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_spheres(materials: &[Material]) -> Vec<Sphere> {
-    vec![
+fn test_spheres(materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Sphere>, [Sphere]> {
+    let arc = Arc::new(vec![
         Sphere {
             center: glm::vec3(0.0, 1.0, -5.0),
             radius: 0.5,
-            material: materials.iter().find(|&material| {
-                material.name == "some_shiny_red"
-            }).unwrap()
+            material: get_material(materials.clone(), "some_shiny_red").unwrap(),
         },
         Sphere {
             center: glm::vec3(0.0, 0.0, -4.0),
             radius: 0.5,
-            material: materials.iter().find(|&material| {
-                material.name == "some_shiny_red"
-            }).unwrap()
+            material: get_material(materials.clone(), "some_shiny_red").unwrap(),
         },
         Sphere {
             center: glm::vec3(0.0, -1.0, -3.0),
             radius: 0.5,
-            material: materials.iter().find(|&material| {
-                material.name == "transparent"
-            }).unwrap()
+            material: get_material(materials.clone(), "transparent").unwrap(),
         },
         Sphere {
             center: glm::vec3(0.0, 2.5, -5.0),
             radius: 1.0,
-            material: materials.iter().find(|&material| {
-                material.name == "reflective"
-            }).unwrap()
+            material: get_material(materials.clone(), "reflective").unwrap(),
         }
-    ]
+    ]);
+    AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_meshes<'a>(materials: &'a[Material], mesh_obj: &[u8]) -> Vec<Mesh<'a>> {
+fn test_meshes(materials: &AliasArc<Vec<Material>, [Material]>, mesh_obj: &[u8]) -> AliasArc<Vec<Mesh>, [Mesh]> {
     use lib_raytracer::exercise1::object_file::WindingOrder;
 
-    let material = materials.iter().find(|&material| {
-        material.name == "some_shiny_white"
-    }).unwrap();
 
+    let material = get_material(materials.clone(), "some_shiny_white").unwrap();
     let mut mesh_obj_bufread = Cursor::new(mesh_obj);
     let mesh = object_file::load_mesh("sphere_low".to_string(),
                                       &mut mesh_obj_bufread,
                                       material, WindingOrder::CounterClockwise);
-    vec![
+    let arc = Arc::new(vec![
         mesh.unwrap()
-    ]
+    ]);
+    AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_instanced_meshes<'a>(materials: &'a[Material], meshes: &'a[Mesh]) -> Vec<Instance<'a, 'a, Mesh<'a>>> {
-    let material_override = materials.iter().find(|&material| {
-        material.name == "reflective"
-    });
+fn test_instanced_meshes(materials: &AliasArc<Vec<Material>, [Material]>,
+                         meshes: &AliasArc<Vec<Mesh>, [Mesh]>) -> AliasArc<Vec<Instance<Mesh>>, [Instance<Mesh>]> {
+    let material_override = get_material(materials.clone(), "reflective");
+    let mesh = get_mesh(meshes.clone(), "sphere_low").unwrap();
 
     let offset = glm::vec3(-1.0, -1.0, -2.0);
     let orientation = glm::vec3(0.0, 0.0, 0.0);
     let scale = glm::vec3(1.0, 1.0, 1.0);
 
-    vec![
-        Instance::new(&meshes[0], offset, orientation, scale, material_override)
-    ]
+    let arc = Arc::new(vec![
+        Instance::new(mesh, offset, orientation, scale, material_override)
+    ]);
+    AliasArc::new(arc, Vec::as_slice)
 }

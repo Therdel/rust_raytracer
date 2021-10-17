@@ -254,24 +254,22 @@ impl Private for Raytracer<'_> {
     }
 }
 
-/// TODO: Why does the second one compile but the first doesn't?
-/// ```
-/// impl<'scene> Public for Raytracer<'_> {
-///    fn new(scene: &'scene Scene) -> Raytracer<'scene> {
-///         let screen_to_world = crate::raytracing::transform::matrix::screen_to_world(&scene.camera);
-///         Raytracer {
-///             scene,
-///             screen_to_world,
-///         }
-///     }
-/// }
-/// impl Public for Raytracer<'_> {
-///     fn new<'scene>(scene: &'scene Scene) -> Raytracer<'scene> {
-///         let screen_to_world = crate::raytracing::transform::matrix::screen_to_world(&scene.camera);
-///         Raytracer {
-///             scene,
-///             screen_to_world,
-///         }
-///     }
-/// }```
-const _TODO_MESSAGE: () = ();
+// TODO: Why does the second one compile but the first doesn't?
+// impl<'scene> Public for Raytracer<'_> {
+//    fn new(scene: &'scene Scene) -> Raytracer<'scene> {
+//         let screen_to_world = crate::raytracing::transform::matrix::screen_to_world(&scene.camera);
+//         Raytracer {
+//             scene,
+//             screen_to_world,
+//         }
+//     }
+// }
+// impl Public for Raytracer<'_> {
+//     fn new<'scene>(scene: &'scene Scene) -> Raytracer<'scene> {
+//         let screen_to_world = crate::raytracing::transform::matrix::screen_to_world(&scene.camera);
+//         Raytracer {
+//             scene,
+//             screen_to_world,
+//         }
+//     }
+// }

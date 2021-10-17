@@ -24,7 +24,7 @@ fn main() {
     let meshes = test_meshes(&materials);
     let mesh_instances = test_instanced_meshes(&materials, &meshes);
 
-    let mut scene = Scene {
+    let scene = Scene {
         camera: test_camera(3640, 2160),
         background: Color::urple(),
         lights: test_lights(),
@@ -42,7 +42,7 @@ fn main() {
 
     let path = CString::new(IMAGE_PATH)
         .expect(&format!("Invalid target image path: ('{}')", IMAGE_PATH));
-    canvas.write_png(path.as_c_str())
+    canvas.write_png(path.as_c_str());
 }
 
 fn paint_scene(scene: &Scene) -> Canvas {
@@ -76,7 +76,7 @@ fn test_lights() -> AliasArc<Vec<Light>, [Light]> {
             }
         }
     ]);
-    AliasArc::new(arc, |vec|vec.as_slice())
+    AliasArc::new(arc, Vec::as_slice)
 }
 
 fn test_camera(width: usize, height: usize) -> Camera {
@@ -161,14 +161,14 @@ fn test_materials() -> AliasArc<Vec<Material>, [Material]> {
             },
         },
     ]);
-    AliasArc::new(arc, |vec|vec.as_slice())
+    AliasArc::new(arc, Vec::as_slice)
 }
 
 fn get_material(materials: AliasArc<Vec<Material>, [Material]>, name: &str) -> Option<AliasArc<Vec<Material>, Material>> {
     let index = materials
         .iter()
         .enumerate()
-        .find(|&(index, material)| {
+        .find(|&(_, material)| {
             material.name == name
         })
         .map(|(index, _)|index)?;
@@ -182,7 +182,7 @@ fn get_mesh(meshes: AliasArc<Vec<Mesh>, [Mesh]>, name: &str) -> Option<AliasArc<
     let index = meshes
         .iter()
         .enumerate()
-        .find(|&(index, mesh)| {
+        .find(|&(_, mesh)| {
             mesh.id == name
         })
         .map(|(index, _)|index)?;

@@ -1,9 +1,13 @@
-use std::io::BufRead;
-use std::path::Path;
-use crate::raytracing::{Material, Mesh, Triangle};
-use tobj::{LoadError, LoadOptions, Model, MTLLoadResult};
+use std::error::Error;
+use std::fmt::{self, Debug, Display};
+use std::io::{self, BufRead, ErrorKind};
 use std::ops::Neg;
+use std::path::Path;
+
 use nalgebra_glm as glm;
+use tobj::{LoadError, LoadOptions, Model, MTLLoadResult};
+
+use crate::raytracing::{Material, Mesh, Triangle};
 use crate::utils::AliasArc;
 
 pub enum WindingOrder {
@@ -11,17 +15,17 @@ pub enum WindingOrder {
     CounterClockwise,
 }
 
-pub fn load_mesh<'a>(id: String,
-                     obj_buffer: &mut impl BufRead,
-                     material: AliasArc<Vec<Material>, Material>,
-                     winding_order: WindingOrder) -> Result<Mesh, String> {
-    let models = parse_models_from_obj_buffer(obj_buffer)?;
+pub fn load_mesh(id: String,
+                 obj_buffer: &mut impl BufRead,
+                 material: AliasArc<Vec<Material>, Material>,
+                 winding_order: WindingOrder) -> io::Result<Mesh> {
+    let models = parse_models_from_obj_buffer(&id, obj_buffer)?;
 
+    let amount_triangles_total = check_and_count_triangles(&id, &models)?;
     let mut mesh = Mesh {
         id,
         triangles: vec![],
     };
-    let amount_triangles_total = check_and_count_triangles(&models)?;
     mesh.triangles.reserve_exact(amount_triangles_total);
 
     for model in models {
@@ -48,7 +52,7 @@ pub fn load_mesh<'a>(id: String,
     Ok(mesh)
 }
 
-fn parse_models_from_obj_buffer(obj_buffer: &mut impl BufRead) -> Result<Vec<Model>, String> {
+fn parse_models_from_obj_buffer(id: &str, obj_buffer: &mut impl BufRead) -> io::Result<Vec<Model>> {
     // triangulate meshes, resulting in triangles only
     // also build single/unified index for vertices and normals -> shorter code
     let mut load_options = LoadOptions::default();
@@ -57,23 +61,23 @@ fn parse_models_from_obj_buffer(obj_buffer: &mut impl BufRead) -> Result<Vec<Mod
 
     /// throws an error on any requested material - material files are *unsupported*
     fn material_loader(_path: &Path) -> MTLLoadResult { Err(LoadError::OpenFileFailed) }
-    // TODO: Beautify
+
     match tobj::load_obj_buf(obj_buffer, &load_options, material_loader) {
         Ok((models, _)) => Ok(models),
-        Err(error) => Err(format!("Failed to parse .obj buffer: {}", error.to_string()))
+        Err(error) => ObjLoadError::create_err(id, error)
     }
 }
 
-fn check_and_count_triangles(models: &[Model]) -> Result<usize, String> {
+fn check_and_count_triangles(id: &str, models: &[Model]) -> io::Result<usize> {
     let mut triangle_count = 0;
 
     for model in models {
         if model.mesh.positions.len() != model.mesh.normals.len() {
-            return Err("Mesh doesn't have exactly one normal per vertex".to_string());
+            return ObjLoadError::create_err(id, "Mesh doesn't have exactly one normal per vertex".to_string());
         }
 
         if model.mesh.indices.len() % 3 != 0 {
-            return Err("Mesh vertices not divisible by 3 (not cleanly divisible into triangles)".to_string());
+            return ObjLoadError::create_err(id, "Mesh vertices not divisible by 3 (not cleanly divisible into triangles)".to_string());
         }
 
         triangle_count = triangle_count + model.mesh.indices.len() / 3;
@@ -100,3 +104,24 @@ fn deflatten_vec3(flattened: &[f32],
     )
 }
 
+#[derive(Debug)]
+struct ObjLoadError<InnerError: Display + Debug + Send + Sync> {
+    id: String,
+    inner_error: InnerError,
+}
+
+// TODO: Why is 'static required, what does it mean?
+impl<InnerError: 'static + Display + Debug + Send + Sync> ObjLoadError<InnerError> {
+    fn create_err<T>(id: &str, inner_error: InnerError) -> io::Result<T> {
+        let obj_load_error = Self { id: id.into(), inner_error };
+        Err(io::Error::new(ErrorKind::Other, obj_load_error))
+    }
+}
+
+impl<InnerError: Display + Debug + Send + Sync> Display for ObjLoadError<InnerError> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Failed to load .obj buffer of {}: {}", self.id, self.inner_error.to_string())
+    }
+}
+
+impl<InnerError: Display + Debug + Send + Sync> Error for ObjLoadError<InnerError> {}

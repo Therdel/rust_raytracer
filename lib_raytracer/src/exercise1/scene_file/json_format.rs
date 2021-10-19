@@ -29,11 +29,11 @@ pub struct Scene {
     pub screen: Screen,
     pub lights: Vec<Light>,
     pub materials: Vec<Material>,
-    pub planes: Vec<Plane>,
-    pub spheres: Vec<Sphere>,
-    pub triangles: Vec<Triangle>,
-    pub meshes: Vec<Mesh>,
-    pub mesh_instances: Vec<MeshInstance>
+    pub planes: Option<Vec<Plane>>,
+    pub spheres: Option<Vec<Sphere>>,
+    pub triangles: Option<Vec<Triangle>>,
+    pub meshes: Option<Vec<Mesh>>,
+    pub mesh_instances: Option<Vec<MeshInstance>>
 }
 
 #[derive(Deserialize)]

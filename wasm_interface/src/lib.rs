@@ -219,7 +219,7 @@ fn get_mesh(meshes: AliasArc<Vec<Mesh>, [Mesh]>, name: &str) -> Option<AliasArc<
         .iter()
         .enumerate()
         .find(|&(_, mesh)| {
-            mesh.id == name
+            mesh.name == name
         })
         .map(|(index, _)|index)?;
 

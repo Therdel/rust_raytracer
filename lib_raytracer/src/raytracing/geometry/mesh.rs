@@ -1,6 +1,6 @@
 use crate::raytracing::Triangle;
 
 pub struct Mesh {
-    pub id: String,
+    pub name: String,
     pub triangles: Vec<Triangle>
 }

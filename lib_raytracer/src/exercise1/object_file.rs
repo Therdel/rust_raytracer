@@ -15,15 +15,15 @@ pub enum WindingOrder {
     CounterClockwise,
 }
 
-pub fn load_mesh(id: String,
+pub fn load_mesh(name: String,
                  obj_buffer: &mut impl BufRead,
                  material: AliasArc<Vec<Material>, Material>,
                  winding_order: WindingOrder) -> io::Result<Mesh> {
-    let models = parse_models_from_obj_buffer(&id, obj_buffer)?;
+    let models = parse_models_from_obj_buffer(&name, obj_buffer)?;
 
-    let amount_triangles_total = check_and_count_triangles(&id, &models)?;
+    let amount_triangles_total = check_and_count_triangles(&name, &models)?;
     let mut mesh = Mesh {
-        id,
+        name,
         triangles: vec![],
     };
     mesh.triangles.reserve_exact(amount_triangles_total);
@@ -52,7 +52,7 @@ pub fn load_mesh(id: String,
     Ok(mesh)
 }
 
-fn parse_models_from_obj_buffer(id: &str, obj_buffer: &mut impl BufRead) -> io::Result<Vec<Model>> {
+fn parse_models_from_obj_buffer(name: &str, obj_buffer: &mut impl BufRead) -> io::Result<Vec<Model>> {
     // triangulate meshes, resulting in triangles only
     // also build single/unified index for vertices and normals -> shorter code
     let mut load_options = LoadOptions::default();
@@ -64,20 +64,20 @@ fn parse_models_from_obj_buffer(id: &str, obj_buffer: &mut impl BufRead) -> io::
 
     match tobj::load_obj_buf(obj_buffer, &load_options, material_loader) {
         Ok((models, _)) => Ok(models),
-        Err(error) => ObjLoadError::create_err(id, error)
+        Err(error) => ObjLoadError::create_err(name, error)
     }
 }
 
-fn check_and_count_triangles(id: &str, models: &[Model]) -> io::Result<usize> {
+fn check_and_count_triangles(name: &str, models: &[Model]) -> io::Result<usize> {
     let mut triangle_count = 0;
 
     for model in models {
         if model.mesh.positions.len() != model.mesh.normals.len() {
-            return ObjLoadError::create_err(id, "Mesh doesn't have exactly one normal per vertex".to_string());
+            return ObjLoadError::create_err(name, "Mesh doesn't have exactly one normal per vertex".to_string());
         }
 
         if model.mesh.indices.len() % 3 != 0 {
-            return ObjLoadError::create_err(id, "Mesh vertices not divisible by 3 (not cleanly divisible into triangles)".to_string());
+            return ObjLoadError::create_err(name, "Mesh vertices not divisible by 3 (not cleanly divisible into triangles)".to_string());
         }
 
         triangle_count = triangle_count + model.mesh.indices.len() / 3;
@@ -106,21 +106,21 @@ fn deflatten_vec3(flattened: &[f32],
 
 #[derive(Debug)]
 struct ObjLoadError<InnerError: Display + Debug + Send + Sync> {
-    id: String,
+    name: String,
     inner_error: InnerError,
 }
 
 // TODO: Why is 'static required, what does it mean?
 impl<InnerError: 'static + Display + Debug + Send + Sync> ObjLoadError<InnerError> {
-    fn create_err<T>(id: &str, inner_error: InnerError) -> io::Result<T> {
-        let obj_load_error = Self { id: id.into(), inner_error };
+    fn create_err<T>(name: &str, inner_error: InnerError) -> io::Result<T> {
+        let obj_load_error = Self { name: name.into(), inner_error };
         Err(io::Error::new(ErrorKind::Other, obj_load_error))
     }
 }
 
 impl<InnerError: Display + Debug + Send + Sync> Display for ObjLoadError<InnerError> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Failed to load .obj buffer of {}: {}", self.id, self.inner_error.to_string())
+        write!(f, "Failed to load .obj buffer of {}: {}", self.name, self.inner_error.to_string())
     }
 }
 

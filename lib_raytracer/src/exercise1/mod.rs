@@ -6,5 +6,4 @@ pub use canvas::*;
 
 pub mod object_file;
 
-mod scene_file_parser;
-pub use scene_file_parser::{SceneFileParser, MeshLoader};
+pub mod scene_file;

@@ -1,10 +1,9 @@
-mod json_format;
-
 use std::io::{self, BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
 use crate::exercise1::object_file::{self, WindingOrder};
 use crate::exercise1::Scene;
+use crate::exercise1::scene_file::{json_format, MeshLoader};
 use crate::raytracing::{Material, Mesh};
 use crate::utils::AliasArc;
 
@@ -36,17 +35,12 @@ fn get_mesh(meshes: AliasArc<Vec<Mesh>, [Mesh]>, name: &str) -> Option<AliasArc<
     Some(alias_arc)
 }
 
-pub trait MeshLoader {
-    fn load(&self, name: &str, file_name: &str, material: AliasArc<Vec<Material>, Material>,
-            winding_order: WindingOrder) -> io::Result<Mesh>;
-}
-
-pub struct SceneFileParser<S: BufRead, M: MeshLoader> {
+pub struct Parser<S: BufRead, M: MeshLoader> {
     pub file_reader: S,
     pub mesh_loader: M,
 }
 
-impl<S: BufRead, M: MeshLoader> SceneFileParser<S, M> {
+impl<S: BufRead, M: MeshLoader> Parser<S, M> {
     pub fn parse_json(&mut self) -> io::Result<Scene> {
         let scene: json_format::Scene = serde_json::from_reader(&mut self.file_reader)?;
 

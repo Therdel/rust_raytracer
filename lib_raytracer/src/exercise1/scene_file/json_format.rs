@@ -1,5 +1,4 @@
 use serde::{Deserialize};
-use serde_json::Result;
 
 #[derive(Deserialize)]
 pub struct Vec3 {
@@ -49,7 +48,7 @@ pub struct Camera {
 pub struct Screen {
     pub pixel_width: usize,
     pub pixel_height: usize,
-    pub ortho_world_height: f32,
+    pub background: ColorRgb
 }
 
 #[derive(Deserialize)]

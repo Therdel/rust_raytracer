@@ -1,4 +1,5 @@
 use crate::raytracing::color::*;
+use crate::raytracing::Screen;
 
 pub struct Canvas {
     pixels: Vec<ColorRgbU8>,
@@ -22,11 +23,11 @@ impl CanvasStripe<'_> {
 }
 
 impl Canvas {
-    pub fn new(canvas_dimensions: (usize, usize), background: ColorRgb) -> Canvas {
+    pub fn new(screen: &Screen) -> Canvas {
         Canvas {
-            pixels: vec![background.quantize(); canvas_dimensions.0 * canvas_dimensions.1],
-            width: canvas_dimensions.0,
-            height: canvas_dimensions.1
+            pixels: vec![screen.background.quantize(); screen.pixel_width * screen.pixel_height],
+            width: screen.pixel_width,
+            height: screen.pixel_height
         }
     }
 

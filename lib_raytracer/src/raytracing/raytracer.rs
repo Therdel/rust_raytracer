@@ -39,7 +39,7 @@ impl Public for Raytracer<'_> {
     fn new<'scene>(scene: &'scene Scene) -> Raytracer<'scene> {
         Raytracer {
             scene,
-            screen_to_world: matrix::screen_to_world(&scene.camera),
+            screen_to_world: matrix::screen_to_world(&scene.camera, &scene.screen),
         }
     }
 
@@ -109,7 +109,7 @@ impl Private for Raytracer<'_> {
 
             let reflection_color =
                 self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
-                    .unwrap_or(self.scene.background);
+                    .unwrap_or(self.scene.screen.background);
             Some(reflection_color * REFLECTION_DIM_FACTOR)
         };
 
@@ -127,9 +127,9 @@ impl Private for Raytracer<'_> {
             let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(&direction_reflected) };
 
             let reflected_color = self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
-                .unwrap_or(self.scene.background);
+                .unwrap_or(self.scene.screen.background);
             let transmitted_color = self.raytrace_impl(&transmitted_ray, ray_recursion_depth + 1)
-                .unwrap_or(self.scene.background);
+                .unwrap_or(self.scene.screen.background);
 
             let k_reflected = Self::get_fresnel_factor(&reflected_ray, &transmitted_ray,
                                                        &hitpoint.hit_normal,

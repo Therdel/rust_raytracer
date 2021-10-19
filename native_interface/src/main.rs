@@ -6,7 +6,7 @@ use std::io::BufReader;
 use std::path::PathBuf;
 use std::sync::Arc;
 use lib_raytracer::exercise1::{Canvas, Scene, object_file};
-use lib_raytracer::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh};
+use lib_raytracer::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightColor, Material, MaterialType, color::*, Instance, raytracer::{Raytracer, Public}, Mesh, Screen};
 use nalgebra_glm as glm;
 use rayon::prelude::*;
 use std::time::Instant;
@@ -25,8 +25,12 @@ fn main() {
     let mesh_instances = test_instanced_meshes(&materials, &meshes);
 
     let scene = Scene {
-        camera: test_camera(3640, 2160),
-        background: Color::urple(),
+        camera: test_camera(),
+        screen: Screen {
+            pixel_width: 3640,
+            pixel_height: 2160,
+            background: Color::urple()
+        },
         lights: test_lights(),
         planes,
         spheres,
@@ -47,14 +51,13 @@ fn main() {
 
 fn paint_scene(scene: &Scene) -> Canvas {
     let raytracer = Raytracer::new(&scene);
-    let canvas_dimensions = (scene.camera.pixel_width, scene.camera.pixel_height);
-    let mut canvas = Canvas::new(canvas_dimensions, scene.background);
+    let mut canvas = Canvas::new(&scene.screen);
 
     canvas.borrow_stripes_mut()
         .par_bridge()
         .for_each(|mut row_stripe| {
             let y = row_stripe.get_y_coord();
-            for x in 0..scene.camera.pixel_width {
+            for x in 0..scene.screen.pixel_width {
                 let coordinate = glm::vec2(x as _, y as _);
                 let ray = raytracer.generate_primary_ray(&coordinate);
                 if let Some(hit_color) = raytracer.raytrace(&ray) {
@@ -79,14 +82,12 @@ fn test_lights() -> AliasArc<Vec<Light>, [Light]> {
     AliasArc::new(arc, Vec::as_slice)
 }
 
-fn test_camera(width: usize, height: usize) -> Camera {
+fn test_camera() -> Camera {
     Camera {
         position: glm::vec3(3.0, 0.0, 1.0),
         orientation: glm::vec3(0.0f32.to_radians(),
                                25.0f32.to_radians(),
                                0.0f32.to_radians()),
-        pixel_width: width,
-        pixel_height: height,
         y_fov_degrees: 90.0,
         z_near: 0.1, z_far: 25.0,
     }

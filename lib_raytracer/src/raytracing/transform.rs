@@ -1,7 +1,7 @@
 pub mod matrix {
     use nalgebra_glm as glm;
     use num_traits::one;
-    use crate::raytracing::Camera;
+    use crate::raytracing::{Camera, Screen};
 
     pub fn translation(offset: &glm::Vec3) -> glm::Mat4 {
         glm::translation(offset)
@@ -64,14 +64,14 @@ pub mod matrix {
         glm::inverse(&camera_transorm)
     }
 
-    pub fn screen_to_world(camera: &Camera) -> glm::Mat4 {
-        let aspect = camera.pixel_width as f32 / camera.pixel_height as f32;
+    pub fn screen_to_world(camera: &Camera, screen: &Screen) -> glm::Mat4 {
+        let aspect = screen.pixel_width as f32 / screen.pixel_height as f32;
 
         let view_matrix = view(&camera.orientation, &camera.position);
         let projection_matrix = projection(camera.y_fov_degrees, aspect,
                                            camera.z_near, camera.z_far);
         let viewport_matrix = viewport(0.0, 0.0,
-                                       camera.pixel_width as f32, camera.pixel_height as f32,
+                                       screen.pixel_width as f32, screen.pixel_height as f32,
                                        camera.z_near, camera.z_far);
 
         let world_to_screen_matrix = viewport_matrix * projection_matrix * view_matrix;

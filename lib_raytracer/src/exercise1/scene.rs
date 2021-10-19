@@ -1,11 +1,11 @@
-use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Instance, Mesh};
+use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Instance, Mesh, Screen};
 use crate::raytracing::color::ColorRgb;
 use crate::utils;
 use crate::utils::AliasArc;
 
 pub struct Scene {
     pub camera: Camera,
-    pub background: ColorRgb,
+    pub screen: Screen,
     pub lights: AliasArc<Vec<Light>, [Light]>,
     pub planes: AliasArc<Vec<Plane>, [Plane]>,
     pub spheres: AliasArc<Vec<Sphere>, [Sphere]>,

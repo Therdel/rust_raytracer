@@ -38,8 +38,8 @@ pub struct Scene {
 #[derive(Deserialize)]
 pub struct Camera {
     pub position: Vec3,
-    pub orientation: Vec3,
-    pub y_fov: f32,
+    pub orientation_degrees: Vec3,
+    pub y_fov_degrees: f32,
     pub z_near: f32,
     pub z_far: f32,
 }
@@ -123,7 +123,7 @@ pub struct Mesh {
 pub struct MeshInstance {
     pub mesh: String,
     pub position: Vec3,
-    pub orientation: Vec3,
+    pub orientation_degrees: Vec3,
     pub scale: Vec3,
     pub material_override: Option<String>
 }

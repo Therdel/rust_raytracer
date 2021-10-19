@@ -1,3 +1,5 @@
+mod json_format;
+
 use std::io::{self, BufRead, BufReader};
 use std::path::{Path, PathBuf};
 
@@ -46,6 +48,8 @@ pub struct SceneFileParser<S: BufRead, M: MeshLoader> {
 
 impl<S: BufRead, M: MeshLoader> SceneFileParser<S, M> {
     pub fn parse_json(&mut self) -> io::Result<Scene> {
+        let scene: json_format::Scene = serde_json::from_reader(&mut self.file_reader)?;
+
         todo!()
     }
 }

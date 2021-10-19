@@ -75,12 +75,12 @@ pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize, mesh_obj_buf
             background: Color::urple()
         },
         lights: test_lights(),
+        materials,
         planes,
         spheres,
         triangles,
         meshes,
         mesh_instances,
-        materials,
     };
 
     let raytracer = Raytracer::new(&scene);
@@ -104,6 +104,17 @@ pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize, mesh_obj_buf
     }
 }
 
+fn test_camera() -> Camera {
+    Camera {
+        position: glm::vec3(3.0, 0.0, 1.0),
+        orientation: glm::vec3(0.0f32.to_radians(),
+                               25.0f32.to_radians(),
+                               0.0f32.to_radians()),
+        y_fov_degrees: 90.0,
+        z_near: 0.1, z_far: 25.0,
+    }
+}
+
 fn test_lights() -> AliasArc<Vec<Light>, [Light]> {
     let arc = Arc::new(vec![
         Light {
@@ -116,17 +127,6 @@ fn test_lights() -> AliasArc<Vec<Light>, [Light]> {
         }
     ]);
     AliasArc::new(arc, Vec::as_slice)
-}
-
-fn test_camera() -> Camera {
-    Camera {
-        position: glm::vec3(3.0, 0.0, 1.0),
-        orientation: glm::vec3(0.0f32.to_radians(),
-                               25.0f32.to_radians(),
-                               0.0f32.to_radians()),
-        y_fov_degrees: 90.0,
-        z_near: 0.1, z_far: 25.0,
-    }
 }
 
 fn test_materials() -> AliasArc<Vec<Material>, [Material]> {

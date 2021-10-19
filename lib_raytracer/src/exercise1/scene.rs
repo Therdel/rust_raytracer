@@ -7,10 +7,11 @@ pub struct Scene {
     pub camera: Camera,
     pub screen: Screen,
     pub lights: AliasArc<Vec<Light>, [Light]>,
+    pub materials: AliasArc<Vec<Material>, [Material]>,
+
     pub planes: AliasArc<Vec<Plane>, [Plane]>,
     pub spheres: AliasArc<Vec<Sphere>, [Sphere]>,
     pub triangles: AliasArc<Vec<Triangle>, [Triangle]>,
-
     pub meshes: AliasArc<Vec<Mesh>, [Mesh]>,
     pub mesh_instances: AliasArc<Vec<Instance<Mesh>>, [Instance<Mesh>]>,
 
@@ -25,7 +26,6 @@ pub struct Scene {
     //       appears because of not being Sync when used with rayon
     // pub dyn_intersectables: Vec<Box<dyn Intersect<Result=Hitpoint<'a>> >>,
 
-    pub materials: AliasArc<Vec<Material>, [Material]>
 }
 
 // impl<'a> Scene<'a> {

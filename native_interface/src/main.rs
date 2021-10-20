@@ -1,5 +1,3 @@
-mod write_png;
-
 use std::ffi::CString;
 use std::fs::File;
 use std::io::BufReader;
@@ -12,6 +10,9 @@ use rayon::prelude::*;
 use std::time::Instant;
 use num_traits::zero;
 use lib_raytracer::utils::AliasArc;
+
+mod write_png;
+mod filesystem_mesh_loader;
 use write_png::*;
 
 const IMAGE_PATH: &'static str = "render.png";

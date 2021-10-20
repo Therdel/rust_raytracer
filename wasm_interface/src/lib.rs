@@ -7,6 +7,9 @@ use lib_raytracer::raytracing::{Triangle, Plane, Sphere, Light, Camera, LightCol
 use lib_raytracer::utils::AliasArc;
 use num_traits::zero;
 
+
+mod fake_same_mesh_loader;
+
 // In order to work with the memory we expose (de)allocation methods
 #[no_mangle]
 pub extern "C" fn alloc(size: usize) -> *mut c_void {

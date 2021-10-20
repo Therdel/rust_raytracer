@@ -116,7 +116,16 @@ pub struct Triangle {
 #[derive(Deserialize)]
 pub struct Mesh {
     pub name: String,
-    pub file_name: String
+    pub file_name: String,
+    pub winding_order: WindingOrder,
+
+    pub material: String,
+}
+
+#[derive(Deserialize)]
+pub enum WindingOrder {
+    Clockwise,
+    CounterClockwise,
 }
 
 #[derive(Deserialize)]

@@ -1,5 +1,4 @@
 use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Instance, Mesh, Screen};
-use crate::raytracing::color::ColorRgb;
 use crate::utils;
 use crate::utils::AliasArc;
 

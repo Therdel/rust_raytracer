@@ -55,12 +55,17 @@ fn empty_alias_vec<T>() -> AliasArc<Vec<T>, [T]> {
 }
 
 #[no_mangle]
-pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize, mesh_obj_buf: *const u8, mesh_obj_buf_len: usize) {
+pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize,
+                         scene_buf: *const u8, scene_buf_len: usize,
+                         mesh_obj_buf: *const u8, mesh_obj_buf_len: usize) {
     let ptr_color = ptr as *mut ColorRgbaU8;
-    let slice = unsafe { slice::from_raw_parts_mut(ptr_color, width*height  ) };
+    let slice = unsafe { slice::from_raw_parts_mut(ptr_color, width * height) };
 
     let mesh_obj = unsafe {
         slice::from_raw_parts(mesh_obj_buf, mesh_obj_buf_len)
+    };
+    let scene_json = unsafe {
+        slice::from_raw_parts(scene_buf, scene_buf_len)
     };
 
     let materials = test_materials();

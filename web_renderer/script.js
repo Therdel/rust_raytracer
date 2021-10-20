@@ -4,7 +4,7 @@ window.onload = async () => {
     let { instance } = await WebAssembly.instantiate(bytes, { });
     let mod = instance;
 
-    class ObjFileForWasm {
+    class WasmBuffer {
         constructor(arrayBuffer) {
             this.len = arrayBuffer.byteLength;
             this.buf_ptr = mod.exports.alloc( this.len );
@@ -18,8 +18,13 @@ window.onload = async () => {
         getBufPtr() { return this.buf_ptr; }
     }
 
-    let obj_sphere_arraybuffer = await(await fetch('../res/models/sphere_low.obj')).arrayBuffer();
-    let obj_sphere = new ObjFileForWasm(obj_sphere_arraybuffer);
+    function print_arraybuffer(a) { console.log(new TextDecoder().decode(new Uint8Array(a))); }
+
+    let obj_sphere_arraybuffer = await (await fetch('../res/models/sphere_low.obj')).arrayBuffer();
+    let obj_sphere = new WasmBuffer(obj_sphere_arraybuffer);
+
+    let scene_arraybuffer = await (await fetch('../res/scenes/scene_rust.json')).arrayBuffer();
+    let scene = new WasmBuffer(scene_arraybuffer);
 
     let canvas = document.getElementById('screen');
     let label = document.getElementById('time-measurement');
@@ -37,7 +42,9 @@ window.onload = async () => {
 
         function render() {
             let startTime = performance.now();
-            mod.exports.render(canvas_buf_ptr, width, height, obj_sphere.getBufPtr(), obj_sphere.getLen());
+            mod.exports.render(canvas_buf_ptr, width, height,
+                               scene.getBufPtr(), scene.getLen(),
+                               obj_sphere.getBufPtr(), obj_sphere.getLen());
             let endTime = performance.now();
 
             ctx.putImageData(canvas_img, 0, 0);

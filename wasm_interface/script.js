@@ -48,6 +48,7 @@ async function run() {
 
 
     let canvas = document.getElementById('screen');
+    let button = document.getElementById("run-wasm");
     let label = document.getElementById('time-measurement');
 
     if (canvas.getContext) {
@@ -67,13 +68,19 @@ async function run() {
             ctx.putImageData(canvas_img, 0, 0);
 
             label.innerHTML = `Render time: ${(endTime - startTime).toFixed(0)} ms`;
+            button.addEventListener("click", button_listener);
         }
 
-        let button = document.getElementById("run-wasm");
-        button.addEventListener("click", function(e) {
+        function button_listener (e) {
             label.innerHTML = `Rendering...`;
-            window.requestAnimationFrame(render_js);
-        });
+            button.addEventListener("click", function () {});
+            // force redraw
+            setTimeout(function () {
+                window.requestAnimationFrame(render_js);
+            }, 1);
+
+        }
+        button.addEventListener("click", button_listener);
     }
 }
 

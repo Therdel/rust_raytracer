@@ -1,31 +1,20 @@
 use std::io::Cursor;
-use std::mem;
-use std::os::raw::c_void;
 use std::slice;
 
 use nalgebra_glm as glm;
+use wasm_bindgen::prelude::*;
+
 use lib_raytracer::exercise1::scene_file::Parser;
-use lib_raytracer::raytracing::{raytracer::{Public, Raytracer}, color::*, Screen};
-use lib_raytracer::utils::AliasArc;
+use lib_raytracer::raytracing::{color::*, raytracer::{Public, Raytracer}, Screen};
 
 use crate::fake_same_mesh_loader::FakeSameMeshLoader;
 
 mod fake_same_mesh_loader;
 
-// In order to work with the memory we expose (de)allocation methods
-#[no_mangle]
-pub extern "C" fn alloc(size: usize) -> *mut c_void {
-    let mut buf = Vec::with_capacity(size);
-    let ptr = buf.as_mut_ptr();
-    mem::forget(buf);
-    return ptr as *mut c_void;
-}
-
-#[no_mangle]
-pub extern "C" fn dealloc(ptr: *mut c_void, size: usize) {
-    unsafe  {
-        let _buf = Vec::from_raw_parts(ptr, 0, size);
-    }
+// Called when the wasm module is instantiated
+#[wasm_bindgen(start)]
+pub fn main() -> Result<(), JsValue> {
+    Ok(())
 }
 
 pub type ColorRgba = glm::Vec4;
@@ -49,26 +38,14 @@ impl QuantizeToU8 for ColorRgba {
     }
 }
 
-fn empty_alias_vec<T>() -> AliasArc<Vec<T>, [T]> {
-    AliasArc::new(Default::default(), Vec::as_slice)
-}
-
-#[no_mangle]
-pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize,
-                         scene_buf: *const u8, scene_buf_len: usize,
-                         mesh_obj_buf: *const u8, mesh_obj_buf_len: usize) {
-    let ptr_color = ptr as *mut ColorRgbaU8;
-    let slice = unsafe { slice::from_raw_parts_mut(ptr_color, width * height) };
-
-    let mesh_obj = unsafe {
-        slice::from_raw_parts(mesh_obj_buf, mesh_obj_buf_len)
-    };
-    let scene_json = unsafe {
-        slice::from_raw_parts(scene_buf, scene_buf_len)
-    };
+#[wasm_bindgen]
+pub fn render(canvas_u8: &mut [u8], width: usize, height: usize,
+              scene: &[u8], mesh_obj: &[u8]) {
+    let canvas_raw_color = canvas_u8.as_mut_ptr() as *mut ColorRgbaU8;
+    let canvas = unsafe { slice::from_raw_parts_mut(canvas_raw_color, width * height) };
 
     let mut scene = Parser {
-        file_reader: Cursor::new(scene_json),
+        file_reader: Cursor::new(scene),
         mesh_loader: FakeSameMeshLoader { mesh_obj },
     }.parse_json().unwrap();
     scene.screen = Screen {
@@ -93,7 +70,7 @@ pub extern "C" fn render(ptr: *mut u8, width: usize, height: usize,
             let y_inverted = max_y_index - y;
             let offset = x + width * y_inverted;
 
-            slice[offset] = color.quantize();
+            canvas[offset] = color.quantize();
         }
     }
 }

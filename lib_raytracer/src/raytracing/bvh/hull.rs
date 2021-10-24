@@ -5,14 +5,36 @@ use crate::raytracing::{AABB, Triangle};
 pub trait Hull {
     type HullGeometry;
 
-    fn hull_from_vertices<'a>(vertices: impl Iterator<Item=&'a glm::Vec3>) -> Option<Self::HullGeometry>;
-    fn hull_from_triangles<'a>(triangles: impl Iterator<Item=&'a Triangle>) -> Option<Self::HullGeometry>;
+    // TODO: Remove duplication
+    fn from_vertices(vertices: impl Iterator<Item=glm::Vec3>) -> Option<Self::HullGeometry>;
+    fn from_vertices_refs<'a>(vertices: impl Iterator<Item=&'a glm::Vec3>) -> Option<Self::HullGeometry>;
+    fn from_triangles<'a>(triangles: impl Iterator<Item=&'a Triangle>) -> Option<Self::HullGeometry>;
 }
 
 impl Hull for AABB {
     type HullGeometry = AABB;
 
-    fn hull_from_vertices<'a>(mut vertices: impl Iterator<Item=&'a glm::Vec3>) -> Option<Self::HullGeometry> {
+    fn from_vertices(mut vertices: impl Iterator<Item=glm::Vec3>) -> Option<Self::HullGeometry> {
+        let first_point = vertices.next()?;
+        let mut result = AABB {
+            min: first_point,
+            max: first_point
+        };
+
+        for vertex in vertices {
+            result.min.x = f32::min(result.min.x, vertex.x);
+            result.min.y = f32::min(result.min.y, vertex.y);
+            result.min.z = f32::min(result.min.z, vertex.z);
+
+            result.max.x = f32::max(result.max.x, vertex.x);
+            result.max.y = f32::max(result.max.y, vertex.y);
+            result.max.z = f32::max(result.max.z, vertex.z);
+        }
+
+        Some(result)
+    }
+
+    fn from_vertices_refs<'a>(mut vertices: impl Iterator<Item=&'a glm::Vec3>) -> Option<Self::HullGeometry> {
         let first_point = vertices.next()?;
         let mut result = AABB {
             min: *first_point,
@@ -32,10 +54,10 @@ impl Hull for AABB {
         Some(result)
     }
 
-    fn hull_from_triangles<'a>(triangles: impl Iterator<Item=&'a Triangle>) -> Option<Self::HullGeometry> {
+    fn from_triangles<'a>(triangles: impl Iterator<Item=&'a Triangle>) -> Option<Self::HullGeometry> {
         let vertices = triangles
             .flat_map(|triangle| triangle.vertices.iter());
-        Self::hull_from_vertices(vertices)
+        Self::from_vertices_refs(vertices)
     }
 }
 
@@ -52,7 +74,7 @@ mod tests {
 
             let iter = vertices.iter();
             // TODO: why doesn't this work with ```let hull: AABB = Hull::hull(iter);```
-            let hull = AABB::hull_from_vertices(iter);
+            let hull = AABB::from_vertices_refs(iter);
             assert!(hull.is_none());
         }
 
@@ -64,7 +86,7 @@ mod tests {
             let vertices = [zero_vec, one_vec];
             {
                 let iter = vertices.iter();
-                let hull = AABB::hull_from_vertices(iter);
+                let hull = AABB::from_vertices_refs(iter);
                 assert!(hull.is_some());
                 let hull = hull.unwrap();
 
@@ -73,7 +95,7 @@ mod tests {
             }
             {
                 let iter_rev = vertices.iter().rev();
-                let hull = AABB::hull_from_vertices(iter_rev);
+                let hull = AABB::from_vertices_refs(iter_rev);
                 assert!(hull.is_some());
                 let hull = hull.unwrap();
 
@@ -113,7 +135,7 @@ mod tests {
                 glm::vec3(0.0, 0.0, 0.0)
             ];
             let triangles = [Triangle::new(vertices, [zero(); 3], material)];
-            let hull = AABB::hull_from_triangles(triangles.iter());
+            let hull = AABB::from_triangles(triangles.iter());
             assert!(hull.is_some());
             let hull = hull.unwrap();
 

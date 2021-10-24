@@ -25,7 +25,7 @@ impl Builder {
 
     fn split_primitives<'b, 'a:'b>(triangles: &'b[Triangle], volume_aabb: &AABB) -> (Triangles, Triangles) {
         let centroid_range = triangles.iter().map(Triangle::centroid);
-        let centroid_aabb: AABB = todo!(); //AABB::hull_from_vertices(centroid_range).expect("Empty triangles iterator");
+        let centroid_aabb= AABB::from_vertices(centroid_range).expect("Empty triangles iterator");
 
         let extent = centroid_aabb.max - centroid_aabb.min;
 
@@ -74,11 +74,11 @@ impl Builder {
                 continue;
             }
 
-            let p_left = match AABB::hull_from_triangles(left_iter(split_bin)) {
+            let p_left = match AABB::from_triangles(left_iter(split_bin)) {
                 Some(left_hull) => left_hull.surface_area() / volume_aabb.surface_area(),
                 None => 0.0
             };
-            let p_right = match AABB::hull_from_triangles(right_iter(split_bin)) {
+            let p_right = match AABB::from_triangles(right_iter(split_bin)) {
                 Some(right_hull) => right_hull.surface_area() / volume_aabb.surface_area(),
                 None => 0.0
             };

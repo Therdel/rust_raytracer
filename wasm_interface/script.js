@@ -40,10 +40,10 @@ async function run() {
 
     function print_arraybuffer(a) { console.log(new TextDecoder().decode(new Uint8Array(a))); }
 
-    let scene_arraybuffer = await (await fetch('../res/scenes/scene_rust.json')).arrayBuffer();
+    let scene_arraybuffer = await (await fetch('res/scenes/scene_rust.json')).arrayBuffer();
     let scene = new Uint8Array(scene_arraybuffer);
 
-    let obj_file_arraybuffer = await (await fetch('../res/models/santa.obj')).arrayBuffer();
+    let obj_file_arraybuffer = await (await fetch('res/models/santa.obj')).arrayBuffer();
     let obj_file = new Uint8Array(obj_file_arraybuffer);
 
     let canvas = document.getElementById('screen');

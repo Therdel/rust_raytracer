@@ -2,7 +2,8 @@ use nalgebra_glm as glm;
 use num_traits::identities::Zero;
 use num_traits::Signed;
 
-use crate::raytracing::{AABB, BVH, Hitpoint, Instance, Material, Mesh, Node, NodeType, Plane, Ray, Sphere, Triangle};
+use crate::raytracing::{AABB, Hitpoint, Instance, Material, Mesh, Plane, Ray, Sphere, Triangle};
+use crate::raytracing::bvh::{BVH, Node, NodeType};
 use crate::utils;
 use crate::utils::AliasArc;
 

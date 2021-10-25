@@ -27,8 +27,7 @@ pub mod raytracer;
 
 pub mod color;
 
-mod bvh;
-pub use bvh::*;
+pub mod bvh;
 
 mod instance;
 pub use instance::*;

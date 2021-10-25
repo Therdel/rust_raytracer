@@ -132,7 +132,8 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         })
     }
 
-    fn find_material(materials: AliasArc<Vec<Material>, [Material]>, name: &str) -> Option<AliasArc<Vec<Material>, Material>> {
+    fn find_material(materials: AliasArc<Vec<Material>, [Material]>,
+                     name: &str) -> Option<AliasArc<Vec<Material>, Material>> {
         let index = materials
             .iter()
             .enumerate()
@@ -146,7 +147,8 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         Some(alias_arc)
     }
 
-    fn find_mesh(meshes: AliasArc<Vec<Mesh>, [Mesh]>, name: &str) -> Option<AliasArc<Vec<Mesh>, Mesh>> {
+    fn find_mesh(meshes: AliasArc<Vec<Mesh>, [Mesh]>,
+                 name: &str) -> Option<AliasArc<Vec<Mesh>, Mesh>> {
         let index = meshes
             .iter()
             .enumerate()
@@ -160,7 +162,8 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         Some(alias_arc)
     }
 
-    fn convert_planes(planes: Option<Vec<json_format::Plane>>, materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Plane>, [Plane]> {
+    fn convert_planes(planes: Option<Vec<json_format::Plane>>,
+                      materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Plane>, [Plane]> {
         if let Some(planes) = planes {
             Self::convert_vec(planes, |plane|
                 Plane {
@@ -174,7 +177,8 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         }
     }
 
-    fn convert_spheres(spheres: Option<Vec<json_format::Sphere>>, materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Sphere>, [Sphere]> {
+    fn convert_spheres(spheres: Option<Vec<json_format::Sphere>>,
+                       materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Sphere>, [Sphere]> {
         if let Some(spheres) = spheres {
             Self::convert_vec(spheres, |sphere|
                 Sphere {
@@ -188,7 +192,8 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         }
     }
 
-    fn convert_triangles(triangles: Option<Vec<json_format::Triangle>>, materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Triangle>, [Triangle]> {
+    fn convert_triangles(triangles: Option<Vec<json_format::Triangle>>,
+                         materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Triangle>, [Triangle]> {
         if let Some(triangles) = triangles {
             Self::convert_vec(triangles, |triangle|
                 Triangle::new(
@@ -202,7 +207,9 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         }
     }
 
-    fn convert_meshes(&self, meshes: Option<Vec<json_format::Mesh>>, materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Mesh>, [Mesh]> {
+    fn convert_meshes(&self,
+                      meshes: Option<Vec<json_format::Mesh>>,
+                      materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Mesh>, [Mesh]> {
         if let Some(meshes) = meshes {
             Self::convert_vec(meshes, |mesh| {
                 let material = Self::find_material(materials.clone(), &mesh.material).unwrap();

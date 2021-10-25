@@ -1,23 +1,27 @@
 use crate::raytracing::{AABB, Triangle};
 
-enum NodeType {
+pub type NodeIndex = usize;
+
+pub type OptNodeIndex = Option<NodeIndex>;
+
+pub enum NodeType {
     Node {
-        child_left: Box<Node>,
-        child_right: Box<Node>
+        child_left: OptNodeIndex,
+        child_right: OptNodeIndex
     },
     Leaf {
         triangles: Vec<Triangle>
-    }
+    },
 }
 
 pub struct Node {
-    aabb: AABB,
-    content: NodeType
+    pub aabb: AABB,
+    pub content: NodeType
 }
 
 impl Node {
     pub fn create_node(aabb: AABB,
-                       child_left: Box<Node>, child_right: Box<Node>) -> Node {
+                       child_left: OptNodeIndex, child_right: OptNodeIndex) -> Node {
         Node {
             aabb,
             content: NodeType::Node { child_left, child_right },

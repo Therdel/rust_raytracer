@@ -8,6 +8,7 @@ use nalgebra_glm as glm;
 use tobj::{LoadError, LoadOptions, Model, MTLLoadResult};
 
 use crate::raytracing::{Material, Mesh, Triangle};
+use crate::raytracing::bvh::BVH;
 use crate::utils::AliasArc;
 
 pub enum WindingOrder {
@@ -22,11 +23,8 @@ pub fn load_mesh(name: String,
     let models = parse_models_from_obj_buffer(&name, obj_buffer)?;
 
     let amount_triangles_total = check_and_count_triangles(&name, &models)?;
-    let mut mesh = Mesh {
-        name,
-        triangles: vec![],
-    };
-    mesh.triangles.reserve_exact(amount_triangles_total);
+    let mut triangles = vec![];
+    triangles.reserve_exact(amount_triangles_total);
 
     for model in models {
         let vertices_flat = &model.mesh.positions;
@@ -45,11 +43,16 @@ pub fn load_mesh(name: String,
             }
 
             let triangle = Triangle::new(vertices, normals, material.clone());
-            mesh.triangles.push(triangle);
+            triangles.push(triangle);
         }
     }
 
-    Ok(mesh)
+    let bvh = BVH::from(triangles.clone());
+    Ok(Mesh {
+        name,
+        triangles,
+        bvh,
+    })
 }
 
 fn parse_models_from_obj_buffer(name: &str, obj_buffer: &mut impl BufRead) -> io::Result<Vec<Model>> {

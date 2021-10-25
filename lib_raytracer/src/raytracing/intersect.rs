@@ -256,7 +256,12 @@ impl Intersect for Mesh {
     type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
-        self.triangles.as_slice().intersect(ray)
+        const USE_BVH: bool = true;
+        if USE_BVH {
+            self.bvh.intersect(ray)
+        } else {
+            self.triangles.as_slice().intersect(ray)
+        }
     }
 }
 

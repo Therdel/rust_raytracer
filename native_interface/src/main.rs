@@ -26,10 +26,12 @@ fn main() {
         model_dir: MODEL_DIR_PATH.into()
     };
 
+    let time_start = Instant::now();
     let scene = Parser {
         file_reader: scene_file,
         mesh_loader,
     }.parse_json().unwrap();
+    println!("Parsing took {:.2}s", time_start.elapsed().as_secs_f32());
 
     let time_start = Instant::now();
     let canvas = paint_scene(&scene);

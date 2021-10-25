@@ -43,9 +43,8 @@ async function run() {
     let scene_arraybuffer = await (await fetch('../res/scenes/scene_rust.json')).arrayBuffer();
     let scene = new Uint8Array(scene_arraybuffer);
 
-    let obj_sphere_arraybuffer = await (await fetch('../res/models/sphere_low.obj')).arrayBuffer();
-    let obj_sphere = new Uint8Array(obj_sphere_arraybuffer);
-
+    let obj_file_arraybuffer = await (await fetch('../res/models/santa.obj')).arrayBuffer();
+    let obj_file = new Uint8Array(obj_file_arraybuffer);
 
     let canvas = document.getElementById('screen');
     let button = document.getElementById("run-wasm");
@@ -62,7 +61,8 @@ async function run() {
 
         function render_js() {
             let startTime = performance.now();
-            render(canvas_buf, width, height, scene, obj_sphere);
+            // TODO: Stop blocking main thread
+            render(canvas_buf, width, height, scene, obj_file);
             let endTime = performance.now();
 
             ctx.putImageData(canvas_img, 0, 0);

@@ -386,31 +386,31 @@
   ],
   "meshes": [
     {
-      "name": "sphere_low",
-      "file_name": "sphere_low.obj",
+      "name": "santa",
+      "file_name": "santa.obj",
       "winding_order": "CounterClockwise",
       "material": "someShinyWhite"
     }
   ],
   "mesh_instances": [
     {
-      "mesh": "sphere_low",
+      "mesh": "santa",
       "position": {
-        "x": -1,
-        "y": -1,
-        "z": -2
+        "x": 1.5,
+        "y": -0.5,
+        "z": -4
       },
       "orientation_degrees": {
-        "x": 0,
+        "x": -90,
         "y": 0,
         "z": 0
       },
       "scale": {
-        "x": 1,
-        "y": 1,
-        "z": 1
+        "x": 0.01,
+        "y": 0.01,
+        "z": 0.01
       },
-      "material_override": "reflective"
+      "material_override": "someShinyRed"
     }
   ]
 }

@@ -10,6 +10,7 @@ pub struct BVH {
 impl BVH {
     pub fn from(triangles: Vec<Triangle>) -> BVH {
         let (nodes, max_depth) = Builder::build_bvh(triangles);
+        println!("BVH with {} nodes and max_depth = {}", nodes.len(), max_depth);
         BVH { nodes, max_depth }
     }
 

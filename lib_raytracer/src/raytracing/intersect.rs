@@ -7,7 +7,7 @@ use crate::raytracing::bvh::{BVH, Node, NodeType};
 use crate::utils;
 use crate::utils::AliasArc;
 
-const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-5;
+const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-4;
 
 pub trait Intersect {
     type Result;

@@ -1,32 +1,53 @@
-window.onload = async () => {
-    let response = await fetch('wasm_interface.wasm');
-    let bytes = await response.arrayBuffer();
-    let { instance } = await WebAssembly.instantiate(bytes, { });
-    let mod = instance;
+// Use ES module import syntax to import functionality from the module
+// that we have compiled.
+//
+// Note that the `default` import is an initialization function which
+// will "boot" the module and make it ready to use. Currently browsers
+// don't support natively imported WebAssembly as an ES module, but
+// eventually the manual initialization won't be required!
+import init, {render} from './pkg/wasm_interface.js';
 
-    class WasmBuffer {
-        constructor(arrayBuffer) {
-            this.len = arrayBuffer.byteLength;
-            this.buf_ptr = mod.exports.alloc( this.len );
+async function run() {
+    // First up we need to actually load the wasm file, so we use the
+    // default export to inform it where the wasm file is located on the
+    // server, and then we wait on the returned promise to wait for the
+    // wasm to be loaded.
+    //
+    // It may look like this: `await init('./pkg/without_a_bundler_bg.wasm');`,
+    // but there is also a handy default inside `init` function, which uses
+    // `import.meta` to locate the wasm file relatively to js file.
+    //
+    // Note that instead of a string you can also pass in any of the
+    // following things:
+    //
+    // * `WebAssembly.Module`
+    //
+    // * `ArrayBuffer`
+    //
+    // * `Response`
+    //
+    // * `Promise` which returns any of the above, e.g. `fetch("./path/to/wasm")`
+    //
+    // This gives you complete control over how the module is loaded
+    // and compiled.
+    //
+    // Also note that the promise, when resolved, yields the wasm module's
+    // exports which is the same as importing the `*_bg` module in other
+    // modes
 
-            // copy file content into wasm buffer
-            let buf = new Uint8Array(mod.exports.memory.buffer, this.buf_ptr, this.len);
-            buf.set(new Uint8Array(arrayBuffer));
-        }
-
-        getLen() { return this.len; }
-        getBufPtr() { return this.buf_ptr; }
-    }
+    // TODO: init panic handler
+    await init();
 
     function print_arraybuffer(a) { console.log(new TextDecoder().decode(new Uint8Array(a))); }
 
-    let obj_sphere_arraybuffer = await (await fetch('sphere_low.obj')).arrayBuffer();
-    let obj_sphere = new WasmBuffer(obj_sphere_arraybuffer);
+    let scene_arraybuffer = await (await fetch('res/scenes/scene_rust.json')).arrayBuffer();
+    let scene = new Uint8Array(scene_arraybuffer);
 
-    let scene_arraybuffer = await (await fetch('scene_rust.json')).arrayBuffer();
-    let scene = new WasmBuffer(scene_arraybuffer);
+    let obj_file_arraybuffer = await (await fetch('res/models/santa.obj')).arrayBuffer();
+    let obj_file = new Uint8Array(obj_file_arraybuffer);
 
     let canvas = document.getElementById('screen');
+    let button = document.getElementById("run-wasm");
     let label = document.getElementById('time-measurement');
 
     if (canvas.getContext) {
@@ -35,27 +56,32 @@ window.onload = async () => {
         let width = canvas.width;
         let height = canvas.height;
         let canvas_buf_len = width * height * 4;
-        let canvas_buf_ptr = mod.exports.alloc( canvas_buf_len );
-
-        let canvas_buf = new Uint8ClampedArray(mod.exports.memory.buffer, canvas_buf_ptr, canvas_buf_len);
+        let canvas_buf = new Uint8ClampedArray(canvas_buf_len);
         let canvas_img = new ImageData(canvas_buf, width, height);
 
-        function render() {
+        function render_js() {
             let startTime = performance.now();
-            mod.exports.render(canvas_buf_ptr, width, height,
-                               scene.getBufPtr(), scene.getLen(),
-                               obj_sphere.getBufPtr(), obj_sphere.getLen());
+            // TODO: Stop blocking main thread
+            render(canvas_buf, width, height, scene, obj_file);
             let endTime = performance.now();
 
             ctx.putImageData(canvas_img, 0, 0);
 
             label.innerHTML = `Render time: ${(endTime - startTime).toFixed(0)} ms`;
+            button.addEventListener("click", button_listener);
         }
 
-        let button = document.getElementById("run-wasm");
-        button.addEventListener("click", function(e) {
+        function button_listener (e) {
             label.innerHTML = `Rendering...`;
-            window.requestAnimationFrame(render);
-        });
+            button.addEventListener("click", function () {});
+            // force redraw
+            setTimeout(function () {
+                window.requestAnimationFrame(render_js);
+            }, 1);
+
+        }
+        button.addEventListener("click", button_listener);
     }
-};
+}
+
+window.onload = run;

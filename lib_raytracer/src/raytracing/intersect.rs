@@ -1,8 +1,9 @@
-use crate::raytracing::{Ray, Hitpoint, Sphere, Plane, Triangle, Material, AABB, Instance, Mesh};
-use crate::utils;
 use nalgebra_glm as glm;
 use num_traits::identities::Zero;
 use num_traits::Signed;
+
+use crate::raytracing::{AABB, Hitpoint, Instance, Material, Mesh, Plane, Ray, Sphere, Triangle};
+use crate::utils;
 use crate::utils::AliasArc;
 
 const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-5;
@@ -14,6 +15,24 @@ pub trait Intersect {
      * Returns information of the hitpoint, if any
      **/
     fn intersect(&self, ray: &Ray) -> Option<Self::Result>;
+}
+
+impl<Primitive> Intersect for &[Primitive]
+    where Primitive: Intersect<Result=Hitpoint> {
+    type Result = Primitive::Result;
+
+    fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
+        let mut closest_hitpoint = None;
+
+        let mut check_hitpoint =
+            |hitpoint| utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
+
+        for primitive in self.iter() {
+            check_hitpoint(primitive.intersect(ray));
+        }
+
+        closest_hitpoint
+    }
 }
 
 impl Intersect for Sphere {
@@ -206,21 +225,12 @@ impl Intersect for Mesh {
     type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
-        let mut closest_hitpoint = None;
-
-        let mut check_hitpoint =
-            |hitpoint| utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
-
-        for triangle in &self.triangles {
-            check_hitpoint(triangle.intersect(ray));
-        }
-
-        closest_hitpoint
+        self.triangles.as_slice().intersect(ray)
     }
 }
 
 impl<Primitive> Intersect for Instance<Primitive>
-where Primitive: Intersect<Result=Hitpoint> {
+    where Primitive: Intersect<Result=Hitpoint> {
     type Result = Primitive::Result;
 
     fn intersect(&self, ray: &Ray) -> Option<Self::Result>{

@@ -56,18 +56,10 @@ impl raytracing::Intersect for Scene {
         let mut check_hitpoint =
             |hitpoint| utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
 
-        for plane in self.planes.iter() {
-            check_hitpoint(plane.intersect(ray));
-        }
-        for sphere in self.spheres.iter() {
-            check_hitpoint(sphere.intersect(ray));
-        }
-        for triangle in self.triangles.iter() {
-            check_hitpoint(triangle.intersect(ray));
-        }
-        for mesh_instance in self.mesh_instances.iter() {
-            check_hitpoint(mesh_instance.intersect(ray));
-        }
+        check_hitpoint(self.planes.as_ref().intersect(ray));
+        check_hitpoint(self.spheres.as_ref().intersect(ray));
+        check_hitpoint(self.triangles.as_ref().intersect(ray));
+        check_hitpoint(self.mesh_instances.as_ref().intersect(ray));
 
         closest_hitpoint
     }

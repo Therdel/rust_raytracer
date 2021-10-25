@@ -3,7 +3,6 @@ use num_traits::{Float, Zero};
 
 use crate::raytracing::{AABB, Triangle};
 use crate::raytracing::bvh::{hull::Hull, node::Node};
-use crate::raytracing::bvh::bvh::BVH;
 use crate::raytracing::bvh::node::{NodeIndex, NodeType};
 
 const BINS_PER_LAYER: usize = 5;

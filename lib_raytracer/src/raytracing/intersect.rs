@@ -2,7 +2,7 @@ use nalgebra_glm as glm;
 use num_traits::identities::Zero;
 use num_traits::Signed;
 
-use crate::raytracing::{AABB, Hitpoint, Instance, Material, Mesh, Plane, Ray, Sphere, Triangle};
+use crate::raytracing::{AABB, BVH, Hitpoint, Instance, Material, Mesh, Node, NodeType, Plane, Ray, Sphere, Triangle};
 use crate::utils;
 use crate::utils::AliasArc;
 
@@ -218,6 +218,36 @@ impl Intersect for AABB {
 
         _t = tmin;
         Some(())
+    }
+}
+
+impl Intersect for BVH {
+    type Result = Hitpoint;
+
+    fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
+        fn intersect_node(node: &Node, bvh: &BVH, ray: &Ray) -> Option<Hitpoint> {
+            let mut closest_hitpoint = None;
+
+            if node.aabb.intersect(ray).is_some() {
+                match &node.content {
+                    NodeType::Node { child_left, child_right } => {
+                        let node_left = bvh.get_node(child_left.expect("Left child is empty"));
+                        let hitpoint = intersect_node(node_left, bvh, ray);
+                        utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
+
+                        let node_right = bvh.get_node(child_right.expect("Right child is empty"));
+                        let hitpoint = intersect_node(node_right, bvh, ray);
+                        utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
+                    }
+                    NodeType::Leaf { triangles } => {
+                        let hitpoint = triangles.as_slice().intersect(ray);
+                        utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
+                    }
+                }
+            }
+            closest_hitpoint
+        }
+        intersect_node(self.get_root(), self, ray)
     }
 }
 

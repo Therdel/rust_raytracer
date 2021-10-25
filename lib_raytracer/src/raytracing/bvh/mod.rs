@@ -4,3 +4,4 @@ mod builder;
 mod bvh;
 
 pub use bvh::BVH;
+pub use node::*;

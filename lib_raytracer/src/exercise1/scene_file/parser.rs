@@ -168,7 +168,7 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
             Self::convert_vec(planes, |plane|
                 Plane {
                     normal: plane.normal.into(),
-                    distance: 5.0,
+                    distance: plane.distance,
                     material: Self::find_material(materials.clone(), &plane.material).unwrap(),
                 },
             )

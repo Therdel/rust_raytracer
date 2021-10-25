@@ -12,10 +12,12 @@ use crate::fake_same_mesh_loader::FakeSameMeshLoader;
 
 mod color;
 mod fake_same_mesh_loader;
+mod utils;
 
 // Called when the wasm module is instantiated
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
+    utils::set_panic_hook();
     Ok(())
 }
 

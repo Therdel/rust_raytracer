@@ -84,4 +84,4 @@ async function run() {
     }
 }
 
-window.onload = run;
+run();

@@ -35,7 +35,6 @@ async function run() {
     // exports which is the same as importing the `*_bg` module in other
     // modes
 
-    // TODO: init panic handler
     await init();
 
     function print_arraybuffer(a) { console.log(new TextDecoder().decode(new Uint8Array(a))); }
@@ -59,26 +58,30 @@ async function run() {
         let canvas_buf = new Uint8ClampedArray(canvas_buf_len);
         let canvas_img = new ImageData(canvas_buf, width, height);
 
+        let last_render_time = performance.now();
+
         function render_js() {
             let startTime = performance.now();
             // TODO: Stop blocking main thread
             render(canvas_buf, width, height, scene, obj_file);
             let endTime = performance.now();
+            last_render_time = endTime;
 
             ctx.putImageData(canvas_img, 0, 0);
 
             label.innerHTML = `Render time: ${(endTime - startTime).toFixed(0)} ms`;
-            button.addEventListener("click", button_listener);
+            button.disabled = false;
         }
 
-        function button_listener (e) {
-            label.innerHTML = `Rendering...`;
-            button.addEventListener("click", function () {});
-            // force redraw
-            setTimeout(function () {
-                window.requestAnimationFrame(render_js);
-            }, 1);
-
+        function button_listener (evt) {
+            if (evt.timeStamp >= last_render_time) {
+                button.disabled = true;
+                label.innerHTML = `Rendering...`;
+                // force redraw
+                setTimeout(function () {
+                    window.requestAnimationFrame(render_js);
+                }, 10);
+            }
         }
         button.addEventListener("click", button_listener);
     }

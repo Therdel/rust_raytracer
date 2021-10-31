@@ -35,7 +35,6 @@ async function run() {
     // exports which is the same as importing the `*_bg` module in other
     // modes
 
-    // TODO: init panic handler
     await init();
 
     function print_arraybuffer(a) { console.log(new TextDecoder().decode(new Uint8Array(a))); }
@@ -84,4 +83,4 @@ async function run() {
     }
 }
 
-window.onload = run;
+run();

@@ -27,7 +27,7 @@ async function init_worker() {
     onmessage = function (msg) {
         console.log('worker_for_render: Message received from main script');
 
-        const [canvas_image_data] = msg.data;
+        const canvas_image_data = msg.data;
         const {data, width, height} = canvas_image_data;
 
         let startTime = performance.now();

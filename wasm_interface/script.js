@@ -28,11 +28,11 @@ async function run() {
 
     worker_for_render.onmessage = function (e) {
         console.log('Message received from worker');
-        const [render_duration, img] = e.data;
+        const [render_duration, canvas_image_data] = e.data;
         label.innerHTML = `Render time: ${render_duration.toFixed(0)} ms`;
 
         window.requestAnimationFrame(function () {
-            ctx.putImageData(img, 0, 0);
+            ctx.putImageData(canvas_image_data, 0, 0);
         });
         button.disabled = false;
     }
@@ -41,7 +41,7 @@ async function run() {
         button.disabled = true;
 
         label.innerHTML = `Rendering...`;
-        worker_for_render.postMessage([canvas_image_data]);
+        worker_for_render.postMessage(canvas_image_data);
         console.log('Message posted to worker');
     });
 }

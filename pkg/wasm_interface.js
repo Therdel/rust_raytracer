@@ -1,9 +1,11 @@
+let wasm_bindgen;
+(function() {
+    const __exports = {};
+    let wasm;
 
-let wasm;
+    const heap = new Array(32).fill(undefined);
 
-const heap = new Array(32).fill(undefined);
-
-heap.push(undefined, null, true, false);
+    heap.push(undefined, null, true, false);
 
 function getObject(idx) { return heap[idx]; }
 
@@ -22,9 +24,9 @@ function takeObject(idx) {
 }
 /**
 */
-export function main() {
+__exports.main = function() {
     wasm.main();
-}
+};
 
 let cachegetUint8Memory0 = null;
 function getUint8Memory0() {
@@ -49,7 +51,7 @@ function passArray8ToWasm0(arg, malloc) {
 * @param {Uint8Array} scene
 * @param {Uint8Array} mesh_obj
 */
-export function render(canvas_u8, width, height, scene, mesh_obj) {
+__exports.render = function(canvas_u8, width, height, scene, mesh_obj) {
     try {
         var ptr0 = passArray8ToWasm0(canvas_u8, wasm.__wbindgen_malloc);
         var len0 = WASM_VECTOR_LEN;
@@ -62,7 +64,7 @@ export function render(canvas_u8, width, height, scene, mesh_obj) {
         canvas_u8.set(getUint8Memory0().subarray(ptr0 / 1, ptr0 / 1 + len0));
         wasm.__wbindgen_free(ptr0, len0 * 1);
     }
-}
+};
 
 let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
 
@@ -175,7 +177,13 @@ async function load(module, imports) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('wasm_interface_bg.wasm', import.meta.url);
+        let src;
+        if (typeof document === 'undefined') {
+            src = location.href;
+        } else {
+            src = document.currentScript.src;
+        }
+        input = src.replace(/\.js$/, '_bg.wasm');
     }
     const imports = {};
     imports.wbg = {};
@@ -215,5 +223,6 @@ async function init(input) {
     return wasm;
 }
 
-export default init;
+wasm_bindgen = Object.assign(init, __exports);
 
+})();

@@ -6,7 +6,6 @@
     "wasm_interface.js",
     "wasm_interface.d.ts"
   ],
-  "module": "wasm_interface.js",
-  "types": "wasm_interface.d.ts",
-  "sideEffects": false
+  "browser": "wasm_interface.js",
+  "types": "wasm_interface.d.ts"
 }

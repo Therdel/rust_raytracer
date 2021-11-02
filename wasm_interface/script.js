@@ -1,16 +1,12 @@
-function getCanvasImageData(canvas) {
-    const width = canvas.width;
-    const height = canvas.height;
-    const canvas_buf_len = width * height * 4;
-    const canvas_buf = new Uint8ClampedArray(canvas_buf_len);
-
-    return new ImageData(canvas_buf, width, height);
-}
-
 async function run() {
     let canvas = document.getElementById('screen');
     let button = document.getElementById("run-wasm");
     let label = document.getElementById('time-measurement');
+
+    const width = canvas.width;
+    const height = canvas.height;
+    const canvas_buf_len = width * height * 4;
+    let canvas_buf = new ArrayBuffer(canvas_buf_len);
 
     if (!window.Worker) {
         alert('Your browser doesn\'t support web workers.');
@@ -22,26 +18,31 @@ async function run() {
         return;
     }
     let ctx = canvas.getContext('2d');
-    // TODO try without copying it here
-    const canvas_image_data = getCanvasImageData(canvas);
     const worker_for_render = new Worker('worker_for_render.js');
 
     worker_for_render.onmessage = function (e) {
         console.log('Message received from worker');
-        const [render_duration, canvas_image_data] = e.data;
+        const { render_duration, buffer=canvas_buf } = e.data;
         label.innerHTML = `Render time: ${render_duration.toFixed(0)} ms`;
+        canvas_buf = buffer;
 
+        let canvas_image_data = new ImageData(new Uint8ClampedArray(canvas_buf), width, height);
         window.requestAnimationFrame(function () {
             ctx.putImageData(canvas_image_data, 0, 0);
         });
         button.disabled = false;
-    }
+    };
 
     button.addEventListener("click", function () {
         button.disabled = true;
 
         label.innerHTML = `Rendering...`;
-        worker_for_render.postMessage(canvas_image_data);
+        let message_data = {
+            buffer: canvas_buf,
+            width: width,
+            height: height,
+        };
+        worker_for_render.postMessage(message_data, [message_data.buffer]);
         console.log('Message posted to worker');
     });
 }

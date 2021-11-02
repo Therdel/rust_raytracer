@@ -34,7 +34,7 @@ fn main() {
     println!("Parsing took {:.2}s", time_start.elapsed().as_secs_f32());
 
     let time_start = Instant::now();
-    let canvas = paint_scene(&scene);
+    let canvas = paint_scene(scene);
     println!("Rendering took {:.2}s", time_start.elapsed().as_secs_f32());
 
     let path = CString::new(IMAGE_PATH)
@@ -42,15 +42,16 @@ fn main() {
     canvas.write_png(path.as_c_str());
 }
 
-fn paint_scene(scene: &Scene) -> Canvas {
-    let raytracer = Raytracer::new(&scene);
+fn paint_scene(scene: Scene) -> Canvas {
     let mut canvas = Canvas::new(&scene.screen);
+    let pixel_width = scene.screen.pixel_width;
+    let raytracer = Raytracer::new(scene);
 
     canvas.borrow_stripes_mut()
         .par_bridge()
         .for_each(|mut row_stripe| {
             let y = row_stripe.get_y_coord();
-            for x in 0..scene.screen.pixel_width {
+            for x in 0..pixel_width {
                 let coordinate = glm::vec2(x as _, y as _);
                 let ray = raytracer.generate_primary_ray(&coordinate);
                 if let Some(hit_color) = raytracer.raytrace(&ray) {

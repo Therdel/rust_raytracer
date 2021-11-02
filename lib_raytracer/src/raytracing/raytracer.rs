@@ -8,13 +8,13 @@ use num_traits::{Zero, zero};
 const MAX_RAY_RECURSION_DEPTH: usize = 10;
 const REFLECTION_DIM_FACTOR: f32 = 0.8;
 
-pub struct Raytracer<'scene> {
-    scene: &'scene Scene,
+pub struct Raytracer {
+    scene: Scene,
     screen_to_world: glm::Mat4
 }
 
 pub trait Public {
-    fn new<'scene>(scene: &'scene Scene) -> Raytracer<'scene>;
+    fn new(scene: Scene) -> Raytracer;
 
     fn raytrace(&self, ray: &Ray) -> Option<ColorRgb>;
     fn depth_map(&self, ray: &Ray) -> Option<ColorRgb>;
@@ -35,11 +35,11 @@ trait Private {
                           reflection_normal: &glm::Vec3, n1_current: f32, n2_pierce: f32) -> f32;
 }
 
-impl Public for Raytracer<'_> {
-    fn new<'scene>(scene: &'scene Scene) -> Raytracer<'scene> {
+impl Public for Raytracer {
+    fn new<'scene>(scene: Scene) -> Raytracer {
         Raytracer {
-            scene,
             screen_to_world: matrix::screen_to_world(&scene.camera, &scene.screen),
+            scene,
         }
     }
 
@@ -80,7 +80,7 @@ impl Public for Raytracer<'_> {
     }
 }
 
-impl Private for Raytracer<'_> {
+impl Private for Raytracer {
     fn raytrace_impl(&self, ray: &Ray, ray_recursion_depth: usize) -> Option<ColorRgb> {
         if ray_recursion_depth < MAX_RAY_RECURSION_DEPTH {
             let hitpoint = self.scene.intersect(ray)?;

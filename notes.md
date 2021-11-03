@@ -15,11 +15,11 @@
     - [x] plane
     - [x] triangle
     - [x] unify surface acne compensation
-- [ ] scene config
+- [x] scene config
     - [x] hardcoded
-    - [ ] parse from string
-    - [ ] parse from file
-    - [ ] primitives
-        - [ ] sphere
-        - [ ] plane
-        - [ ] triangle
+    - [x] parse from string
+    - [x] parse from file
+    - [x] primitives
+        - [x] sphere
+        - [x] plane
+        - [x] triangle

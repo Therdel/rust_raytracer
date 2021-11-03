@@ -52,26 +52,46 @@ impl Renderer {
     }
 
     pub fn render(&self, canvas_u8: &mut [u8]) {
-        let canvas_raw_color = canvas_u8.as_mut_ptr() as *mut ColorRgbaU8;
-        let canvas = unsafe { slice::from_raw_parts_mut(canvas_raw_color, self.width * self.height) };
+        let canvas = self.canvas_from_raw(canvas_u8);
 
         for y in 0..self.height {
             for x in 0..self.width {
-                let coordinate = glm::vec2(x as _, y as _);
-                let ray = self.raytracer.generate_primary_ray(&coordinate);
-
-                let color = match self.raytracer.raytrace(&ray) {
-                    Some(hit_color) => hit_color,
-                    None => Color::urple(), //scene.screen.background
-                };
-                let color = glm::vec4(color.x, color.y, color.z, 1.0);
-
-                let max_y_index = self.height - 1;
-                let y_inverted = max_y_index - y;
-                let offset = x + self.width * y_inverted;
-
-                canvas[offset] = color.quantize();
+                self.render_pixel(canvas, x, y);
             }
+        }
+    }
+
+    pub fn render_interlaced(&self, canvas_u8: &mut [u8], y_offset: usize, row_jump: usize) {
+        let canvas = self.canvas_from_raw(canvas_u8);
+
+        for y in (y_offset..self.height).step_by(row_jump) {
+            for x in 0..self.width {
+                self.render_pixel(canvas, x, y);
+            }
+        }
+    }
+
+    fn render_pixel(&self, canvas: &mut [ColorRgbaU8], x: usize, y: usize) {
+        let max_y_index = self.height - 1;
+        let y_inverted = max_y_index - y;
+
+        let coordinate = glm::vec2(x as _, y_inverted as _);
+        let ray = self.raytracer.generate_primary_ray(&coordinate);
+
+        let color = match self.raytracer.raytrace(&ray) {
+            Some(hit_color) => hit_color,
+            None => Color::urple(), //scene.screen.background
+        };
+        let color = glm::vec4(color.x, color.y, color.z, 1.0);
+        let offset = x + self.width * y;
+
+        canvas[offset] = color.quantize();
+    }
+
+    fn canvas_from_raw(&self, canvas_u8: &mut [u8]) -> &mut [ColorRgbaU8] {
+        let canvas_raw_color = canvas_u8.as_mut_ptr() as *mut ColorRgbaU8;
+        unsafe {
+            slice::from_raw_parts_mut(canvas_raw_color, self.width * self.height)
         }
     }
 }

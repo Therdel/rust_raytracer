@@ -22,11 +22,10 @@ function takeObject(idx) {
     dropObject(idx);
     return ret;
 }
-/**
-*/
-__exports.main = function() {
-    wasm.main();
-};
+
+let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
+
+cachedTextDecoder.decode();
 
 let cachegetUint8Memory0 = null;
 function getUint8Memory0() {
@@ -36,6 +35,15 @@ function getUint8Memory0() {
     return cachegetUint8Memory0;
 }
 
+function getStringFromWasm0(ptr, len) {
+    return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
+}
+/**
+*/
+__exports.main = function() {
+    wasm.main();
+};
+
 let WASM_VECTOR_LEN = 0;
 
 function passArray8ToWasm0(arg, malloc) {
@@ -43,35 +51,6 @@ function passArray8ToWasm0(arg, malloc) {
     getUint8Memory0().set(arg, ptr / 1);
     WASM_VECTOR_LEN = arg.length;
     return ptr;
-}
-/**
-* @param {Uint8Array} canvas_u8
-* @param {number} width
-* @param {number} height
-* @param {Uint8Array} scene
-* @param {Uint8Array} mesh_obj
-*/
-__exports.render = function(canvas_u8, width, height, scene, mesh_obj) {
-    try {
-        var ptr0 = passArray8ToWasm0(canvas_u8, wasm.__wbindgen_malloc);
-        var len0 = WASM_VECTOR_LEN;
-        var ptr1 = passArray8ToWasm0(scene, wasm.__wbindgen_malloc);
-        var len1 = WASM_VECTOR_LEN;
-        var ptr2 = passArray8ToWasm0(mesh_obj, wasm.__wbindgen_malloc);
-        var len2 = WASM_VECTOR_LEN;
-        wasm.render(ptr0, len0, width, height, ptr1, len1, ptr2, len2);
-    } finally {
-        canvas_u8.set(getUint8Memory0().subarray(ptr0 / 1, ptr0 / 1 + len0));
-        wasm.__wbindgen_free(ptr0, len0 * 1);
-    }
-};
-
-let cachedTextDecoder = new TextDecoder('utf-8', { ignoreBOM: true, fatal: true });
-
-cachedTextDecoder.decode();
-
-function getStringFromWasm0(ptr, len) {
-    return cachedTextDecoder.decode(getUint8Memory0().subarray(ptr, ptr + len));
 }
 
 function addHeapObject(obj) {
@@ -143,6 +122,72 @@ function getInt32Memory0() {
     }
     return cachegetInt32Memory0;
 }
+/**
+*/
+class Renderer {
+
+    static __wrap(ptr) {
+        const obj = Object.create(Renderer.prototype);
+        obj.ptr = ptr;
+
+        return obj;
+    }
+
+    __destroy_into_raw() {
+        const ptr = this.ptr;
+        this.ptr = 0;
+
+        return ptr;
+    }
+
+    free() {
+        const ptr = this.__destroy_into_raw();
+        wasm.__wbg_renderer_free(ptr);
+    }
+    /**
+    * @param {number} width
+    * @param {number} height
+    * @param {Uint8Array} scene
+    * @param {Uint8Array} mesh_obj
+    */
+    constructor(width, height, scene, mesh_obj) {
+        var ptr0 = passArray8ToWasm0(scene, wasm.__wbindgen_malloc);
+        var len0 = WASM_VECTOR_LEN;
+        var ptr1 = passArray8ToWasm0(mesh_obj, wasm.__wbindgen_malloc);
+        var len1 = WASM_VECTOR_LEN;
+        var ret = wasm.renderer_new(width, height, ptr0, len0, ptr1, len1);
+        return Renderer.__wrap(ret);
+    }
+    /**
+    * @param {Uint8Array} canvas_u8
+    */
+    render(canvas_u8) {
+        try {
+            var ptr0 = passArray8ToWasm0(canvas_u8, wasm.__wbindgen_malloc);
+            var len0 = WASM_VECTOR_LEN;
+            wasm.renderer_render(this.ptr, ptr0, len0);
+        } finally {
+            canvas_u8.set(getUint8Memory0().subarray(ptr0 / 1, ptr0 / 1 + len0));
+            wasm.__wbindgen_free(ptr0, len0 * 1);
+        }
+    }
+    /**
+    * @param {Uint8Array} canvas_u8
+    * @param {number} y_offset
+    * @param {number} row_jump
+    */
+    render_interlaced(canvas_u8, y_offset, row_jump) {
+        try {
+            var ptr0 = passArray8ToWasm0(canvas_u8, wasm.__wbindgen_malloc);
+            var len0 = WASM_VECTOR_LEN;
+            wasm.renderer_render_interlaced(this.ptr, ptr0, len0, y_offset, row_jump);
+        } finally {
+            canvas_u8.set(getUint8Memory0().subarray(ptr0 / 1, ptr0 / 1 + len0));
+            wasm.__wbindgen_free(ptr0, len0 * 1);
+        }
+    }
+}
+__exports.Renderer = Renderer;
 
 async function load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
@@ -207,6 +252,9 @@ async function init(input) {
     };
     imports.wbg.__wbindgen_object_drop_ref = function(arg0) {
         takeObject(arg0);
+    };
+    imports.wbg.__wbindgen_throw = function(arg0, arg1) {
+        throw new Error(getStringFromWasm0(arg0, arg1));
     };
 
     if (typeof input === 'string' || (typeof Request === 'function' && input instanceof Request) || (typeof URL === 'function' && input instanceof URL)) {

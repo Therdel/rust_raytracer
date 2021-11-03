@@ -3,7 +3,7 @@
 // available which we need to initialize our WASM code.
 importScripts('./pkg/wasm_interface.js');
 
-const {main, render} = wasm_bindgen;
+const {main, Renderer} = wasm_bindgen;
 
 async function init_wasm() {
     // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
@@ -24,19 +24,46 @@ async function init_worker() {
     let scene = await fetch_into_array('res/scenes/scene_rust.json');
     let obj_file = await fetch_into_array('res/models/santa.obj');
 
-    onmessage = function (msg) {
-        console.log('worker_for_render: Message received from main script');
+    // TODO: Init from init msg from main script
+    let renderer = new Renderer(700, 700, scene, obj_file);
 
-        const canvas_image_data = msg.data;
-        const {data, width, height} = canvas_image_data;
+    function on_init(content) {
+        const { width, height } = content;
+        // TODO: Try creating once and passing to workers
+        renderer = new Renderer(width, height, scene, obj_file);
+    }
+
+    function on_render(content) {
+        const { index, buffer, amount_workers } = content;
+
+        const y_offset = index;
+        const row_jump = amount_workers;
 
         let startTime = performance.now();
-        render(data, width, height, scene, obj_file);
+        renderer.render_interlaced(new Uint8Array(buffer), y_offset, row_jump);
         let endTime = performance.now();
 
-        console.log('worker_for_render: Posting message back to main script');
-        postMessage([endTime - startTime, canvas_image_data]);
+        console.log(`Worker#${index}: Posting message back to main script`);
+        let content_out = {
+            index,
+            render_duration: endTime - startTime,
+            buffer
+        };
+        postMessage({ is_init: false, content: content_out }, [content_out.buffer]);
     }
+
+    onmessage = function (msg) {
+        const { is_init, content } = msg.data;
+        console.log(`Worker: Message received from main script. Init: ${is_init}`);
+
+        if (is_init) {
+            on_init(content);
+        } else {
+            on_render(content);
+        }
+    }
+    // TODO: How to identify ourselves to the main script?
+    postMessage({ is_init: true, content: null });
 }
 
 init_worker();

@@ -1,3 +1,9 @@
+function makeCanvasImageData(width, height) {
+    const canvas_buf_len = width * height * 4;
+    const canvas_buf = new ArrayBuffer(canvas_buf_len);
+    return new ImageData(new Uint8ClampedArray(canvas_buf), width, height);
+}
+
 async function run() {
     let canvas = document.getElementById('screen');
     let button = document.getElementById("run-wasm");
@@ -9,9 +15,7 @@ async function run() {
 
     const width = canvas.width;
     const height = canvas.height;
-    const canvas_buf_len = width * height * 4;
-    const canvas_buf = new ArrayBuffer(canvas_buf_len);
-    const canvas_image_data = new ImageData(new Uint8ClampedArray(canvas_buf), width, height);
+    const canvas_image_data = makeCanvasImageData(width, height);
 
     if (!window.Worker) {
         alert('Your browser doesn\'t support web workers.');
@@ -26,9 +30,8 @@ async function run() {
 
     const amount_workers = navigator.hardwareConcurrency;
     label_thread_count.innerHTML = `Thread count: ${amount_workers}`
-    console.log(`Amount workers: ${amount_workers}`);
     let workers_responded = 0;
-    let workers = [];
+    const workers = [];
 
     function draw_on_canvas_and_finish() {
         console.log(`Finishing with ${workers_responded} responses`);
@@ -45,7 +48,7 @@ async function run() {
         const row_len_bytes = width * 4;
         for (let y=worker.index; y<height; y += row_jump) {
             const row_begin_offset = y * row_len_bytes;
-            const row_dst = new Uint8Array(canvas_buf, row_begin_offset, row_len_bytes);
+            const row_dst = new Uint8Array(canvas_image_data.data.buffer, row_begin_offset, row_len_bytes);
             const row_src = new Uint8Array(worker.buffer, row_begin_offset, row_len_bytes);
             row_dst.set(row_src);
         }
@@ -90,7 +93,7 @@ async function run() {
     for (let index=0; index<amount_workers; ++index) {
         const worker = new Worker('worker_for_render.js');
         worker.onmessage = on_worker_message;
-        let buffer = new ArrayBuffer(canvas_buf_len);
+        let buffer = new ArrayBuffer(canvas_image_data.data.byteLength);
         workers.push({
             index,
             worker,

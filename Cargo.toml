@@ -2,8 +2,8 @@
 
 members = [
     "lib_raytracer",
-    "native_interface",
-    "wasm_interface"
+    "native_app",
+    "web_app"
 ]
 
 [profile.dev]

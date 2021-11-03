@@ -374,7 +374,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "native_interface"
+name = "native_app"
 version = "0.1.0"
 dependencies = [
  "lib_raytracer",
@@ -764,7 +764,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0237232789cf037d5480773fe568aac745bfe2afbc11a863e97901780a6b47cc"
 
 [[package]]
-name = "wasm_interface"
+name = "web_app"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",

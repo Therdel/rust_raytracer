@@ -2,6 +2,7 @@ async function run() {
     let canvas = document.getElementById('screen');
     let button = document.getElementById("run-wasm");
     let label = document.getElementById('time-measurement');
+    let label_thread_count = document.getElementById('thread-count');
 
     let render_start_time = 0;
 
@@ -23,6 +24,7 @@ async function run() {
     let ctx = canvas.getContext('2d');
 
     const amount_workers = navigator.hardwareConcurrency;
+    label_thread_count.innerHTML = `Thread count: ${amount_workers}`
     console.log(`Amount workers: ${amount_workers}`);
     let workers_responded = 0;
     let workers = [];
@@ -51,6 +53,7 @@ async function run() {
     function check_worker_init_and_activate_button() {
         ++workers_responded;
         if (workers_responded >= amount_workers) {
+            button.innerHTML = "Start rendering";
             button.disabled = false;
         }
     }
@@ -66,7 +69,6 @@ async function run() {
             //worker.postMessage({ is_init: true, content: { width, height,}});
             // TODO: Await all init responses before activating the button
             //console.log(`Init Message posted to ${index}`);
-            check_worker_init_and_activate_button();
         } else {
             const { index, render_duration, buffer } = content;
             let worker = workers[index];

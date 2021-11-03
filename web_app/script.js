@@ -4,6 +4,7 @@ async function run() {
     let label = document.getElementById('time-measurement');
     let label_thread_count = document.getElementById('thread-count');
 
+    button.disabled = true;
     let render_start_time = 0;
 
     const width = canvas.width;

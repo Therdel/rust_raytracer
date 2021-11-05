@@ -1,13 +1,13 @@
 // The worker has its own scope and no direct access to functions/objects of the
 // global scope. We import the generated JS file to make `wasm_bindgen`
 // available which we need to initialize our WASM code.
-importScripts('./pkg/wasm_interface.js');
+importScripts('./pkg/web_app.js');
 
 const {main, Renderer} = wasm_bindgen;
 
 async function init_wasm() {
     // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
-    await wasm_bindgen('./pkg/wasm_interface_bg.wasm');
+    await wasm_bindgen('./pkg/web_app_bg.wasm');
 
     // Run main WASM entry point
     main();

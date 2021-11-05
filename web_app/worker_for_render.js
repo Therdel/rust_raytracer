@@ -19,6 +19,11 @@ async function fetch_into_array(path) {
     return new Uint8Array(array_buffer);
 }
 
+async function fetch_scene() {
+    let array_buffer = await (await fetch('../res/scenes/scene_rust.json')).arrayBuffer();
+    return new Uint8Array(array_buffer);
+}
+
 async function init_worker() {
     await init_wasm();
 
@@ -34,8 +39,11 @@ async function init_worker() {
         renderer = new Renderer(width, height, scene, obj_file);
     }
 
-    function on_render(content) {
+    async function on_render(content) {
         const { index, buffer, amount_workers } = content;
+
+        let scene = await fetch_into_array('../res/scenes/scene_rust.json');
+        console.log(`fetched scene, length: ${scene.byteLength}`);
 
         const y_offset = index;
         const row_jump = amount_workers;
@@ -53,14 +61,14 @@ async function init_worker() {
         postMessage({ is_init: false, content: content_out }, [content_out.buffer]);
     }
 
-    onmessage = function (msg) {
+    onmessage = async function (msg) {
         const { is_init, content } = msg.data;
         console.log(`Worker: Message received from main script. Init: ${is_init}`);
 
         if (is_init) {
             on_init(content);
         } else {
-            on_render(content);
+            await on_render(content);
         }
     }
     // TODO: How to identify ourselves to the main script?

@@ -2,6 +2,7 @@ use std::io::Cursor;
 use std::slice;
 
 use nalgebra_glm as glm;
+use wasm_bindgen::JsCast;
 use wasm_bindgen::prelude::*;
 
 use lib_raytracer::exercise1::scene_file::Parser;
@@ -9,10 +10,12 @@ use lib_raytracer::raytracing::{color::*, raytracer::{Public, Raytracer}, Screen
 
 use crate::color::{ColorRgbaU8, QuantizeToU8};
 use crate::fake_same_mesh_loader::FakeSameMeshLoader;
+use crate::fetch::{fetch_into_array, fetch_scene};
 
 mod color;
 mod fake_same_mesh_loader;
 mod utils;
+mod fetch;
 
 // Called when the wasm module is instantiated
 #[wasm_bindgen(start)]
@@ -31,11 +34,11 @@ pub struct Renderer {
 #[wasm_bindgen]
 impl Renderer {
     #[wasm_bindgen(constructor)]
-    pub fn new(width: usize, height: usize,
-               scene: &[u8], mesh_obj: &[u8]) -> Self {
+    pub async fn new(width: usize, height: usize,
+               scene: Box<[u8]>, mesh_obj: Box<[u8]>) -> Self {
         let mut scene = Parser {
             file_reader: Cursor::new(scene),
-            mesh_loader: FakeSameMeshLoader { mesh_obj },
+            mesh_loader: FakeSameMeshLoader { mesh_obj: &*mesh_obj },
         }.parse_json().unwrap();
         scene.screen = Screen {
             pixel_width: width,
@@ -43,6 +46,10 @@ impl Renderer {
             background: Color::urple(),
         };
         let raytracer = Raytracer::new(scene);
+        //let len = fetch_into_array("../res/scenes/scene_rust.json").len();
+        let scene_fetched = fetch_scene().await;
+        let scene_fetched = scene_fetched.dyn_ref::<Box<[u8]>>().unwrap();
+        web_sys::console::log_1(&(format!("scene len: {}", scene_fetched.len())).into());
 
         Renderer {
             width,

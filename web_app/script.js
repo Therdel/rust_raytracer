@@ -28,7 +28,12 @@ async function run() {
     }
     let ctx = canvas.getContext('2d');
 
-    const amount_workers = navigator.hardwareConcurrency;
+    let amount_workers;
+    if (navigator.hardwareConcurrency) {
+        amount_workers = navigator.hardwareConcurrency;
+    } else {
+        amount_workers = 4;
+    }
     label_thread_count.innerHTML = `Thread count: ${amount_workers}`
     let workers_responded = 0;
     const workers = [];

@@ -15,6 +15,7 @@ async function init_wasm() {
 
 async function fetch_into_array(path) {
     let array_buffer = await (await fetch(path)).arrayBuffer();
+    // TODO: Throw error if file doesn't exist / is empty
     return new Uint8Array(array_buffer);
 }
 

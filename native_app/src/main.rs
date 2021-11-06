@@ -17,7 +17,7 @@ use lib_raytracer::raytracing::raytracer::{Public, Raytracer};
 
 // TODO: Grab from args or default to stdout
 const IMAGE_PATH: &'static str = "render.png";
-const SCENE_PATH: &'static str = "res/scenes/infinity_santa.json";
+const SCENE_PATH: &'static str = "res/scenes/scene_rust.json";
 const MODEL_DIR_PATH: &'static str = "res/models";
 
 fn main() {

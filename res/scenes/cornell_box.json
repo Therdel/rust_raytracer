@@ -3,7 +3,7 @@
     "position": {
       "x": 0,
       "y": -0.2,
-      "z": 1
+      "z": 1.4
     },
     "orientation_degrees": {
       "x": 0,
@@ -29,8 +29,8 @@
     {
       "position": {
         "x": 0,
-        "y": 1,
-        "z": 0,
+        "y": 0.9,
+        "z": -0.5,
         "w": 1
       },
       "color": {
@@ -297,7 +297,7 @@
         "y": 0,
         "z": 1
       },
-      "distance": 1,
+      "distance": 1.5,
       "material": "blackHole"
     },
     {

@@ -57,8 +57,8 @@ pub mod matrix {
         let rotation_matrix: glm::Mat4 = rotation(orientation.y, orientation.x, orientation.z);
         // TODO: Document http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#translation-matrices
         let translation_matrix = translation(&position);
-        // apply translation first, rotation second
-        let camera_transorm = rotation_matrix * translation_matrix;
+        // apply rotation first, translation second
+        let camera_transorm = translation_matrix * rotation_matrix;
 
         // TODO: Document: View transform must use inverses, because it must undo the camera pos/rot towards origin.
         glm::inverse(&camera_transorm)

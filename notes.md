@@ -23,3 +23,4 @@
         - [x] sphere
         - [x] plane
         - [x] triangle
+- [x] gouraud shading

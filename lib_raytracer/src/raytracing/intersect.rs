@@ -104,7 +104,7 @@ impl Intersect for Sphere {
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
                 let normal = self.normal(&hit_position);
-                let hitpoint = create_hitpoint(t, &hit_position, ray, &normal, self.material.clone());
+                let hitpoint = create_hitpoint(t, &hit_position, ray, &normal, &normal, self.material.clone());
 
                 result = Some(hitpoint);
             }
@@ -131,7 +131,7 @@ impl Intersect for Plane {
             let does_intersect_in_ray_direction = t >= 0.0;
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
-                let hitpoint = create_hitpoint(t, &hit_position, ray, &self.normal, self.material.clone());
+                let hitpoint = create_hitpoint(t, &hit_position, ray, &self.normal, &self.normal, self.material.clone());
 
                 result = Some(hitpoint);
             }
@@ -170,7 +170,9 @@ impl Intersect for Triangle {
             !is_hit_point_outside;
         if does_intersect {
             let hit_position = utils::ray_equation(ray, t);
-            let hitpoint = create_hitpoint(t, &hit_position, ray, self.normal(), self.material.clone());
+            let hit_normal_gouraud = u * self.normals[0] + v * self.normals[1] + w * self.normals[2];
+            let hit_normal_gouraud = glm::normalize(&hit_normal_gouraud);
+            let hitpoint = create_hitpoint(t, &hit_position, ray, self.normal(), &hit_normal_gouraud, self.material.clone());
 
             result = Some(hitpoint);
         }
@@ -302,18 +304,19 @@ impl<Primitive> Intersect for Instance<Primitive>
     }
 }
 
-fn create_hitpoint(t: f32, hit_position: &glm::Vec3, ray: &Ray, normal: &glm::Vec3,
+fn create_hitpoint(t: f32, hit_position: &glm::Vec3, ray: &Ray, surface_normal: &glm::Vec3, hit_normal: &glm::Vec3,
                    material: AliasArc<Vec<Material>, Material>) -> Hitpoint {
-    let n_dot_rdir = glm::dot(normal, &ray.direction);
+    let n_dot_rdir = glm::dot(surface_normal, &ray.direction);
     let intersect_frontside = n_dot_rdir < 0.0;
 
-    // invert surface normal when hitting the back or inside of the geometry
-    let hit_normal = if intersect_frontside { *normal } else { -*normal };
+    // invert normals when hitting the back or inside of the geometry
+    let surface_normal = if intersect_frontside { *surface_normal } else { -*surface_normal };
+    let hit_normal = if intersect_frontside { *hit_normal } else { -*hit_normal };
 
     // compensate numeric error on intersection.
     // moves hitpoint along surface normal in direction of ray origin
     // this avoids cases where hitpoints numerically "sink through" the surface
-    let offset = hit_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
+    let offset = surface_normal * NUMERIC_ERROR_COMPENSATION_OFFSET;
     let hit_position_acne_compensated = *hit_position + offset;
 
     // refractive ray begins on the other side of the geometry.

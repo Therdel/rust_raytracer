@@ -53,7 +53,7 @@ async function init_worker() {
         postMessage({ is_init: false, content: content_out }, [content_out.buffer]);
     }
 
-    onmessage = function (msg) {
+    onmessage = (msg) => {
         const { is_init, content } = msg.data;
         console.log(`Worker: Message received from main script. Init: ${is_init}`);
 

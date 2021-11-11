@@ -1,32 +1,25 @@
-function makeCanvasImageData(width, height) {
-    const canvas_buf_len = width * height * 4;
-    const canvas_buf = new ArrayBuffer(canvas_buf_len);
-    return new ImageData(new Uint8ClampedArray(canvas_buf), width, height);
-}
 
 async function run() {
-    let canvas = document.getElementById('screen');
-    let button = document.getElementById("run-wasm");
-    let label = document.getElementById('time-measurement');
-    let label_thread_count = document.getElementById('thread-count');
-
-    button.disabled = true;
-    let render_start_time = 0;
-
-    const width = canvas.width;
-    const height = canvas.height;
-    const canvas_image_data = makeCanvasImageData(width, height);
-
     if (!window.Worker) {
         alert('Your browser doesn\'t support web workers.');
         console.log('Your browser doesn\'t support web workers.');
         return;
-    } else if (!canvas.getContext) {
-        alert('Couldn\'t get canvas.getContext');
-        console.log('Couldn\'t get canvas.getContext');
-        return;
     }
-    let ctx = canvas.getContext('2d');
+
+    const canvas = document.getElementById('screen');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const canvas_image_data = ctx.createImageData(width, height);
+
+    const button = document.getElementById("run-wasm");
+    const label = document.getElementById('time-measurement');
+    const label_thread_count = document.getElementById('thread-count');
+
+    button.disabled = true;
+
+    let render_start_time = 0;
+
 
     let amount_workers;
     if (navigator.hardwareConcurrency) {
@@ -40,9 +33,9 @@ async function run() {
 
     function draw_on_canvas_and_finish() {
         console.log(`Finishing with ${workers_responded} responses`);
-        window.requestAnimationFrame(function () {
-            ctx.putImageData(canvas_image_data, 0, 0);
-        });
+        window.requestAnimationFrame(
+            () => ctx.putImageData(canvas_image_data, 0, 0)
+        );
         const render_duration = performance.now() - render_start_time;
         label.innerHTML = `Render time: ${render_duration.toFixed(0)} ms`;
         button.disabled = false;
@@ -86,6 +79,9 @@ async function run() {
 
             worker.buffer = buffer;
             write_worker_buffer_into_image_data(worker);
+            window.requestAnimationFrame(
+                () => ctx.putImageData(canvas_image_data, 0, 0)
+            );
 
             workers_responded += 1;
             if (workers_responded >= amount_workers) {
@@ -106,7 +102,7 @@ async function run() {
         })
     }
 
-    button.addEventListener("click", function () {
+    button.addEventListener("click", () => {
         button.disabled = true;
         workers_responded = 0;
         render_start_time = performance.now();

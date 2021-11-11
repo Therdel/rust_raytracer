@@ -22,7 +22,7 @@ async function fetch_into_array(path) {
 async function init_worker() {
     await init_wasm();
 
-    let scene = await fetch_into_array('../res/scenes/scene_rust.json');
+    let scene = await fetch_into_array('../res/scenes/cornell_box.json');
     let obj_file = await fetch_into_array('../res/models/santa.obj');
 
     // TODO: Init from init msg from main script

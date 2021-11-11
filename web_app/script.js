@@ -72,8 +72,8 @@ async function run() {
             // TODO: Await all init responses before activating the button
             //console.log(`Init Message posted to ${index}`);
         } else {
-            const { index, render_duration, buffer } = content;
-            let worker = workers[index];
+            const { index, buffer } = content;
+            const worker = workers[index];
 
             console.log(`Message received from worker #${worker.index}`);
 

@@ -39,15 +39,11 @@ async function init_worker() {
 
         const y_offset = index;
         const row_jump = amount_workers;
-
-        let startTime = performance.now();
         renderer.render_interlaced(new Uint8Array(buffer), y_offset, row_jump);
-        let endTime = performance.now();
 
         console.log(`Worker#${index}: Posting message back to main script`);
         let content_out = {
             index,
-            render_duration: endTime - startTime,
             buffer
         };
         postMessage({ is_init: false, content: content_out }, [content_out.buffer]);

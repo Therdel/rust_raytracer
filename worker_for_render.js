@@ -15,13 +15,14 @@ async function init_wasm() {
 
 async function fetch_into_array(path) {
     let array_buffer = await (await fetch(path)).arrayBuffer();
+    // TODO: Throw error if file doesn't exist / is empty
     return new Uint8Array(array_buffer);
 }
 
 async function init_worker() {
     await init_wasm();
 
-    let scene = await fetch_into_array('res/scenes/scene_rust.json');
+    let scene = await fetch_into_array('res/scenes/cornell_box.json');
     let obj_file = await fetch_into_array('res/models/santa.obj');
 
     // TODO: Init from init msg from main script
@@ -38,21 +39,17 @@ async function init_worker() {
 
         const y_offset = index;
         const row_jump = amount_workers;
-
-        let startTime = performance.now();
         renderer.render_interlaced(new Uint8Array(buffer), y_offset, row_jump);
-        let endTime = performance.now();
 
         console.log(`Worker#${index}: Posting message back to main script`);
         let content_out = {
             index,
-            render_duration: endTime - startTime,
             buffer
         };
         postMessage({ is_init: false, content: content_out }, [content_out.buffer]);
     }
 
-    onmessage = function (msg) {
+    onmessage = (msg) => {
         const { is_init, content } = msg.data;
         console.log(`Worker: Message received from main script. Init: ${is_init}`);
 

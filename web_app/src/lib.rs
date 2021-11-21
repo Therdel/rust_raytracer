@@ -88,6 +88,21 @@ impl Renderer {
         canvas[offset] = color.quantize();
     }
 
+    pub fn resize_screen(&mut self, width: usize, height: usize) {
+        self.width = width;
+        self.height = height;
+        self.raytracer.resize_screen(width, height)
+    }
+
+    pub fn turn_camera(&mut self, begin_x: f32, begin_y: f32, end_x: f32, end_y: f32) {
+        use web_sys::console;
+        console::log_7(&begin_x.into(), &",".into(), &begin_y.into(),
+                       &") -> (".into(), &end_x.into(), &",".into(), &end_y.into());
+        let ang_diffs = self.raytracer.turn_camera(&glm::vec2(begin_x, begin_y),
+                                   &glm::vec2(end_x, end_y));
+        console::log_4(&"ang_diff_x,  ang_diff_y".into(), &ang_diffs.x.into(), &", ".into(), &ang_diffs.y.into());
+    }
+
     fn canvas_from_raw(&self, canvas_u8: &mut [u8]) -> &mut [ColorRgbaU8] {
         let canvas_raw_color = canvas_u8.as_mut_ptr() as *mut ColorRgbaU8;
         unsafe {

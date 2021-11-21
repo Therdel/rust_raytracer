@@ -3,19 +3,35 @@
 <head>
     <meta charset="utf-8">
     <title>knerz</title>
+    <style>
+        #canvas-resizer {
+            border: black 2px dashed;
+            overflow: hidden;
+            height: 700px;
+            width: 700px;
+        }
+    </style>
 </head>
 <body>
     <center>
         <h2>Raytracing with WASM</h2>
 
-        <canvas id="screen" style="border: black 2px solid" width="700px" height="700px"></canvas>
+        <div id="canvas-resizer" class="resizable">
+            <canvas id="screen"></canvas>
+        </div>
 
         <br>
         <br>
-
-        <button id="run-wasm">Initialising...</button>
 
         <label id="time-measurement"></label>
+
+        <br>
+
+        <label>Choose a scene:</label>
+        <select id="select_scenes">
+            <option value="cornell_box.json">Cornell box</option>
+            <option value="scene_rust.json">Santa and balls</option>
+        </select>
         <br>
         <label id="thread-count"></label>
         
@@ -34,5 +50,8 @@
         <!--    </ul>-->
     </center>
 </body>
-<script type="module" src="script.js"></script>
+<!--Manual imports to share code with WebWorkers without modules or a bundler-->
+<script src="pkg/message_from_worker.js"></script>
+<script src="pkg/message_to_worker.js"></script>
+<script type="module" src="pkg/main/main.js"></script>
 </html>

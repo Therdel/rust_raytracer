@@ -1,0 +1,21 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "target": "ES6",
+    "lib": [
+      "es6",
+      "dom"
+    ],
+    "module": "ES6",
+    "outDir": "../../pkg"
+  },
+  "files": [
+    "scripts/message_from_worker.ts",
+    "scripts/message_to_worker.ts",
+    "controller.ts",
+    "main.ts",
+    "model.ts",
+    "render_worker_pool.ts",
+    "view.ts"
+  ]
+}

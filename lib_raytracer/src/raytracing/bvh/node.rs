@@ -10,6 +10,7 @@ pub enum NodeType {
         child_right: OptNodeIndex
     },
     Leaf {
+        // TODO: Try storing the Triangles locally
         triangles: Vec<Triangle>
     },
 }

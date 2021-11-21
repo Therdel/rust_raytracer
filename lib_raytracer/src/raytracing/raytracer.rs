@@ -16,7 +16,7 @@ pub struct Raytracer {
 pub trait Public {
     fn new(scene: Scene) -> Raytracer;
     fn resize_screen(&mut self, width: usize, height: usize);
-    fn turn_camera(&mut self, begin: &glm::Vec2, end: &glm::Vec2) -> glm::Vec2 ;
+    fn turn_camera(&mut self, drag_begin: &glm::Vec2, drag_end: &glm::Vec2);
 
     fn raytrace(&self, ray: &Ray) -> Option<ColorRgb>;
     fn depth_map(&self, ray: &Ray) -> Option<ColorRgb>;
@@ -52,33 +52,43 @@ impl Public for Raytracer {
         self.screen_to_world = matrix::screen_to_world(&self.scene.camera, &self.scene.screen);
     }
 
-    fn turn_camera(&mut self, begin: &glm::Vec2, end: &glm::Vec2) -> glm::Vec2 {
-        // find forward vectors
-        let dir_begin: glm::Vec3 = self.generate_primary_ray(begin).direction;
-        let dir_end: glm::Vec3 = self.generate_primary_ray(end).direction;
+    fn turn_camera(&mut self, begin: &glm::Vec2, end: &glm::Vec2) {
+        let radians = |degrees: f32| degrees * (glm::pi::<f32>() / 180.0);
 
-        // angle between both vectors in y-normal plane
-        let dir_begin_xz: glm::Vec2 = glm::vec2(dir_begin.x, dir_begin.z);
-        let dir_end_xz: glm::Vec2 = glm::vec2(dir_end.x, dir_end.z);
-        let angle_diff_y = glm::angle(&dir_begin_xz, &dir_end_xz);
-        // the angle is positive when begin is right of end
-        let angle_diff_y = if begin.x > end.x { angle_diff_y } else { -angle_diff_y };
+        // pixel to degrees mapping
+        let y_fov_degrees = self.scene.camera.y_fov_degrees;
+        let degrees_per_pixel = y_fov_degrees / self.scene.screen.pixel_height as f32;
+        let pixel_to_angle = |pixel| radians(pixel * degrees_per_pixel);
 
-        // angle between both vectors in x-normal plane
-        let dir_begin_yz: glm::Vec2 = glm::vec2(dir_begin.y, dir_begin.z);
-        let dir_end_yz: glm::Vec2 = glm::vec2(dir_end.y, dir_end.z);
-        let angle_diff_x = glm::angle(&dir_begin_yz, &dir_end_yz);
-        // the angle is positive when begin is lower than end
-        let angle_diff_x = if begin.y < end.y { angle_diff_x } else { - angle_diff_x };
+        let pixel_diff_x = end.x - begin.x;
+        let pixel_diff_y = end.y - begin.y;
+
+        let angle_diff_heading = pixel_to_angle(pixel_diff_x);
+        let angle_diff_pitch = pixel_to_angle(pixel_diff_y);
+
+        // "natural scrolling" - turning follows the inverse cursor motion
+        // the heading turn is positive when turning to the left -> when drag_begin is left of drag_end
+        let angle_diff_heading = match begin.x < end.x {
+            true => angle_diff_heading.abs(),
+            false => -angle_diff_heading.abs()
+        };
+        // the pitch turn is positive when turning upwards -> when drag_begin is above drag_end
+        let angle_diff_pitch = match begin.y > end.y {
+            true => angle_diff_pitch.abs(),
+            false => -angle_diff_pitch.abs()
+        };
 
         let camera_orientation = &mut self.scene.camera.orientation;
-        // TODO: explain why this has to be substracted
-        camera_orientation.x = (camera_orientation.x - angle_diff_x).clamp(-90., 90.);
-        camera_orientation.y = (camera_orientation.y - angle_diff_y) % 360.0;
+        camera_orientation.x += angle_diff_pitch;
+        camera_orientation.y += angle_diff_heading;
+
+        // clamp pitch
+        camera_orientation.x = camera_orientation.x.clamp(radians(-90.),
+                                                          radians(90.));
+        // modulo heading
+        camera_orientation.y %= radians(360.);
 
         self.screen_to_world = matrix::screen_to_world(&self.scene.camera, &self.scene.screen);
-
-        return glm::degrees(&glm::vec2(angle_diff_x, angle_diff_y));
     }
 
     fn raytrace(&self, ray: &Ray) -> Option<ColorRgb> {

@@ -94,13 +94,9 @@ impl Renderer {
         self.raytracer.resize_screen(width, height)
     }
 
-    pub fn turn_camera(&mut self, begin_x: f32, begin_y: f32, end_x: f32, end_y: f32) {
-        use web_sys::console;
-        console::log_7(&begin_x.into(), &",".into(), &begin_y.into(),
-                       &") -> (".into(), &end_x.into(), &",".into(), &end_y.into());
-        let ang_diffs = self.raytracer.turn_camera(&glm::vec2(begin_x, begin_y),
-                                   &glm::vec2(end_x, end_y));
-        console::log_4(&"ang_diff_x,  ang_diff_y".into(), &ang_diffs.x.into(), &", ".into(), &ang_diffs.y.into());
+    pub fn turn_camera(&mut self, drag_begin_x: f32, drag_begin_y: f32, drag_end_x: f32, drag_end_y: f32) {
+        self.raytracer.turn_camera(&glm::vec2(drag_begin_x, drag_begin_y),
+                                                   &glm::vec2(drag_end_x, drag_end_y));
     }
 
     fn canvas_from_raw(&self, canvas_u8: &mut [u8]) -> &mut [ColorRgbaU8] {

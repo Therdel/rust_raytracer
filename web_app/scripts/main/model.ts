@@ -1,9 +1,20 @@
 /// <reference path="../message_to_worker.ts" />
 /// <reference path="../message_from_worker.ts" />
+/// <reference types="../../pkg/web_app" />
 
 import {View} from "./view.js";
 import {Controller} from "./controller.js";
 import {RenderWorkerPool} from "./render_worker_pool.js";
+
+async function init_wasm() {
+    // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
+    await wasm_bindgen('pkg/web_app_bg.wasm');
+    //await wasm_bindgen('pkg/web_app_bg.wasm');
+
+    // Run main WASM entry point
+    wasm_bindgen.main();
+}
+init_wasm()
 
 export class Model {
     private readonly core: ModelCore
@@ -39,8 +50,7 @@ class ModelCore {
 
     public readonly render_worker_pool: RenderWorkerPool
 
-    constructor(view: View, controller: Controller,
-                canvas: HTMLCanvasElement) {
+    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
         this.view = view
         this.controller = controller
 
@@ -90,16 +100,26 @@ class ModelCore {
     }
 
     write_interlaced_worker_buffer_into_image_data(index: number, buffer: ArrayBuffer) {
-        const [width, height] = [this.canvas.width, this.canvas.height]
-        const row_jump = this.render_worker_pool.amount_workers();
-        const row_len_bytes = width * 4;
+        const dst = new Uint8Array(this.image_data.data.buffer)
+        const src = new Uint8Array(buffer)
 
-        for (let y = index; y < height; y += row_jump) {
-            const row_begin_offset = y * row_len_bytes;
-            const row_dst = new Uint8Array(this.image_data.data.buffer, row_begin_offset, row_len_bytes);
-            const row_src = new Uint8Array(buffer, row_begin_offset, row_len_bytes);
-            row_dst.set(row_src);
-        }
+        wasm_bindgen.add_buffer(dst, src)
+        // const [width, height] = [this.canvas.width, this.canvas.height]
+        // const row_jump = this.render_worker_pool.amount_workers();
+        // const row_len_bytes = width * 4;
+        //
+        // for (let y = index; y < height; y += row_jump) {
+        //     const row_begin_offset = y * row_len_bytes;
+        //     const row_dst = new Uint8Array(this.image_data.data.buffer, row_begin_offset, row_len_bytes);
+        //     const row_src = new Uint8Array(buffer, row_begin_offset, row_len_bytes);
+        //     row_dst.set(row_src);
+        // }
+    }
+
+    overwrite_worker_buffer_into_image_data(buffer: ArrayBuffer) {
+        const dst = new Uint8Array(this.image_data.data.buffer)
+        const src = new Uint8Array(buffer)
+        dst.set(src)
     }
 }
 
@@ -207,7 +227,12 @@ namespace ModelState {
 
         on_message_impl(message: MessageFromWorker_Message): DidHandleMessage {
             if (message.type == "MessageFromWorker_RenderResponse") {
-                this.model.write_interlaced_worker_buffer_into_image_data(message.index, message.buffer)
+                const is_first_response = this.worker_responses == 0
+                if (is_first_response) {
+                    this.model.overwrite_worker_buffer_into_image_data(message.buffer)
+                } else {
+                    this.model.write_interlaced_worker_buffer_into_image_data(message.index, message.buffer)
+                }
                 this.model.view.update_canvas(this.model.get_image_data())
 
                 this.worker_responses += 1

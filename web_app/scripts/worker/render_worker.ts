@@ -42,7 +42,7 @@ class RenderWorker {
         this.cheat_obj_file = await fetch_into_array(CHEAT_MODEL_PATH)
     }
 
-    static async init({ index, amount_workers, scene_file: scene_file, width, height }) {
+    static async init({ index, amount_workers, scene_file: scene_file, width, height }: MessageToWorker_Init) {
         const scene_url = SCENE_BASE_PATH + '/' + scene_file
         const scene = await fetch_into_array(scene_url)
         RenderWorker.instance = new RenderWorker(index,
@@ -52,7 +52,7 @@ class RenderWorker {
                                                  height)
     }
 
-    static async scene_select({ scene_file: scene_file }) {
+    static async scene_select({ scene_file: scene_file }: MessageToWorker_SceneSelect) {
         const instance = RenderWorker.getInstance()
         const scene_url = SCENE_BASE_PATH + '/' + scene_file
         const scene = await fetch_into_array(scene_url)
@@ -62,22 +62,21 @@ class RenderWorker {
                                                       this.cheat_obj_file)
     }
 
-    static resize({ width, height }) {
+    static resize({ width, height }: MessageToWorker_Resize) {
         const instance = RenderWorker.getInstance()
         instance.width = width
         instance.height = height
         instance.renderer.resize_screen(width, height)
     }
 
-    static turn_camera(message) {
-        const {
-            drag_begin: { x: begin_x, y: begin_y},
-            drag_end: { x: end_x, y: end_y}
-        } = message
+    static turn_camera({
+                           drag_begin: {x: begin_x, y: begin_y},
+                           drag_end: {x: end_x, y: end_y}
+                       }: MessageToWorker_TurnCamera) {
         RenderWorker.instance.renderer.turn_camera(begin_x, begin_y, end_x, end_y)
     }
 
-    static render(buffer) {
+    static render(buffer: ArrayBuffer) {
         const instance = RenderWorker.getInstance()
         const y_offset = instance.index
         const row_jump = instance.amount_workers

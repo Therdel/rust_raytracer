@@ -49,9 +49,19 @@
         <!--        </li>-->
         <!--    </ul>-->
     </center>
+    <script>
+        const el = document.createElement("div")
+        el.innerHTML = `Cross origin isolated: ${window.crossOriginIsolated ? "✅" : "❌"}`
+        document.body.append(el);
+    </script>
 </body>
+<!--source: https://github.com/gzuidhof/coi-serviceworker
+    enable COOP and COEP headers to enable SharedArrayBuffer-->
+<script src="pkg/coi-serviceworker.js"></script>
 <!--Manual imports to share code with WebWorkers without modules or a bundler-->
+<!--TODO: Can we import with importScripts in Typescript? -->
 <script src="pkg/message_from_worker.js"></script>
 <script src="pkg/message_to_worker.js"></script>
+<script src="pkg/web_app.js"></script>
 <script type="module" src="pkg/main/main.js"></script>
 </html>

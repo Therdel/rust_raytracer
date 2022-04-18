@@ -52,8 +52,7 @@ class RenderWorker {
         instance.height = height;
         instance.renderer.resize_screen(width, height);
     }
-    static turn_camera(message) {
-        const { drag_begin: { x: begin_x, y: begin_y }, drag_end: { x: end_x, y: end_y } } = message;
+    static turn_camera({ drag_begin: { x: begin_x, y: begin_y }, drag_end: { x: end_x, y: end_y } }) {
         RenderWorker.instance.renderer.turn_camera(begin_x, begin_y, end_x, end_y);
     }
     static render(buffer) {
@@ -109,7 +108,7 @@ function init_worker() {
             RenderWorker.render(buffer);
             console.debug(`Worker: Responding`);
             const response = new MessageFromWorker_RenderResponse(RenderWorker.index(), buffer);
-            postMessage(response, [buffer]);
+            postMessage(response); //, [buffer])
         });
         const init_message = new MessageFromWorker_Init();
         postMessage(init_message);

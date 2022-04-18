@@ -1,6 +1,26 @@
 /// <reference path="../message_to_worker.ts" />
 /// <reference path="../message_from_worker.ts" />
+/// <reference types="../../pkg/web_app" />
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { RenderWorkerPool } from "./render_worker_pool.js";
+function init_wasm() {
+    return __awaiter(this, void 0, void 0, function* () {
+        // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
+        yield wasm_bindgen('pkg/web_app_bg.wasm');
+        //await wasm_bindgen('pkg/web_app_bg.wasm');
+        // Run main WASM entry point
+        wasm_bindgen.main();
+    });
+}
+init_wasm();
 export class Model {
     constructor(view, controller, canvas) {
         this.core = new ModelCore(view, controller, canvas);
@@ -53,8 +73,12 @@ class ModelCore {
         this.state.on_message(message);
     }
     write_interlaced_worker_buffer_into_image_data(index, buffer) {
-        const [width, height] = [this.canvas.width, this.canvas.height];
+        const dst = new Uint8Array(this.image_data.data.buffer);
+        const src = new Uint8Array(buffer);
+        const y_offset = index;
         const row_jump = this.render_worker_pool.amount_workers();
+        const [width, height] = [this.canvas.width, this.canvas.height];
+        // wasm_bindgen.put_buffer(dst, src, y_offset, row_jump, width, height)
         const row_len_bytes = width * 4;
         for (let y = index; y < height; y += row_jump) {
             const row_begin_offset = y * row_len_bytes;
@@ -62,6 +86,27 @@ class ModelCore {
             const row_src = new Uint8Array(buffer, row_begin_offset, row_len_bytes);
             row_dst.set(row_src);
         }
+    }
+    write_all_interlaced_worker_buffers_into_image_data() {
+        const [width, height] = [this.canvas.width, this.canvas.height];
+        const row_len_bytes = width * 4;
+        const amount_buffers = this.render_worker_pool.amount_workers();
+        for (let y = 0; y < height; ++y) {
+            const row_begin_offset = y * row_len_bytes;
+            const buffer_index = y % amount_buffers;
+            const buffer = this.render_worker_pool.worker_image_buffers[buffer_index];
+            const row_dst = new Uint8Array(this.image_data.data.buffer, row_begin_offset, row_len_bytes);
+            const row_src = new Uint8Array(buffer, row_begin_offset, row_len_bytes);
+            row_dst.set(row_src);
+        }
+    }
+    // merge_interlaced_buffers_into_image_data() {
+    //     wasm_bindgen
+    // }
+    overwrite_worker_buffer_into_image_data(buffer) {
+        const dst = new Uint8Array(this.image_data.data.buffer);
+        const src = new Uint8Array(buffer);
+        dst.set(src);
     }
 }
 var ModelState;
@@ -132,10 +177,20 @@ var ModelState;
         }
         on_message_impl(message) {
             if (message.type == "MessageFromWorker_RenderResponse") {
-                this.model.write_interlaced_worker_buffer_into_image_data(message.index, message.buffer);
+                // const is_first_response = this.worker_responses == 0
+                // if (is_first_response) {
+                //     this.model.overwrite_worker_buffer_into_image_data(message.buffer)
+                // } else {
+                //     this.model.write_interlaced_worker_buffer_into_image_data(message.index, message.buffer)
+                // }
                 this.model.view.update_canvas(this.model.get_image_data());
                 this.worker_responses += 1;
                 if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {
+                    // this.model.write_all_interlaced_worker_buffers_into_image_data()
+                    console.log("0000000000000000000000000000000022200");
+                    // this.model.view.update_canvas(this.model.get_image_data())
+                    //
+                    // this.model.view.update_canvas(this.model.get_image_data())
                     this.model.transition_state(new AcceptUserControl(this.model));
                     this.display_render_time();
                 }

@@ -52,6 +52,26 @@ function passArray8ToWasm0(arg, malloc) {
     WASM_VECTOR_LEN = arg.length;
     return ptr;
 }
+/**
+* @param {Uint8Array} result_buf
+* @param {Uint8Array} other_buf
+* @param {number} y_offset
+* @param {number} row_jump
+* @param {number} buffer_width
+* @param {number} buffer_height
+*/
+__exports.put_buffer = function(result_buf, other_buf, y_offset, row_jump, buffer_width, buffer_height) {
+    try {
+        var ptr0 = passArray8ToWasm0(result_buf, wasm.__wbindgen_malloc);
+        var len0 = WASM_VECTOR_LEN;
+        var ptr1 = passArray8ToWasm0(other_buf, wasm.__wbindgen_malloc);
+        var len1 = WASM_VECTOR_LEN;
+        wasm.put_buffer(ptr0, len0, ptr1, len1, y_offset, row_jump, buffer_width, buffer_height);
+    } finally {
+        result_buf.set(getUint8Memory0().subarray(ptr0 / 1, ptr0 / 1 + len0));
+        wasm.__wbindgen_free(ptr0, len0 * 1);
+    }
+};
 
 function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);

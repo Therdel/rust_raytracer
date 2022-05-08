@@ -1,6 +1,6 @@
 
 
-import {test_module_import, test_worker} from "./test_module.js";
+import {test_module_import} from "./test_module.js";
 
 onmessage = ({ data }) => {
     postMessage(`hi from worker. Mainwindow said: [${data}]`);

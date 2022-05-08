@@ -15,8 +15,8 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 importScripts("../../pkg/web_app.js");
 importScripts("../messages/message_to_worker.js");
 importScripts("../messages/message_from_worker.js");
-const SCENE_BASE_PATH = "../../../res/scenes";
-const CHEAT_MODEL_PATH = "../../../res/models/santa.obj";
+const SCENE_BASE_PATH = "../../res/scenes";
+const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
 class RenderWorker {
     constructor(index, amount_workers, scene, width, height) {
         this.index = index;

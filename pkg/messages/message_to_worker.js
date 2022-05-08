@@ -1,0 +1,37 @@
+class MessageToWorker_MessageWithBuffer {
+    constructor(buffer, message) {
+        this.buffer = buffer;
+        this.message = message;
+        this.type = "MessageToWorker_MessageWithBuffer";
+    }
+}
+class MessageToWorker_Init {
+    constructor(index, amount_workers, scene_file, width, height) {
+        this.index = index;
+        this.amount_workers = amount_workers;
+        this.scene_file = scene_file;
+        this.width = width;
+        this.height = height;
+        this.type = "MessageToWorker_Init";
+    }
+}
+class MessageToWorker_SceneSelect {
+    constructor(scene_file) {
+        this.scene_file = scene_file;
+        this.type = "MessageToWorker_SceneSelect";
+    }
+}
+class MessageToWorker_Resize {
+    constructor(width, height) {
+        this.width = width;
+        this.height = height;
+        this.type = "MessageToWorker_Resize";
+    }
+}
+class MessageToWorker_TurnCamera {
+    constructor(drag_begin, drag_end) {
+        this.drag_begin = drag_begin;
+        this.drag_end = drag_end;
+        this.type = "MessageToWorker_TurnCamera";
+    }
+}

@@ -18,7 +18,9 @@ export class RenderWorkerPool {
     init_workers(amount_workers) {
         this.workers = [];
         for (let index = 0; index < amount_workers; ++index) {
-            const worker = new Worker("../pkg/worker/render_worker.js");//, {type:'module'});
+            // const worker = new Worker("pkg/worker/render_worker.js");
+            const worker = new Worker("rust_raytracer/pkg/worker/render_worker.js");
+            // const worker = new Worker("pkg/worker/render_worker.js", {type:'module'});
             // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
             // source: https://stackoverflow.com/a/20279485
             worker.onmessage = (message) => this.on_worker_message(message);

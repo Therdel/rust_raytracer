@@ -13,11 +13,11 @@
 <!--source: https://gist.github.com/developit/220246bc99044af74a6680ce13284f59
     author: Jason Miller
     adds support for module workers in "all modern browsers"-->
-<script src="module-workers-polyfill.js"></script>
+<script src="/src/thirdparty/module-workers-polyfill.js"></script>
 <!-- source: https://github.com/gzuidhof/coi-serviceworker
     author: Guido Zuidhof
     enable COOP and COEP headers to enable SharedArrayBuffer-->
-<script src="coi-serviceworker.js"></script>
+<script src="/src/thirdparty/coi-serviceworker.js"></script>
 <!-- <script src="pkg/web_app.js"></script>
 <script type="module" src="pkg/main/main.js"></script> -->
 <script>
@@ -25,7 +25,7 @@
     el.innerHTML = `Cross origin isolated: ${window.crossOriginIsolated ? "✅" : "❌"}`
     document.body.append(el);
     
-    const worker = new Worker('src/test_worker_module_proxy.js', { type: 'module' });
+    const worker = new Worker('/src/test_worker_module_proxy.js', { type: 'module' });
     worker.onmessage = (e) => {
         
         const el = document.createElement("div")

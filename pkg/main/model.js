@@ -1,5 +1,7 @@
-/// <reference path="../message_to_worker.ts" />
-/// <reference path="../message_from_worker.ts" />
+// /// <reference path="../message_to_worker.ts" />
+// /// <reference path="../message_from_worker.ts" />
+/// <reference path="../messages/message_to_worker.ts" />
+/// <reference path="../messages/message_from_worker.ts" />
 /// <reference types="../../pkg/web_app" />
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -87,19 +89,19 @@ class ModelCore {
             row_dst.set(row_src);
         }
     }
-    write_all_interlaced_worker_buffers_into_image_data() {
-        const [width, height] = [this.canvas.width, this.canvas.height];
-        const row_len_bytes = width * 4;
-        const amount_buffers = this.render_worker_pool.amount_workers();
-        for (let y = 0; y < height; ++y) {
-            const row_begin_offset = y * row_len_bytes;
-            const buffer_index = y % amount_buffers;
-            const buffer = this.render_worker_pool.worker_image_buffers[buffer_index];
-            const row_dst = new Uint8Array(this.image_data.data.buffer, row_begin_offset, row_len_bytes);
-            const row_src = new Uint8Array(buffer, row_begin_offset, row_len_bytes);
-            row_dst.set(row_src);
-        }
-    }
+    // write_all_interlaced_worker_buffers_into_image_data() {
+    //     const [width, height] = [this.canvas.width, this.canvas.height]
+    //     const row_len_bytes = width * 4;
+    //     const amount_buffers = this.render_worker_pool.amount_workers()
+    //     for (let y = 0; y < height; ++y) {
+    //         const row_begin_offset = y * row_len_bytes;
+    //         const buffer_index = y % amount_buffers
+    //         const buffer = this.render_worker_pool.worker_image_buffers[buffer_index]
+    //         const row_dst = new Uint8Array(this.image_data.data.buffer, row_begin_offset, row_len_bytes);
+    //         const row_src = new Uint8Array(buffer, row_begin_offset, row_len_bytes);
+    //         row_dst.set(row_src);
+    //     }
+    // }
     // merge_interlaced_buffers_into_image_data() {
     //     wasm_bindgen
     // }
@@ -183,14 +185,18 @@ var ModelState;
                 // } else {
                 //     this.model.write_interlaced_worker_buffer_into_image_data(message.index, message.buffer)
                 // }
-                this.model.view.update_canvas(this.model.get_image_data());
+                // this.model.view.update_canvas(this.model.get_image_data())
+                // this.model.overwrite_worker_buffer_into_image_data(this.model.render_worker_pool.shared_buffer());
+                this.model.write_interlaced_worker_buffer_into_image_data(message.index, this.model.render_worker_pool.shared_buffer());
+                // this.model.view.update_canvas(this.model.get_image_data())
                 this.worker_responses += 1;
                 if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {
                     // this.model.write_all_interlaced_worker_buffers_into_image_data()
                     console.log("0000000000000000000000000000000022200");
                     // this.model.view.update_canvas(this.model.get_image_data())
                     //
-                    // this.model.view.update_canvas(this.model.get_image_data())
+                    // this.model.overwrite_worker_buffer_into_image_data(this.model.render_worker_pool.shared_buffer())
+                    this.model.view.update_canvas(this.model.get_image_data());
                     this.model.transition_state(new AcceptUserControl(this.model));
                     this.display_render_time();
                 }

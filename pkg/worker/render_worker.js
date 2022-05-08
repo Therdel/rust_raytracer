@@ -1,5 +1,7 @@
-/// <reference path="../message_to_worker.ts" />
-/// <reference path="../message_from_worker.ts" />
+// /// <reference path="../message_to_worker.ts" />
+// /// <reference path="../message_from_worker.ts" />
+/// <reference path="../messages/message_to_worker.ts" />
+/// <reference path="../messages/message_from_worker.ts" />
 /// <reference types="../../pkg/web_app" />
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
@@ -11,10 +13,10 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 importScripts("../../pkg/web_app.js");
-importScripts("../message_to_worker.js");
-importScripts("../message_from_worker.js");
-const SCENE_BASE_PATH = "../../res/scenes";
-const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
+importScripts("../messages/message_to_worker.js");
+importScripts("../messages/message_from_worker.js");
+const SCENE_BASE_PATH = "../../../res/scenes";
+const CHEAT_MODEL_PATH = "../../../res/models/santa.obj";
 class RenderWorker {
     constructor(index, amount_workers, scene, width, height) {
         this.index = index;
@@ -107,7 +109,9 @@ function init_worker() {
             }
             RenderWorker.render(buffer);
             console.debug(`Worker: Responding`);
-            const response = new MessageFromWorker_RenderResponse(RenderWorker.index(), buffer);
+            const response = 
+            // new MessageFromWorker_RenderResponse(RenderWorker.index(), buffer)
+            new MessageFromWorker_RenderResponse(RenderWorker.index());
             postMessage(response); //, [buffer])
         });
         const init_message = new MessageFromWorker_Init();

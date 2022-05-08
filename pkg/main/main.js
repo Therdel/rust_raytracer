@@ -17,7 +17,7 @@ function main() {
         const view = new View(canvas);
         const controller = new Controller(canvas);
         const model = new Model(view, controller, canvas);
-        controller.set_model(model); //
+        controller.set_model(model);
     });
 }
 main();

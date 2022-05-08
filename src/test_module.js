@@ -1,3 +1,4 @@
-export function test_worker() {
-    console.log('test from worker');
+export function test_module_import() {
+    return `Hello from module import in worker`;
+
 }

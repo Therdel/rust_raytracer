@@ -26,6 +26,12 @@
     document.body.append(el);
     
     const worker = new Worker('src/test_worker.js', { type: 'module' });
-    console.log(`worker: ${worker}`);
+    worker.onmessage = (e) => {
+        
+        const el = document.createElement("div")
+        el.innerHTML = `Message from Worker: [${e.data}]`
+        document.body.append(el);
+    };
+    worker.postMessage("hi worker");
 </script>
 </html>

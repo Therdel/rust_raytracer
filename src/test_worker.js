@@ -1,6 +1,9 @@
 
 
-import {test_worker} from "./test_module.js";
+import {test_module_import, test_worker} from "./test_module.js";
 
-console.log("hello from worker. calling function");
-test_worker();
+onmessage = ({ data }) => {
+    postMessage(`hi from worker. Mainwindow said: [${data}]`);
+    postMessage(`Calling imported function from module worker: ${test_module_import()}`)
+    postMessage(`SharedArrayBuffer Test from worker: ${new SharedArrayBuffer(10)}`);
+}

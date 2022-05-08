@@ -126,6 +126,8 @@ const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
+var my_index = 0
+
 async function init_worker() {
     console.log(`RenderWorker started`)
 
@@ -141,21 +143,23 @@ async function init_worker() {
         console.debug(`Worker: Received '${message.type}'`);
 
         if (message.type === "MessageToWorker_Init") {
-            await RenderWorker.init(message)
-        } else if (message.type === "MessageToWorker_SceneSelect") {
-            await RenderWorker.scene_select(message)
-        } else if (message.type === "MessageToWorker_Resize") {
-            RenderWorker.resize(message)
-        } else if (message.type === "MessageToWorker_TurnCamera") {
-            RenderWorker.turn_camera(message)
+            // await RenderWorker.init(message)
+            my_index = message.index
+        // } else if (message.type === "MessageToWorker_SceneSelect") {
+        //     await RenderWorker.scene_select(message)
+        // } else if (message.type === "MessageToWorker_Resize") {
+        //     RenderWorker.resize(message)
+        // } else if (message.type === "MessageToWorker_TurnCamera") {
+        //     RenderWorker.turn_camera(message)
         }
 
-        RenderWorker.render(buffer)
+        // RenderWorker.render(buffer)
 
         console.debug(`Worker: Responding`);
         const response =
             // new MessageFromWorker_RenderResponse(RenderWorker.index(), buffer)
-            new MessageFromWorker.RenderResponse(RenderWorker.index())
+            // new MessageFromWorker.RenderResponse(RenderWorker.index())
+            new MessageFromWorker.RenderResponse(my_index)
         postMessage(response)//, [buffer])
     }
     const init_message = new MessageFromWorker.Init()

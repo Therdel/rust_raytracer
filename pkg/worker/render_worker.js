@@ -104,7 +104,7 @@ function fetch_into_array(path) {
 const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 };
-var my_index = 0;
+// var my_index = 0
 function init_worker() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`RenderWorker started`);
@@ -117,21 +117,24 @@ function init_worker() {
             const { buffer, message } = data;
             console.debug(`Worker: Received '${message.type}'`);
             if (message.type === "MessageToWorker_Init") {
-                // await RenderWorker.init(message)
-                my_index = message.index;
-                // } else if (message.type === "MessageToWorker_SceneSelect") {
-                //     await RenderWorker.scene_select(message)
-                // } else if (message.type === "MessageToWorker_Resize") {
-                //     RenderWorker.resize(message)
-                // } else if (message.type === "MessageToWorker_TurnCamera") {
-                //     RenderWorker.turn_camera(message)
+                yield RenderWorker.init(message);
+                // my_index = message.index
+            }
+            else if (message.type === "MessageToWorker_SceneSelect") {
+                yield RenderWorker.scene_select(message);
+            }
+            else if (message.type === "MessageToWorker_Resize") {
+                RenderWorker.resize(message);
+            }
+            else if (message.type === "MessageToWorker_TurnCamera") {
+                RenderWorker.turn_camera(message);
             }
             // RenderWorker.render(buffer)
             console.debug(`Worker: Responding`);
             const response = 
             // new MessageFromWorker_RenderResponse(RenderWorker.index(), buffer)
-            // new MessageFromWorker.RenderResponse(RenderWorker.index())
-            new MessageFromWorker.RenderResponse(my_index);
+            new MessageFromWorker.RenderResponse(RenderWorker.index());
+            // new MessageFromWorker.RenderResponse(my_index)
             postMessage(response); //, [buffer])
         });
         const init_message = new MessageFromWorker.Init();

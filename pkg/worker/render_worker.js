@@ -127,7 +127,7 @@ function init_worker() {
             else if (message.type === "MessageToWorker_TurnCamera") {
                 RenderWorker.turn_camera(message);
             }
-            // RenderWorker.render(buffer)
+            RenderWorker.render(buffer);
             console.debug(`Worker: Responding`);
             const response = 
             // new MessageFromWorker_RenderResponse(RenderWorker.index(), buffer)

@@ -157,7 +157,7 @@ async function init_worker() {
             RenderWorker.turn_camera(message)
         }
 
-        // RenderWorker.render(buffer)
+        RenderWorker.render(buffer)
 
         console.debug(`Worker: Responding`);
         const response =

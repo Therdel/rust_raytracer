@@ -1,8 +1,8 @@
 // /// <reference path="../message_to_worker.ts" />
 // /// <reference path="../message_from_worker.ts" />
-/// <reference path="../messages/message_to_worker.ts" />
-/// <reference path="../messages/message_from_worker.ts" />
-/// <reference types="../../pkg/web_app" />
+// /// <reference path="../messages/message_to_worker.ts" />
+// /// <reference path="../messages/message_from_worker.ts" />
+// /// <reference types="../../pkg/web_app" />
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -12,9 +12,11 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-importScripts("../../pkg/web_app.js");
-importScripts("../messages/message_to_worker.js");
-importScripts("../messages/message_from_worker.js");
+import * as MessageFromWorker from "../messages/message_from_worker.js";
+import init, { Renderer, main } from "../../pkg/web_app.js";
+// importScripts("../../pkg/web_app.js")
+// importScripts("../messages/message_to_worker.js")
+// importScripts("../messages/message_from_worker.js")
 const SCENE_BASE_PATH = "../../res/scenes";
 const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
 class RenderWorker {
@@ -23,7 +25,11 @@ class RenderWorker {
         this.amount_workers = amount_workers;
         this.width = width;
         this.height = height;
-        this.renderer = new wasm_bindgen.Renderer(width, height, scene, RenderWorker.cheat_obj_file);
+        // this.renderer = new wasm_bindgen.Renderer(width,
+        //                                           height,
+        //                                           scene,
+        //                                           RenderWorker.cheat_obj_file);
+        this.renderer = new Renderer(width, height, scene, RenderWorker.cheat_obj_file);
     }
     static getInstance() {
         return RenderWorker.instance;
@@ -45,7 +51,11 @@ class RenderWorker {
             const instance = RenderWorker.getInstance();
             const scene_url = SCENE_BASE_PATH + '/' + scene_file;
             const scene = yield fetch_into_array(scene_url);
-            instance.renderer = new wasm_bindgen.Renderer(instance.width, instance.height, scene, this.cheat_obj_file);
+            // instance.renderer = new wasm_bindgen.Renderer(instance.width,
+            //                                               instance.height,
+            //                                               scene,
+            //                                               this.cheat_obj_file)
+            instance.renderer = new Renderer(instance.width, instance.height, scene, this.cheat_obj_file);
         });
     }
     static resize({ width, height }) {
@@ -69,10 +79,14 @@ class RenderWorker {
 }
 function init_wasm() {
     return __awaiter(this, void 0, void 0, function* () {
-        // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
-        yield wasm_bindgen('../../pkg/web_app_bg.wasm');
+        // // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
+        // await wasm_bindgen('../../pkg/web_app_bg.wasm');
+        // // Run main WASM entry point
+        // wasm_bindgen.main();
+        // Load the wasm file
+        yield init();
         // Run main WASM entry point
-        wasm_bindgen.main();
+        main();
     });
 }
 function fetch_into_array(path) {
@@ -111,10 +125,10 @@ function init_worker() {
             console.debug(`Worker: Responding`);
             const response = 
             // new MessageFromWorker_RenderResponse(RenderWorker.index(), buffer)
-            new MessageFromWorker_RenderResponse(RenderWorker.index());
+            new MessageFromWorker.RenderResponse(RenderWorker.index());
             postMessage(response); //, [buffer])
         });
-        const init_message = new MessageFromWorker_Init();
+        const init_message = new MessageFromWorker.Init();
         postMessage(init_message);
         const worker_init_duration = (performance.now() - worker_init_start).toFixed(0);
         console.debug(`RenderWorker init took ${worker_init_duration}ms`);

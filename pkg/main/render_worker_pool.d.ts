@@ -1,7 +1,7 @@
-/// <reference path="../messages/message_to_worker.d.ts" />
-/// <reference path="../messages/message_from_worker.d.ts" />
+import * as MessageToWorker from "../messages/message_to_worker.js";
+import * as MessageFromWorker from "../messages/message_from_worker.js";
 export interface RenderWorkerMessageDelegate {
-    (message: MessageFromWorker_Message): any;
+    (message: MessageFromWorker.Message): any;
 }
 export declare class RenderWorkerPool {
     private message_delegate;
@@ -12,6 +12,6 @@ export declare class RenderWorkerPool {
     configure_worker_image_buffers(width: number, height: number): void;
     shared_buffer(): SharedArrayBuffer;
     amount_workers(): number;
-    post(index: number, message: MessageToWorker_Message): void;
+    post(index: number, message: MessageToWorker.Message): void;
     private on_worker_message;
 }

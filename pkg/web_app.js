@@ -1,11 +1,9 @@
-let wasm_bindgen;
-(function() {
-    const __exports = {};
-    let wasm;
 
-    const heap = new Array(32).fill(undefined);
+let wasm;
 
-    heap.push(undefined, null, true, false);
+const heap = new Array(32).fill(undefined);
+
+heap.push(undefined, null, true, false);
 
 function getObject(idx) { return heap[idx]; }
 
@@ -40,9 +38,9 @@ function getStringFromWasm0(ptr, len) {
 }
 /**
 */
-__exports.main = function() {
+export function main() {
     wasm.main();
-};
+}
 
 let WASM_VECTOR_LEN = 0;
 
@@ -60,7 +58,7 @@ function passArray8ToWasm0(arg, malloc) {
 * @param {number} buffer_width
 * @param {number} buffer_height
 */
-__exports.put_buffer = function(result_buf, other_buf, y_offset, row_jump, buffer_width, buffer_height) {
+export function put_buffer(result_buf, other_buf, y_offset, row_jump, buffer_width, buffer_height) {
     try {
         var ptr0 = passArray8ToWasm0(result_buf, wasm.__wbindgen_malloc);
         var len0 = WASM_VECTOR_LEN;
@@ -71,7 +69,7 @@ __exports.put_buffer = function(result_buf, other_buf, y_offset, row_jump, buffe
         result_buf.set(getUint8Memory0().subarray(ptr0 / 1, ptr0 / 1 + len0));
         wasm.__wbindgen_free(ptr0, len0 * 1);
     }
-};
+}
 
 function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);
@@ -144,7 +142,7 @@ function getInt32Memory0() {
 }
 /**
 */
-class Renderer {
+export class Renderer {
 
     static __wrap(ptr) {
         const obj = Object.create(Renderer.prototype);
@@ -223,7 +221,6 @@ class Renderer {
         wasm.renderer_turn_camera(this.ptr, drag_begin_x, drag_begin_y, drag_end_x, drag_end_y);
     }
 }
-__exports.Renderer = Renderer;
 
 async function load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
@@ -258,13 +255,7 @@ async function load(module, imports) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        let src;
-        if (typeof document === 'undefined') {
-            src = location.href;
-        } else {
-            src = document.currentScript.src;
-        }
-        input = src.replace(/\.js$/, '_bg.wasm');
+        input = new URL('web_app_bg.wasm', import.meta.url);
     }
     const imports = {};
     imports.wbg = {};
@@ -307,6 +298,5 @@ async function init(input) {
     return wasm;
 }
 
-wasm_bindgen = Object.assign(init, __exports);
+export default init;
 
-})();

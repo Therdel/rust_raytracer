@@ -1,9 +1,9 @@
-class MessageFromWorker_Init {
+export class Init {
     constructor() {
         this.type = "MessageFromWorker_Init";
     }
 }
-class MessageFromWorker_RenderResponse {
+export class RenderResponse {
     // constructor(readonly index: number,
     //     readonly buffer: SharedArrayBuffer) {
     // }

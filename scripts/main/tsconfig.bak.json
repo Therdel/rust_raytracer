@@ -1,0 +1,22 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "target": "ES6",
+    "lib": [
+      "es6",
+      "dom",
+      "es2017.sharedmemory"
+    ],
+    "module": "ES6",
+    "outDir": "../../pkg"
+  },
+  "files": [
+    "../message_from_worker.ts",
+    "../message_to_worker.ts",
+    "controller.ts",
+    "main.ts",
+    "model.ts",
+    "render_worker_pool.ts",
+    "view.ts"
+  ]
+}

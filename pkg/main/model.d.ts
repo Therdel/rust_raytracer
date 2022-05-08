@@ -1,5 +1,3 @@
-/// <reference path="../messages/message_to_worker.d.ts" />
-/// <reference path="../messages/message_from_worker.d.ts" />
 import { View } from "./view.js";
 import { Controller } from "./controller.js";
 export declare class Model {

@@ -1,7 +1,8 @@
 // /// <reference path="../message_to_worker.ts" />
 // /// <reference path="../message_from_worker.ts" />
-/// <reference path="../messages/message_to_worker.ts" />
-/// <reference path="../messages/message_from_worker.ts" />
+// /// <reference path="../messages/message_to_worker.ts" />
+// /// <reference path="../messages/message_from_worker.ts" />
+import * as MessageToWorker from "../messages/message_to_worker.js";
 export class RenderWorkerPool {
     constructor(message_delegate, canvas_width, canvas_height) {
         this.message_delegate = message_delegate;
@@ -17,10 +18,9 @@ export class RenderWorkerPool {
     }
     init_workers(amount_workers) {
         this.workers = [];
-        const nullworker = new Worker("pkg/main/nullworker_lol.js", { type: "module" });
         for (let index = 0; index < amount_workers; ++index) {
-            const worker = new Worker("pkg/worker/render_worker.js");
-            // const worker = new Worker("pkg/worker/render_worker.js", {type:'module'});
+            // const worker = new Worker("pkg/worker/render_worker.js");
+            const worker = new Worker("pkg/worker/render_worker.js", { type: 'module' });
             // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
             // source: https://stackoverflow.com/a/20279485
             worker.onmessage = (message) => this.on_worker_message(message);
@@ -47,7 +47,7 @@ export class RenderWorkerPool {
         const worker = this.workers[index];
         // const buffer = this.worker_image_buffers[index]
         const buffer = this.shared_buffer();
-        const message_with_buffer = new MessageToWorker_MessageWithBuffer(buffer, message);
+        const message_with_buffer = new MessageToWorker.MessageWithBuffer(buffer, message);
         worker.postMessage(message_with_buffer); //, [message_with_buffer.buffer]);
     }
     on_worker_message({ data: message }) {

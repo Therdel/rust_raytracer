@@ -1,0 +1,15 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "target": "ES6",
+    "lib": [ "ES2017", "ES2017.SharedMemory" ],
+    "module": "ES6",
+    "rootDir": ".",
+    "outDir": "../../pkg/messages",
+    "composite": true
+  },
+  "files": [
+    "message_from_worker.ts",
+    "message_to_worker.ts"
+  ]
+}

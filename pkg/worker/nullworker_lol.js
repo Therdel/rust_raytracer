@@ -1,4 +1,3 @@
-"use strict";
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,10 +7,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-Object.defineProperty(exports, "__esModule", { value: true });
-const test_module_js_1 = require("test_module.js");
+import { test_get_string } from "test_module.js";
 console.log("Nullworker init");
-console.log(`Nullworker imported function: ${(0, test_module_js_1.test_get_string)()}`);
+console.log(`Nullworker imported function: ${test_get_string()}`);
 onmessage = ({ data }) => __awaiter(void 0, void 0, void 0, function* () {
     const { message } = data;
     console.debug(`Nullworker: Received '${message}'`);

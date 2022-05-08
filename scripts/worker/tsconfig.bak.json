@@ -1,0 +1,18 @@
+{
+  "compileOnSave": true,
+  "compilerOptions": {
+    "target": "ES6",
+    "lib": [
+      "es6",
+      "WebWorker",
+      "es2017.sharedmemory"
+    ],
+    "module": "none",
+    "outDir": "../../pkg"
+  },
+  "files": [
+    "../message_from_worker.ts",
+    "../message_to_worker.ts",
+    "render_worker.ts"
+  ]
+}

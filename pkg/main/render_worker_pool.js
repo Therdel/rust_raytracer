@@ -17,6 +17,7 @@ export class RenderWorkerPool {
     }
     init_workers(amount_workers) {
         this.workers = [];
+        const nullworker = new Worker("pkg/main/nullworker_lol.js", { type: "module" });
         for (let index = 0; index < amount_workers; ++index) {
             const worker = new Worker("pkg/worker/render_worker.js");
             // const worker = new Worker("pkg/worker/render_worker.js", {type:'module'});

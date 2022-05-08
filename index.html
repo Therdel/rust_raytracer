@@ -25,7 +25,7 @@
     el.innerHTML = `Cross origin isolated: ${window.crossOriginIsolated ? "✅" : "❌"}`
     document.body.append(el);
     
-    const worker = new Worker('src/test_worker_module.js', { type: 'module' });
+    const worker = new Worker('src/test_worker_module_proxy.js', { type: 'module' });
     worker.onmessage = (e) => {
         
         const el = document.createElement("div")

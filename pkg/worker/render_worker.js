@@ -21,8 +21,8 @@ import init, { Renderer, main } from "../../pkg/web_app.js";
 // const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
 // const SCENE_BASE_PATH = "../res/scenes";
 // const CHEAT_MODEL_PATH = "../res/models/santa.obj";
-const SCENE_BASE_PATH = "res/scenes";
-const CHEAT_MODEL_PATH = "res/models/santa.obj";
+const SCENE_BASE_PATH = "/rust_raytracer/res/scenes";
+const CHEAT_MODEL_PATH = "/rust_raytracer/res/models/santa.obj";
 class RenderWorker {
     constructor(index, amount_workers, scene, width, height) {
         this.index = index;

@@ -82,17 +82,20 @@ class ModelCore {
     }
     write_interlaced_worker_buffer_into_image_data(index, buffer) {
         const dst = new Uint8Array(this.image_data.data.buffer);
-        const src = new Uint8Array(buffer);
+        // const src = new Uint8Array(buffer)
+        const src = buffer;
+        // const src = new Uint8Array(this.render_worker_pool.get_buffer(index))
+        // const src = new Uint8Array(this.render_worker_pool.shared_buffer())
         const y_offset = index;
         const row_jump = this.render_worker_pool.amount_workers();
         const [width, height] = [this.canvas.width, this.canvas.height];
         // wasm_bindgen.put_buffer(dst, src, y_offset, row_jump, width, height)
         // put_buffer(dst, src, y_offset, row_jump, width, height)
         const row_len_bytes = width * 4;
-        for (let y = index; y < height; y += row_jump) {
+        for (let y = y_offset; y < height; y += row_jump) {
             const row_begin_offset = y * row_len_bytes;
-            const row_dst = new Uint8Array(this.image_data.data.buffer, row_begin_offset, row_len_bytes);
-            const row_src = new Uint8Array(buffer, row_begin_offset, row_len_bytes);
+            const row_dst = dst.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
+            const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
             row_dst.set(row_src);
         }
     }
@@ -194,7 +197,8 @@ var ModelState;
                 // }
                 // this.model.view.update_canvas(this.model.get_image_data())
                 // this.model.overwrite_worker_buffer_into_image_data(this.model.render_worker_pool.shared_buffer());
-                this.model.write_interlaced_worker_buffer_into_image_data(message.index, this.model.render_worker_pool.shared_buffer());
+                const buffer = new Uint8Array(this.model.render_worker_pool.get_buffer(message.index));
+                this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer);
                 // this.model.view.update_canvas(this.model.get_image_data())
                 this.worker_responses += 1;
                 if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {

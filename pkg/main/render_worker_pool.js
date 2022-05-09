@@ -29,24 +29,31 @@ export class RenderWorkerPool {
     }
     // TODO: Find better place / abstraction
     configure_worker_image_buffers(width, height) {
-        // this.worker_image_buffers = []
+        this.worker_image_buffers = [];
         const image_buf_size = width * height * 4;
-        this.worker_image_buffers = [new SharedArrayBuffer(image_buf_size)];
+        // this.worker_image_buffers = [new SharedArrayBuffer(image_buf_size)]
         // let image_buffer = new SharedArrayBuffer(image_buf_size)
         // for (let i = 0; i < this.amount_workers(); ++i) {
         // const image_buffer = new ArrayBuffer(image_buf_size)
         // }
+        for (let i = 0; i < this.amount_workers(); ++i) {
+            const image_buffer = new SharedArrayBuffer(image_buf_size);
+            this.worker_image_buffers.push(image_buffer);
+        }
     }
-    shared_buffer() {
-        return this.worker_image_buffers[0];
+    // shared_buffer(): SharedArrayBuffer {
+    //     return this.worker_image_buffers[0]
+    // }
+    get_buffer(index) {
+        return this.worker_image_buffers[index];
     }
     amount_workers() {
         return this.workers.length;
     }
     post(index, message) {
         const worker = this.workers[index];
-        // const buffer = this.worker_image_buffers[index]
-        const buffer = this.shared_buffer();
+        const buffer = this.worker_image_buffers[index];
+        // const buffer = this.shared_buffer()
         const message_with_buffer = new MessageToWorker.MessageWithBuffer(buffer, message);
         worker.postMessage(message_with_buffer); //, [message_with_buffer.buffer]);
     }

@@ -10,9 +10,6 @@ export class Init {
 export class RenderResponse {
     readonly type = "MessageFromWorker_RenderResponse"
 
-    // constructor(readonly index: number,
-    //     readonly buffer: SharedArrayBuffer) {
-    // }
     constructor(readonly index: number) {
     }
 }

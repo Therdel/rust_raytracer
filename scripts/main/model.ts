@@ -1,26 +1,18 @@
-// /// <reference path="../message_to_worker.ts" />
-// /// <reference path="../message_from_worker.ts" />
-// /// <reference path="../messages/message_to_worker.ts" />
-// /// <reference path="../messages/message_from_worker.ts" />
-// /// <reference types="../../pkg/web_app" />
-
 import {View} from "./view.js";
 import {Controller} from "./controller.js";
 import {RenderWorkerPool} from "./render_worker_pool.js";
-import init, { main, put_buffer} from "../../pkg/web_app.js"
+// import init, { initThreadPool, main} from "../../pkg/web_app.js"
+import init, {main} from "../../pkg/web_app.js"
 import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
 
-async function init_wasm() {
-    // // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
-    // await wasm_bindgen('pkg/web_app_bg.wasm');
-    // //await wasm_bindgen('pkg/web_app_bg.wasm');
-
-    // // Run main WASM entry point
-    // wasm_bindgen.main();
-    
+async function init_wasm() {    
     // Load the wasm file
     await init();
+
+    // Thread pool initialization with the given number of threads
+    // (pass `navigator.hardwareConcurrency` if you want to use all cores).
+    // await initThreadPool(navigator.hardwareConcurrency);
 
     // Run main WASM entry point
     main();
@@ -59,6 +51,7 @@ class ModelCore {
     private readonly canvas_context: CanvasRenderingContext2D
     private image_data: ImageData
 
+    private worker_image_buffers: SharedArrayBuffer[]
     public readonly render_worker_pool: RenderWorkerPool
 
     constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
@@ -75,6 +68,7 @@ class ModelCore {
         // source: https://stackoverflow.com/a/20279485
         const delegate = (message) => this.on_worker_message(message)
         this.render_worker_pool = new RenderWorkerPool(delegate, this.canvas.width, this.canvas.height)
+        this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
     }
 
     transition_state(state: ModelState.State) {
@@ -85,6 +79,19 @@ class ModelCore {
     init_image_data() {
         const [width, height] = [this.canvas.width, this.canvas.height]
         this.image_data = this.canvas_context.createImageData(width, height)
+    }
+
+    create_worker_image_buffers(width: number, height: number) {
+        this.worker_image_buffers = []
+        const image_buf_size = width * height * 4
+        for (let i = 0; i < this.render_worker_pool.amount_workers(); ++i) {
+            const image_buffer = new SharedArrayBuffer(image_buf_size);
+            this.worker_image_buffers.push(image_buffer);
+        }
+    }
+
+    get_worker_buffer(index: number): SharedArrayBuffer {
+        return this.worker_image_buffers[index]
     }
 
     get_image_data() {
@@ -110,19 +117,12 @@ class ModelCore {
         this.state.on_message(message)
     }
 
-    write_interlaced_worker_buffer_into_image_data(index: number, buffer: Uint8Array) {
+    write_interlaced_worker_buffer_into_image_data(index: number, src: Uint8Array) {
         const dst = new Uint8Array(this.image_data.data.buffer)
-        // const src = new Uint8Array(buffer)
-        const src = buffer;
-        // const src = new Uint8Array(this.render_worker_pool.get_buffer(index))
-        // const src = new Uint8Array(this.render_worker_pool.shared_buffer())
 
         const y_offset = index
         const row_jump = this.render_worker_pool.amount_workers()
         const [width, height] = [this.canvas.width, this.canvas.height]
-
-        // wasm_bindgen.put_buffer(dst, src, y_offset, row_jump, width, height)
-        // put_buffer(dst, src, y_offset, row_jump, width, height)
 
         const row_len_bytes = width * 4;
         for (let y = y_offset; y < height; y += row_jump) {
@@ -131,32 +131,6 @@ class ModelCore {
             const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
             row_dst.set(row_src);
         }
-    }
-
-    // write_all_interlaced_worker_buffers_into_image_data() {
-    //     const [width, height] = [this.canvas.width, this.canvas.height]
-    //     const row_len_bytes = width * 4;
-    //     const amount_buffers = this.render_worker_pool.amount_workers()
-
-    //     for (let y = 0; y < height; ++y) {
-    //         const row_begin_offset = y * row_len_bytes;
-    //         const buffer_index = y % amount_buffers
-    //         const buffer = this.render_worker_pool.worker_image_buffers[buffer_index]
-
-    //         const row_dst = new Uint8Array(this.image_data.data.buffer, row_begin_offset, row_len_bytes);
-    //         const row_src = new Uint8Array(buffer, row_begin_offset, row_len_bytes);
-    //         row_dst.set(row_src);
-    //     }
-    // }
-
-    // merge_interlaced_buffers_into_image_data() {
-    //     wasm_bindgen
-    // }
-
-    overwrite_worker_buffer_into_image_data(buffer: ArrayBuffer) {
-        const dst = new Uint8Array(this.image_data.data.buffer)
-        const src = new Uint8Array(buffer)
-        dst.set(src)
     }
 }
 
@@ -224,13 +198,13 @@ namespace ModelState {
             const amount_workers = this.model.render_worker_pool.amount_workers()
             const canvas_size = this.model.controller.get_current_canvas_size()
             for (let index=0; index<amount_workers; ++index) {
-                const message = new MessageToWorker.Init(
-                    index,
-                    amount_workers,
-                    this.model.controller.get_current_scene_file(),
-                    canvas_size.width,
-                    canvas_size.height
-                )
+                const buffer = this.model.get_worker_buffer(index);
+                const message = new MessageToWorker.Init(index,
+                                                         buffer,
+                                                         amount_workers,
+                                                         this.model.controller.get_current_scene_file(),
+                                                         canvas_size.width,
+                                                         canvas_size.height)
                 this.model.render_worker_pool.post(index, message)
             }
             this.model.transition_state(new Rendering(this.model))
@@ -263,28 +237,12 @@ namespace ModelState {
         }
 
         on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
-            if (message.type == "MessageFromWorker_RenderResponse") {
-                // const is_first_response = this.worker_responses == 0
-                // if (is_first_response) {
-                //     this.model.overwrite_worker_buffer_into_image_data(message.buffer)
-                // } else {
-                //     this.model.write_interlaced_worker_buffer_into_image_data(message.index, message.buffer)
-                // }
-
-                // this.model.view.update_canvas(this.model.get_image_data())
-                // this.model.overwrite_worker_buffer_into_image_data(this.model.render_worker_pool.shared_buffer());
-                
-                const buffer = new Uint8Array(this.model.render_worker_pool.get_buffer(message.index));
+            if (message.type == "MessageFromWorker_RenderResponse") {                
+                const buffer = new Uint8Array(this.model.get_worker_buffer(message.index));
                 this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer)
-                // this.model.view.update_canvas(this.model.get_image_data())
 
                 this.worker_responses += 1
                 if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {
-                    // this.model.write_all_interlaced_worker_buffers_into_image_data()
-                    console.log("0000000000000000000000000000000022200")
-                    // this.model.view.update_canvas(this.model.get_image_data())
-                    //
-                    // this.model.overwrite_worker_buffer_into_image_data(this.model.render_worker_pool.shared_buffer())
                     this.model.view.update_canvas(this.model.get_image_data())
                     this.model.transition_state(new AcceptUserControl(this.model))
                     this.display_render_time()
@@ -323,11 +281,15 @@ namespace ModelState {
         }
 
         resize(width: number, height: number) {
-            const message = new MessageToWorker.Resize(width, height)
             this.model.init_image_data()
-            this.model.render_worker_pool.configure_worker_image_buffers(width, height)
+            this.model.create_worker_image_buffers(width, height)
+            const amount_workers = this.model.render_worker_pool.amount_workers()
+            for (let index=0; index<amount_workers; ++index) {
+                const buffer = this.model.get_worker_buffer(index);
+                const message = new MessageToWorker.Resize(width, height, buffer)
+                this.model.render_worker_pool.post(index, message)
+            }
 
-            this.post_all(message)
             this.transition_to_rendering()
         }
 

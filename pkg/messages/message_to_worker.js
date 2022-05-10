@@ -1,13 +1,7 @@
-export class MessageWithBuffer {
-    constructor(buffer, message) {
-        this.buffer = buffer;
-        this.message = message;
-        this.type = "MessageToWorker_MessageWithBuffer";
-    }
-}
 export class Init {
-    constructor(index, amount_workers, scene_file, width, height) {
+    constructor(index, buffer, amount_workers, scene_file, width, height) {
         this.index = index;
+        this.buffer = buffer;
         this.amount_workers = amount_workers;
         this.scene_file = scene_file;
         this.width = width;
@@ -22,9 +16,10 @@ export class SceneSelect {
     }
 }
 export class Resize {
-    constructor(width, height) {
+    constructor(width, height, buffer) {
         this.width = width;
         this.height = height;
+        this.buffer = buffer;
         this.type = "MessageToWorker_Resize";
     }
 }

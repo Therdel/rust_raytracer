@@ -3,18 +3,11 @@ export type Message = Init |
                       Resize |
                       TurnCamera
 
-export class MessageWithBuffer {
-    readonly type = "MessageToWorker_MessageWithBuffer"
-
-    constructor(readonly buffer: SharedArrayBuffer,
-                readonly message: Message) {
-    }
-}
-
 export class Init {
     readonly type = "MessageToWorker_Init"
 
     constructor(readonly index: number,
+                readonly buffer: SharedArrayBuffer,
                 readonly amount_workers: number,
                 readonly scene_file: string,
                 readonly width: number,
@@ -33,7 +26,8 @@ export class Resize {
     readonly type = "MessageToWorker_Resize"
 
     constructor(readonly width: number,
-                readonly height: number) {
+                readonly height: number,
+                readonly buffer: SharedArrayBuffer) {
     }
 }
 

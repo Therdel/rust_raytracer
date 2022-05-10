@@ -1,15 +1,6 @@
-// /// <reference path="../message_to_worker.ts" />
-// /// <reference path="../message_from_worker.ts" />
-// /// <reference path="../messages/message_to_worker.ts" />
-// /// <reference path="../messages/message_from_worker.ts" />
-// /// <reference types="../../pkg/web_app" />
-
 import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
 import init, {Renderer, main} from "../../pkg/web_app.js"
-// importScripts("../../pkg/web_app.js")
-// importScripts("../messages/message_to_worker.js")
-// importScripts("../messages/message_from_worker.js")
 
 // const SCENE_BASE_PATH = "../../res/scenes";
 // const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
@@ -20,28 +11,26 @@ const CHEAT_MODEL_PATH = "/rust_raytracer/res/models/santa.obj";
 
 class RenderWorker {
     private index: number
+    private buffer: SharedArrayBuffer
     private amount_workers: number
     private width: number
     private height: number
-    // private renderer: wasm_bindgen.Renderer
     private renderer: Renderer
 
     private static instance: RenderWorker
     private static cheat_obj_file: Uint8Array
 
     private constructor(index: number,
-                amount_workers: number,
-                scene: Uint8Array,
-                width: number,
-                height: number) {
+                        buffer: SharedArrayBuffer,
+                        amount_workers: number,
+                        scene: Uint8Array,
+                        width: number,
+                        height: number) {
         this.index = index;
+        this.buffer = buffer;
         this.amount_workers = amount_workers;
         this.width = width
         this.height = height
-        // this.renderer = new wasm_bindgen.Renderer(width,
-        //                                           height,
-        //                                           scene,
-        //                                           RenderWorker.cheat_obj_file);
         this.renderer = new Renderer(width,
                                      height,
                                      scene,
@@ -56,10 +45,11 @@ class RenderWorker {
         this.cheat_obj_file = await fetch_into_array(CHEAT_MODEL_PATH)
     }
 
-    static async init({ index, amount_workers, scene_file: scene_file, width, height }: MessageToWorker.Init) {
+    static async init({ index, buffer, amount_workers, scene_file: scene_file, width, height }: MessageToWorker.Init) {
         const scene_url = SCENE_BASE_PATH + '/' + scene_file
         const scene = await fetch_into_array(scene_url)
         RenderWorker.instance = new RenderWorker(index,
+                                                 buffer,
                                                  amount_workers,
                                                  scene,
                                                  width,
@@ -70,20 +60,17 @@ class RenderWorker {
         const instance = RenderWorker.getInstance()
         const scene_url = SCENE_BASE_PATH + '/' + scene_file
         const scene = await fetch_into_array(scene_url)
-        // instance.renderer = new wasm_bindgen.Renderer(instance.width,
-        //                                               instance.height,
-        //                                               scene,
-        //                                               this.cheat_obj_file)
         instance.renderer = new Renderer(instance.width,
                                          instance.height,
                                          scene,
                                          this.cheat_obj_file)
     }
 
-    static resize({ width, height }: MessageToWorker.Resize) {
+    static resize({ width, height, buffer }: MessageToWorker.Resize) {
         const instance = RenderWorker.getInstance()
         instance.width = width
         instance.height = height
+        instance.buffer = buffer
         instance.renderer.resize_screen(width, height)
     }
 
@@ -94,12 +81,12 @@ class RenderWorker {
         RenderWorker.instance.renderer.turn_camera(begin_x, begin_y, end_x, end_y)
     }
 
-    static render(buffer: SharedArrayBuffer) {
+    static render() {
         const instance = RenderWorker.getInstance()
+        const canvas_u8 = new Uint8Array(instance.buffer)
         const y_offset = instance.index
         const row_jump = instance.amount_workers
-        instance.renderer.render_interlaced(new Uint8Array(buffer),
-                                            y_offset, row_jump)
+        instance.renderer.render_interlaced(canvas_u8, y_offset, row_jump)
     }
 
     static index() {
@@ -108,12 +95,6 @@ class RenderWorker {
 }
 
 async function init_wasm() {
-    // // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
-    // await wasm_bindgen('../../pkg/web_app_bg.wasm');
-
-    // // Run main WASM entry point
-    // wasm_bindgen.main();
-    
     // Load the wasm file
     await init();
 
@@ -130,8 +111,6 @@ const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
 
-// var my_index = 0
-
 async function init_worker() {
     console.log(`RenderWorker started`)
 
@@ -142,13 +121,11 @@ async function init_worker() {
     //        Move to main?
     await RenderWorker.init_cheat_obj()
 
-    onmessage = async ({ data }: MessageEvent<MessageToWorker.MessageWithBuffer>) => {
-        const { buffer, message } = data
+    onmessage = async ({ data: message }: MessageEvent<MessageToWorker.Message>) => {
         console.debug(`Worker: Received '${message.type}'`);
 
         if (message.type === "MessageToWorker_Init") {
             await RenderWorker.init(message)
-            // my_index = message.index
         } else if (message.type === "MessageToWorker_SceneSelect") {
             await RenderWorker.scene_select(message)
         } else if (message.type === "MessageToWorker_Resize") {
@@ -157,14 +134,12 @@ async function init_worker() {
             RenderWorker.turn_camera(message)
         }
 
-        RenderWorker.render(buffer)
+        RenderWorker.render()
 
         console.debug(`Worker: Responding`);
         const response =
-            // new MessageFromWorker_RenderResponse(RenderWorker.index(), buffer)
             new MessageFromWorker.RenderResponse(RenderWorker.index())
-            // new MessageFromWorker.RenderResponse(my_index)
-        postMessage(response)//, [buffer])
+        postMessage(response)
     }
     const init_message = new MessageFromWorker.Init()
     postMessage(init_message)

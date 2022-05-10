@@ -4,14 +4,18 @@
     "target": "ES6",
     "lib": [
       "es6",
-      "WebWorker"
+      "WebWorker",
+      "es2017.sharedmemory"
     ],
-    "module": "none",
-    "outDir": "../../pkg"
+    "module": "ES6",
+    "rootDir": ".",
+    "outDir": "../../pkg/worker",
+    "composite": true
   },
   "files": [
-    "scripts/message_from_worker.ts",
-    "scripts/message_to_worker.ts",
     "render_worker.ts"
+  ],
+  "references": [
+    { "path": "../messages"}
   ]
 }

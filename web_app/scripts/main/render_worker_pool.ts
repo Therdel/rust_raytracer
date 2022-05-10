@@ -1,14 +1,13 @@
-/// <reference path="../message_to_worker.ts" />
-/// <reference path="../message_from_worker.ts" />
+import * as MessageToWorker from "../messages/message_to_worker.js"
+import * as MessageFromWorker from "../messages/message_from_worker.js"
 
 export interface RenderWorkerMessageDelegate {
-    (message: MessageFromWorker_Message)
+    (message: MessageFromWorker.Message)
 }
 
 export class RenderWorkerPool {
     private message_delegate: RenderWorkerMessageDelegate
     private workers: Worker[]
-    private worker_image_buffers: ArrayBuffer[]
 
     constructor(message_delegate: RenderWorkerMessageDelegate,
                 canvas_width: number, canvas_height: number) {
@@ -22,13 +21,12 @@ export class RenderWorkerPool {
         }
 
         this.init_workers(amount_workers)
-        this.configure_worker_image_buffers(canvas_width, canvas_height)
     }
 
     private init_workers(amount_workers: number) {
         this.workers = []
         for (let index=0; index<amount_workers; ++index) {
-            const worker = new Worker("pkg/worker/render_worker.js");
+            const worker = new Worker("pkg/worker/render_worker.js", {type:'module'});
 
             // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
             // source: https://stackoverflow.com/a/20279485
@@ -38,34 +36,16 @@ export class RenderWorkerPool {
         }
     }
 
-    // TODO: Find better place / abstraction
-    configure_worker_image_buffers(width: number, height: number) {
-        this.worker_image_buffers = []
-        const image_buf_size = width * height * 4
-        for (let i = 0; i < this.amount_workers(); ++i) {
-            const image_buffer = new ArrayBuffer(image_buf_size)
-            this.worker_image_buffers.push(image_buffer)
-        }
-    }
-
     amount_workers(): number {
         return this.workers.length
     }
 
-    post(index: number, message: MessageToWorker_Message) {
+    post(index: number, message: MessageToWorker.Message) {
         const worker = this.workers[index];
-
-        const buffer = this.worker_image_buffers[index]
-        const message_with_buffer =
-            new MessageToWorker_MessageWithBuffer(buffer, message)
-        worker.postMessage(message_with_buffer, [message_with_buffer.buffer]);
+        worker.postMessage(message);
     }
 
-    private on_worker_message({data: message}: MessageEvent<MessageFromWorker_Message>) {
-        if (message.type == "MessageFromWorker_RenderResponse") {
-            this.worker_image_buffers[message.index] = message.buffer
-        }
-
+    private on_worker_message({data: message}: MessageEvent<MessageFromWorker.Message>) {
         this.message_delegate(message)
     }
 }

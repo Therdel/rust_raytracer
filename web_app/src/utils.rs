@@ -28,22 +28,3 @@ pub fn canvas_from_raw_mut(canvas_u8: &mut [u8]) -> &mut [ColorRgbaU8] {
         slice::from_raw_parts_mut(canvas_raw_color, canvas_u8.len() / 4)
     }
 }
-
-#[wasm_bindgen]
-pub fn add_buffer(result_buf: &mut [u8], other_buf: &[u8]) {
-    if result_buf.len() != other_buf.len() {
-        panic!("add_buffer: Buffers aren't the same length!")
-    }
-
-    unsafe {
-        for i in 0..result_buf.len() {
-            *result_buf.get_unchecked_mut(i) += *other_buf.get_unchecked(i)
-        }
-    }
-
-    // result_buf.iter_mut()
-    //     .zip(other_buf.iter())
-    //     .for_each(|(result, other)| {
-    //         *result += *other;
-    //     });
-}

@@ -4,18 +4,22 @@
     "target": "ES6",
     "lib": [
       "es6",
-      "dom"
+      "dom",
+      "es2017.sharedmemory"
     ],
     "module": "ES6",
-    "outDir": "../../pkg"
+    "rootDir": ".",
+    "outDir": "../../pkg/main",
+    "composite": true
   },
   "files": [
-    "scripts/message_from_worker.ts",
-    "scripts/message_to_worker.ts",
     "controller.ts",
     "main.ts",
     "model.ts",
     "render_worker_pool.ts",
     "view.ts"
+  ],
+  "references": [
+    { "path": "../messages"}
   ]
 }

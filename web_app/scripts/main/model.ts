@@ -1,18 +1,17 @@
-/// <reference path="../message_to_worker.ts" />
-/// <reference path="../message_from_worker.ts" />
-/// <reference types="../../pkg/web_app" />
-
 import {View} from "./view.js";
 import {Controller} from "./controller.js";
 import {RenderWorkerPool} from "./render_worker_pool.js";
+import init, {main} from "../../pkg/web_app.js"
+import * as MessageToWorker from "../messages/message_to_worker.js"
+import * as MessageFromWorker from "../messages/message_from_worker.js"
 
 async function init_wasm() {
-    // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
-    await wasm_bindgen('pkg/web_app_bg.wasm');
-    //await wasm_bindgen('pkg/web_app_bg.wasm');
+    // Load the wasm file
+    await init();
+
 
     // Run main WASM entry point
-    wasm_bindgen.main();
+    main();
 }
 init_wasm()
 
@@ -48,6 +47,7 @@ class ModelCore {
     private readonly canvas_context: CanvasRenderingContext2D
     private image_data: ImageData
 
+    private worker_image_buffers: SharedArrayBuffer[]
     public readonly render_worker_pool: RenderWorkerPool
 
     constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
@@ -64,6 +64,7 @@ class ModelCore {
         // source: https://stackoverflow.com/a/20279485
         const delegate = (message) => this.on_worker_message(message)
         this.render_worker_pool = new RenderWorkerPool(delegate, this.canvas.width, this.canvas.height)
+        this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
     }
 
     transition_state(state: ModelState.State) {
@@ -74,6 +75,19 @@ class ModelCore {
     init_image_data() {
         const [width, height] = [this.canvas.width, this.canvas.height]
         this.image_data = this.canvas_context.createImageData(width, height)
+    }
+
+    create_worker_image_buffers(width: number, height: number) {
+        this.worker_image_buffers = []
+        const image_buf_size = width * height * 4
+        for (let i = 0; i < this.render_worker_pool.amount_workers(); ++i) {
+            const image_buffer = new SharedArrayBuffer(image_buf_size);
+            this.worker_image_buffers.push(image_buffer);
+        }
+    }
+
+    get_worker_buffer(index: number): SharedArrayBuffer {
+        return this.worker_image_buffers[index]
     }
 
     get_image_data() {
@@ -95,31 +109,24 @@ class ModelCore {
         this.state.turn_camera(drag_begin, drag_end)
     }
 
-    private on_worker_message(message: MessageFromWorker_Message) {
+    private on_worker_message(message: MessageFromWorker.Message) {
         this.state.on_message(message)
     }
 
-    write_interlaced_worker_buffer_into_image_data(index: number, buffer: ArrayBuffer) {
+    write_interlaced_worker_buffer_into_image_data(index: number, src: Uint8Array) {
         const dst = new Uint8Array(this.image_data.data.buffer)
-        const src = new Uint8Array(buffer)
 
-        wasm_bindgen.add_buffer(dst, src)
-        // const [width, height] = [this.canvas.width, this.canvas.height]
-        // const row_jump = this.render_worker_pool.amount_workers();
-        // const row_len_bytes = width * 4;
-        //
-        // for (let y = index; y < height; y += row_jump) {
-        //     const row_begin_offset = y * row_len_bytes;
-        //     const row_dst = new Uint8Array(this.image_data.data.buffer, row_begin_offset, row_len_bytes);
-        //     const row_src = new Uint8Array(buffer, row_begin_offset, row_len_bytes);
-        //     row_dst.set(row_src);
-        // }
+        const y_offset = index
+        const row_jump = this.render_worker_pool.amount_workers()
+        const [width, height] = [this.canvas.width, this.canvas.height]
+
+        const row_len_bytes = width * 4;
+        for (let y = y_offset; y < height; y += row_jump) {
+            const row_begin_offset = y * row_len_bytes;
+            const row_dst = dst.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
+            const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
+            row_dst.set(row_src);
     }
-
-    overwrite_worker_buffer_into_image_data(buffer: ArrayBuffer) {
-        const dst = new Uint8Array(this.image_data.data.buffer)
-        const src = new Uint8Array(buffer)
-        dst.set(src)
     }
 }
 
@@ -137,7 +144,7 @@ namespace ModelState {
         turn_camera(drag_begin: { x: number; y: number },
                     drag_end: { x: number; y: number })
 
-        on_message(message: MessageFromWorker_Message)
+        on_message(message: MessageFromWorker.Message)
 
         state_name(): string
     }
@@ -162,14 +169,14 @@ namespace ModelState {
             console.error(`ModelCore<${this.state_name()}>: Didn't handle turn_camera(`, {drag_begin, drag_end}, `)`)
         }
 
-        on_message(message: MessageFromWorker_Message) {
+        on_message(message: MessageFromWorker.Message) {
             const result = this.on_message_impl(message)
             if (result == DidHandleMessage.NO) {
                 console.error(`ModelCore<${this.state_name()}>: Didn't handle message:`, message.constructor.name)
             }
         }
 
-        protected on_message_impl(message: MessageFromWorker_Message): DidHandleMessage {
+        protected on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
             return DidHandleMessage.NO
         }
 
@@ -187,19 +194,19 @@ namespace ModelState {
             const amount_workers = this.model.render_worker_pool.amount_workers()
             const canvas_size = this.model.controller.get_current_canvas_size()
             for (let index=0; index<amount_workers; ++index) {
-                const message = new MessageToWorker_Init(
-                    index,
+                const buffer = this.model.get_worker_buffer(index);
+                const message = new MessageToWorker.Init(index,
+                                                         buffer,
                     amount_workers,
                     this.model.controller.get_current_scene_file(),
                     canvas_size.width,
-                    canvas_size.height
-                )
+                                                         canvas_size.height)
                 this.model.render_worker_pool.post(index, message)
             }
             this.model.transition_state(new Rendering(this.model))
         }
 
-        on_message_impl(message: MessageFromWorker_Message): DidHandleMessage {
+        on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
             if (message.type == "MessageFromWorker_Init") {
                 this.worker_responses += 1
                 if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {
@@ -225,18 +232,14 @@ namespace ModelState {
             this.time_start = performance.now()
         }
 
-        on_message_impl(message: MessageFromWorker_Message): DidHandleMessage {
+        on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
             if (message.type == "MessageFromWorker_RenderResponse") {
-                const is_first_response = this.worker_responses == 0
-                if (is_first_response) {
-                    this.model.overwrite_worker_buffer_into_image_data(message.buffer)
-                } else {
-                    this.model.write_interlaced_worker_buffer_into_image_data(message.index, message.buffer)
-                }
-                this.model.view.update_canvas(this.model.get_image_data())
+                const buffer = new Uint8Array(this.model.get_worker_buffer(message.index));
+                this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer)
 
                 this.worker_responses += 1
                 if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {
+                    this.model.view.update_canvas(this.model.get_image_data())
                     this.model.transition_state(new AcceptUserControl(this.model))
                     this.display_render_time()
                 }
@@ -266,7 +269,7 @@ namespace ModelState {
             this.model.transition_state(new Rendering(this.model))
         }
 
-        private post_all(message: MessageToWorker_Message) {
+        private post_all(message: MessageToWorker.Message) {
             const amount_workers = this.model.render_worker_pool.amount_workers()
             for (let index=0; index<amount_workers; ++index) {
                 this.model.render_worker_pool.post(index, message)
@@ -274,23 +277,27 @@ namespace ModelState {
         }
 
         resize(width: number, height: number) {
-            const message = new MessageToWorker_Resize(width, height)
             this.model.init_image_data()
-            this.model.render_worker_pool.configure_worker_image_buffers(width, height)
+            this.model.create_worker_image_buffers(width, height)
+            const amount_workers = this.model.render_worker_pool.amount_workers()
+            for (let index=0; index<amount_workers; ++index) {
+                const buffer = this.model.get_worker_buffer(index);
+                const message = new MessageToWorker.Resize(width, height, buffer)
+                this.model.render_worker_pool.post(index, message)
+            }
 
-            this.post_all(message)
             this.transition_to_rendering()
         }
 
         scene_select(scene_file: string) {
-            const message = new MessageToWorker_SceneSelect(scene_file)
+            const message = new MessageToWorker.SceneSelect(scene_file)
             this.post_all(message)
             this.transition_to_rendering()
         }
 
         turn_camera(drag_begin: { x: number; y: number },
                     drag_end: { x: number; y: number }) {
-            const message = new MessageToWorker_TurnCamera(drag_begin, drag_end)
+            const message = new MessageToWorker.TurnCamera(drag_begin, drag_end)
 
             console.log("Posting turn_camera: ", message)
             this.post_all(message)

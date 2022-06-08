@@ -1,14 +1,18 @@
 import {View} from "./view.js";
 import {Controller} from "./controller.js";
 import {RenderWorkerPool} from "./render_worker_pool.js";
+// import init, { initThreadPool, main} from "../../pkg/web_app.js"
 import init, {main} from "../../pkg/web_app.js"
 import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
 
-async function init_wasm() {
+async function init_wasm() {    
     // Load the wasm file
     await init();
 
+    // Thread pool initialization with the given number of threads
+    // (pass `navigator.hardwareConcurrency` if you want to use all cores).
+    // await initThreadPool(navigator.hardwareConcurrency);
 
     // Run main WASM entry point
     main();
@@ -126,7 +130,7 @@ class ModelCore {
             const row_dst = dst.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
             const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
             row_dst.set(row_src);
-    }
+        }
     }
 }
 
@@ -197,9 +201,9 @@ namespace ModelState {
                 const buffer = this.model.get_worker_buffer(index);
                 const message = new MessageToWorker.Init(index,
                                                          buffer,
-                    amount_workers,
-                    this.model.controller.get_current_scene_file(),
-                    canvas_size.width,
+                                                         amount_workers,
+                                                         this.model.controller.get_current_scene_file(),
+                                                         canvas_size.width,
                                                          canvas_size.height)
                 this.model.render_worker_pool.post(index, message)
             }
@@ -233,7 +237,7 @@ namespace ModelState {
         }
 
         on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
-            if (message.type == "MessageFromWorker_RenderResponse") {
+            if (message.type == "MessageFromWorker_RenderResponse") {                
                 const buffer = new Uint8Array(this.model.get_worker_buffer(message.index));
                 this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer)
 

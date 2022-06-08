@@ -1,0 +1,6 @@
+# source: https://github.com/GoogleChromeLabs/wasm-bindgen-rayon#building-rust-code
+[target.wasm32-unknown-unknown]
+rustflags = ["-C", "target-feature=+atomics,+bulk-memory,+mutable-globals"]
+
+[unstable]
+build-std = ["panic_abort", "std"]

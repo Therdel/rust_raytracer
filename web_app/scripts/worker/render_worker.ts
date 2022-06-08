@@ -2,9 +2,12 @@ import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
 import init, {Renderer, main} from "../../pkg/web_app.js"
 
-
-const SCENE_BASE_PATH = "../../../res/scenes";
-const CHEAT_MODEL_PATH = "../../../res/models/santa.obj";
+// const SCENE_BASE_PATH = "../../res/scenes";
+// const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
+// const SCENE_BASE_PATH = "../res/scenes";
+// const CHEAT_MODEL_PATH = "../res/models/santa.obj";
+const SCENE_BASE_PATH = "/rust_raytracer/res/scenes";
+const CHEAT_MODEL_PATH = "/rust_raytracer/res/models/santa.obj";
 
 class RenderWorker {
     private index: number
@@ -19,19 +22,19 @@ class RenderWorker {
 
     private constructor(index: number,
                         buffer: SharedArrayBuffer,
-                amount_workers: number,
-                scene: Uint8Array,
-                width: number,
-                height: number) {
+                        amount_workers: number,
+                        scene: Uint8Array,
+                        width: number,
+                        height: number) {
         this.index = index;
         this.buffer = buffer;
         this.amount_workers = amount_workers;
         this.width = width
         this.height = height
         this.renderer = new Renderer(width,
-                                                  height,
-                                                  scene,
-                                                  RenderWorker.cheat_obj_file);
+                                     height,
+                                     scene,
+                                     RenderWorker.cheat_obj_file);
     }
 
     private static getInstance() {
@@ -59,9 +62,9 @@ class RenderWorker {
         const scene_url = SCENE_BASE_PATH + '/' + scene_file
         const scene = await fetch_into_array(scene_url)
         instance.renderer = new Renderer(instance.width,
-                                                      instance.height,
-                                                      scene,
-                                                      this.cheat_obj_file)
+                                         instance.height,
+                                         scene,
+                                         this.cheat_obj_file)
     }
 
     static resize({ width, height, buffer }: MessageToWorker.Resize) {
@@ -74,8 +77,8 @@ class RenderWorker {
 
     static turn_camera(message: MessageToWorker.TurnCamera) {
         const {
-                           drag_begin: {x: begin_x, y: begin_y},
-                           drag_end: {x: end_x, y: end_y}
+            drag_begin: {x: begin_x, y: begin_y},
+            drag_end: {x: end_x, y: end_y}
         } = message
         RenderWorker.instance.renderer.turn_camera(begin_x, begin_y, end_x, end_y)
     }

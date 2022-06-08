@@ -1,0 +1,4 @@
+{
+    "nrf-connect.toolchain.path": "PATH",
+    "liveServer.settings.multiRootWorkspaceName": "rust_raytracer"
+}

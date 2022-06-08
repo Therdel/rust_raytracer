@@ -13,6 +13,8 @@ use crate::utils;
 use crate::color::{ColorRgbaU8, QuantizeToU8};
 use crate::fake_same_mesh_loader::FakeSameMeshLoader;
 
+pub use wasm_bindgen_rayon::init_thread_pool;
+
 #[wasm_bindgen]
 pub struct Renderer {
     width: usize,

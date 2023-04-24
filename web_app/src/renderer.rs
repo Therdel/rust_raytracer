@@ -2,6 +2,7 @@ use std::io::Cursor;
 
 use nalgebra_glm as glm;
 use wasm_bindgen::prelude::wasm_bindgen;
+use rayon::prelude::*;
 
 use lib_raytracer::exercise1::scene_file::Parser;
 use lib_raytracer::raytracing::color::Color;
@@ -18,6 +19,11 @@ pub struct Renderer {
     width: usize,
     height: usize,
     raytracer: Raytracer,
+}
+
+#[wasm_bindgen]
+pub fn sum(numbers: &[i32]) -> i32 {
+    numbers.par_iter().sum()
 }
 
 #[wasm_bindgen]

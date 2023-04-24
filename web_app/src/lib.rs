@@ -11,3 +11,6 @@ pub fn main() -> Result<(), JsValue> {
     utils::set_panic_hook();
     Ok(())
 }
+
+
+pub use wasm_bindgen_rayon::init_thread_pool;

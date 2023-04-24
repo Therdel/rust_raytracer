@@ -1,13 +1,22 @@
 import {View} from "./view.js";
 import {Controller} from "./controller.js";
 import {RenderWorkerPool} from "./render_worker_pool.js";
-import init, {main} from "../../pkg/web_app.js"
+// import init, { initThreadPool, main} from "../../pkg/web_app.js"
+import init, {initThreadPool, sum, main} from "../../pkg/web_app.js"
 import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
 
-async function init_wasm() {
+export async function init_wasm() {    
     // Load the wasm file
     await init();
+
+    // Thread pool initialization with the given number of threads
+    // (pass `navigator.hardwareConcurrency` if you want to use all cores).
+    await initThreadPool(navigator.hardwareConcurrency);
+
+    const arr = Array(420000).fill(1);
+    const typedArr = new Int32Array(arr);
+    console.log("summing items: ", sum(typedArr));
 
 
     // Run main WASM entry point
@@ -126,7 +135,7 @@ class ModelCore {
             const row_dst = dst.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
             const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
             row_dst.set(row_src);
-    }
+        }
     }
 }
 

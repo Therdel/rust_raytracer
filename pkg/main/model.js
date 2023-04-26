@@ -1,3 +1,6 @@
+/// <reference path="../message_to_worker.ts" />
+/// <reference path="../message_from_worker.ts" />
+/// <reference types="../../pkg/web_app" />
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -8,14 +11,12 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { RenderWorkerPool } from "./render_worker_pool.js";
-import init, { main } from "../../pkg/web_app.js";
-import * as MessageToWorker from "../messages/message_to_worker.js";
 function init_wasm() {
     return __awaiter(this, void 0, void 0, function* () {
-        // Load the wasm file
-        yield init();
+        // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
+        yield wasm_bindgen('pkg/web_app_bg.wasm');
         // Run main WASM entry point
-        main();
+        wasm_bindgen.main();
     });
 }
 init_wasm();
@@ -139,7 +140,7 @@ var ModelState;
             const canvas_size = this.model.controller.get_current_canvas_size();
             for (let index = 0; index < amount_workers; ++index) {
                 const buffer = this.model.get_worker_buffer(index);
-                const message = new MessageToWorker.Init(index, buffer, amount_workers, this.model.controller.get_current_scene_file(), canvas_size.width, canvas_size.height);
+                const message = new MessageToWorker_Init(index, buffer, amount_workers, this.model.controller.get_current_scene_file(), canvas_size.width, canvas_size.height);
                 this.model.render_worker_pool.post(index, message);
             }
             this.model.transition_state(new Rendering(this.model));
@@ -209,20 +210,20 @@ var ModelState;
             const amount_workers = this.model.render_worker_pool.amount_workers();
             for (let index = 0; index < amount_workers; ++index) {
                 const buffer = this.model.get_worker_buffer(index);
-                const message = new MessageToWorker.Resize(width, height, buffer);
+                const message = new MessageToWorker_Resize(width, height, buffer);
                 this.model.render_worker_pool.post(index, message);
             }
             this.transition_to_rendering();
             return DidHandleMessage.YES;
         }
         scene_select(scene_file) {
-            const message = new MessageToWorker.SceneSelect(scene_file);
+            const message = new MessageToWorker_SceneSelect(scene_file);
             this.post_all(message);
             this.transition_to_rendering();
             return DidHandleMessage.YES;
         }
         turn_camera(drag_begin, drag_end) {
-            const message = new MessageToWorker.TurnCamera(drag_begin, drag_end);
+            const message = new MessageToWorker_TurnCamera(drag_begin, drag_end);
             console.log("Posting turn_camera: ", message);
             this.post_all(message);
             this.transition_to_rendering();

@@ -6,7 +6,6 @@
     "web_app.js",
     "web_app.d.ts"
   ],
-  "module": "web_app.js",
-  "types": "web_app.d.ts",
-  "sideEffects": false
+  "browser": "web_app.js",
+  "types": "web_app.d.ts"
 }

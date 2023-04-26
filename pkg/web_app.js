@@ -1,9 +1,11 @@
+let wasm_bindgen;
+(function() {
+    const __exports = {};
+    let wasm;
 
-let wasm;
+    const heap = new Array(32).fill(undefined);
 
-const heap = new Array(32).fill(undefined);
-
-heap.push(undefined, null, true, false);
+    heap.push(undefined, null, true, false);
 
 function getObject(idx) { return heap[idx]; }
 
@@ -47,9 +49,9 @@ function passArray8ToWasm0(arg, malloc) {
 }
 /**
 */
-export function main() {
+__exports.main = function() {
     wasm.main();
-}
+};
 
 function addHeapObject(obj) {
     if (heap_next === heap.length) heap.push(heap.length + 1);
@@ -122,7 +124,7 @@ function getInt32Memory0() {
 }
 /**
 */
-export class Renderer {
+class Renderer {
 
     static __wrap(ptr) {
         const obj = Object.create(Renderer.prototype);
@@ -201,6 +203,7 @@ export class Renderer {
         wasm.renderer_turn_camera(this.ptr, drag_begin_x, drag_begin_y, drag_end_x, drag_end_y);
     }
 }
+__exports.Renderer = Renderer;
 
 async function load(module, imports) {
     if (typeof Response === 'function' && module instanceof Response) {
@@ -235,7 +238,13 @@ async function load(module, imports) {
 
 async function init(input) {
     if (typeof input === 'undefined') {
-        input = new URL('web_app_bg.wasm', import.meta.url);
+        let src;
+        if (typeof document === 'undefined') {
+            src = location.href;
+        } else {
+            src = document.currentScript.src;
+        }
+        input = src.replace(/\.js$/, '_bg.wasm');
     }
     const imports = {};
     imports.wbg = {};
@@ -278,5 +287,6 @@ async function init(input) {
     return wasm;
 }
 
-export default init;
+wasm_bindgen = Object.assign(init, __exports);
 
+})();

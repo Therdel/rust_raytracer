@@ -1,0 +1,422 @@
+{
+  "camera": {
+    "position": {
+      "x": 2,
+      "y": 0,
+      "z": 1.2
+    },
+    "orientation_degrees": {
+      "x": -12.5,
+      "y": 10,
+      "z": 0
+    },
+    "y_fov_degrees": 70,
+    "z_near": 0.1,
+    "z_far": 25,
+    "use_perspective": true,
+    "ortho_world_height": 10
+  },
+  "screen": {
+    "pixel_width": 3840,
+    "pixel_height": 2160,
+    "background": {
+      "r": 1,
+      "g": 1,
+      "b": 1
+    }
+  },
+  "lights": [
+    {
+      "position": {
+        "x": 6,
+        "y": 1,
+        "z": 0,
+        "w": 1
+      },
+      "color": {
+        "ambient": {
+          "r": 0.3,
+          "g": 0.3,
+          "b": 0.3
+        },
+        "diffuse": {
+          "r": 0.6,
+          "g": 0.6,
+          "b": 0.6
+        },
+        "specular": {
+          "r": 0.5 ,
+          "g": 0.5,
+          "b": 0.5
+        }
+      }
+    },
+    {
+      "position": {
+        "x": 0,
+        "y": 4,
+        "z": -2,
+        "w": 1
+      },
+      "color": {
+        "ambient": {
+          "r": 0.1,
+          "g": 0.1,
+          "b": 0.1
+        },
+        "diffuse": {
+          "r": 0.6,
+          "g": 0.6,
+          "b": 0.6
+        },
+        "specular": {
+          "r": 0.5 ,
+          "g": 0.5,
+          "b": 0.5
+        }
+      }
+    }
+  ],
+  "materials": [
+    {
+      "name": "someShinyRed",
+      "emissive": {
+        "r": 0.1,
+        "g": 0,
+        "b": 0
+      },
+      "ambient": {
+        "r": 0.4,
+        "g": 0,
+        "b": 0
+      },
+      "diffuse": {
+        "r": 0.4,
+        "g": 0,
+        "b": 0
+      },
+      "specular": {
+        "r": 0.6,
+        "g": 0.6,
+        "b": 0.6
+      },
+      "shininess": 10,
+      "material_type": "Phong"
+    },
+    {
+      "name": "someShinyYellow",
+      "emissive": {
+        "r": 0.1,
+        "g": 0.1,
+        "b": 0
+      },
+      "ambient": {
+        "r": 0.4,
+        "g": 0.4,
+        "b": 0
+      },
+      "diffuse": {
+        "r": 0.4,
+        "g": 0.4,
+        "b": 0
+      },
+      "specular": {
+        "r": 0.6,
+        "g": 0.6,
+        "b": 0.6
+      },
+      "shininess": 10,
+      "material_type": "Phong"
+    },
+    {
+      "name": "someShinyGreen",
+      "emissive": {
+        "r": 0,
+        "g": 0.1,
+        "b": 0
+      },
+      "ambient": {
+        "r": 0,
+        "g": 0.4,
+        "b": 0
+      },
+      "diffuse": {
+        "r": 0,
+        "g": 0.4,
+        "b": 0
+      },
+      "specular": {
+        "r": 0.6,
+        "g": 0.6,
+        "b": 0.6
+      },
+      "shininess": 10,
+      "material_type": "Phong"
+    },
+    {
+      "name": "dullGray",
+      "emissive": {
+        "r": 0.1,
+        "g": 0.1,
+        "b": 0.1
+      },
+      "ambient": {
+        "r": 0.1,
+        "g": 0.1,
+        "b": 0.1
+      },
+      "diffuse": {
+        "r": 0.2,
+        "g": 0.2,
+        "b": 0.2
+      },
+      "specular": {
+        "r": 0.2,
+        "g": 0.2,
+        "b": 0.2
+      },
+      "shininess": 100,
+      "material_type": "Phong"
+    },
+    {
+      "name": "reflective",
+      "emissive": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      },
+      "ambient": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      },
+      "diffuse": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      },
+      "specular": {
+        "r": 1,
+        "g": 1,
+        "b": 1
+      },
+      "shininess": 10,
+      "material_type": "ReflectAndPhong"
+    },
+    {
+      "name": "transparent",
+      "emissive": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      },
+      "ambient": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      },
+      "diffuse": {
+        "r": 0,
+        "g": 0,
+        "b": 0
+      },
+      "specular": {
+        "r": 0.2,
+        "g": 0.2,
+        "b": 0.2
+      },
+      "shininess": 100,
+      "material_type": {
+        "ReflectAndRefract": {
+          "index_inner": 1.5,
+          "index_outer": 1.0
+        }
+      }
+    }
+  ],
+  "planes": [
+    {
+      "comment": "wall right",
+      "normal": {
+        "x": -1,
+        "y": 1,
+        "z": 1
+      },
+      "distance": -10,
+      "material": "reflective"
+    },
+    {
+      "comment": "wall left",
+      "normal": {
+        "x": 1,
+        "y": 0,
+        "z": 0
+      },
+      "distance": -5,
+      "material": "someShinyRed"
+    }
+  ],
+  "spheres": [
+    {
+      "center": {
+        "x": -1,
+        "y": -2,
+        "z": -3
+      },
+      "radius": 1,
+      "material": "transparent"
+    },
+    {
+      "center": {
+        "x": 5,
+        "y": -2,
+        "z": -9
+      },
+      "radius": 3,
+      "material": "reflective"
+    },
+    {
+      "center": {
+        "x": 3,
+        "y": -1,
+        "z": -4.5
+      },
+      "radius": 1,
+      "material": "transparent"
+    },
+    {
+      "center": {
+        "x": 3,
+        "y": 7,
+        "z": -10
+      },
+      "radius": 5,
+      "material": "someShinyYellow"
+    }
+  ],
+  "triangles": [
+    {
+      "vertices": [
+        {
+          "x": -4,
+          "y": 3,
+          "z": -5
+        },
+        {
+          "x": -4,
+          "y": 2,
+          "z": -6
+        },
+        {
+          "x": -4,
+          "y": 2,
+          "z": -4
+        }
+      ],
+      "normals": [
+        {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        },
+        {
+          "x": 1,
+          "y": 0,
+          "z": 0
+        }
+      ],
+      "material": "someShinyGreen"
+    }
+  ],
+  "meshes": [
+    {
+      "name": "bunny",
+      "file_name": "bunny.obj",
+      "winding_order": "CounterClockwise",
+      "material": "someShinyGreen"
+    }
+  ],
+  "meshInstances": [
+    {
+      "mesh": "bunny",
+      "position": {
+        "x": -1,
+        "y": -0.5,
+        "z": -6
+      },
+      "orientation_degrees": {
+        "x": 20,
+        "y": 50,
+        "z": 10
+      },
+      "scale": {
+        "x": 2,
+        "y": 2,
+        "z": 2
+      },
+      "materialOverride": "reflective"
+    },
+    {
+      "mesh": "bunny",
+      "position": {
+        "x": 1,
+        "y": 2,
+        "z": -6
+      },
+      "orientation_degrees": {
+        "x": 20,
+        "y": 50,
+        "z": 10
+      },
+      "scale": {
+        "x": 2,
+        "y": 2,
+        "z": 2
+      },
+      "materialOverride": "reflective"
+    },
+    {
+      "mesh": "bunny",
+      "position": {
+        "x": 3,
+        "y": 2,
+        "z": -6
+      },
+      "orientation_degrees": {
+        "x": 20,
+        "y": 50,
+        "z": 10
+      },
+      "scale": {
+        "x": 2,
+        "y": 2,
+        "z": 2
+      },
+      "materialOverride": "reflective"
+    },
+    {
+      "mesh": "bunny",
+      "position": {
+        "x": -2,
+        "y": -3,
+        "z": -5.5
+      },
+      "orientation_degrees": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      },
+      "scale": {
+        "x": 0.5,
+        "y": 0.5,
+        "z": 0.5
+      },
+      "materialOverride": "someShinyGreen"
+    }
+  ]
+}

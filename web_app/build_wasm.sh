@@ -1,2 +1,4 @@
 #!/bin/sh
-wasm-pack.exe build --target web --release
+wasm-pack.exe build --target no-modules --release
+
+

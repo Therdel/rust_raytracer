@@ -1,8 +1,8 @@
-import * as MessageToWorker from "../messages/message_to_worker.js"
-import * as MessageFromWorker from "../messages/message_from_worker.js"
+/// <reference path="../message_to_worker.ts" />
+/// <reference path="../message_from_worker.ts" />
 
 export interface RenderWorkerMessageDelegate {
-    (message: MessageFromWorker.Message)
+    (message: MessageFromWorker_Message)
 }
 
 export class RenderWorkerPool {
@@ -26,7 +26,7 @@ export class RenderWorkerPool {
     private init_workers(amount_workers: number) {
         this.workers = []
         for (let index=0; index<amount_workers; ++index) {
-            const worker = new Worker("pkg/worker/render_worker.js", {type:'module'});
+            const worker = new Worker("pkg/worker/render_worker.js");
 
             // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
             // source: https://stackoverflow.com/a/20279485
@@ -40,12 +40,12 @@ export class RenderWorkerPool {
         return this.workers.length
     }
 
-    post(index: number, message: MessageToWorker.Message) {
+    post(index: number, message: MessageToWorker_Message) {
         const worker = this.workers[index];
         worker.postMessage(message);
     }
 
-    private on_worker_message({data: message}: MessageEvent<MessageFromWorker.Message>) {
+    private on_worker_message({data: message}: MessageEvent<MessageFromWorker_Message>) {
         this.message_delegate(message)
     }
 }

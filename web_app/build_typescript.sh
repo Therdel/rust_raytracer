@@ -1,2 +1,3 @@
 #!/bin/sh
-tsc --build scripts/
+tsc --project scripts/main
+tsc --project scripts/worker

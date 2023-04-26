@@ -60,19 +60,14 @@
                     Cross-origin isolation (COOP and COEP) through a service worker for situations in which you can't control the headers (e.g. GH pages). (Guido Zuidhof)
                 </a>
             </li>
-            <li>
-                <a href="https://gist.github.com/developit/220246bc99044af74a6680ce13284f59">
-                    adds support for module workers in "all modern browsers" (Jason Miller)
-                </a>
-            </li>
         </ul>
 -->
     </center>
 </body>
-<!--source: https://gist.github.com/developit/220246bc99044af74a6680ce13284f59
-    author: Jason Miller
-    adds support for module workers in "all modern browsers"-->
-<script src="module-workers-polyfill.js"></script>
+<!--Manual imports to share code with WebWorkers without modules or a bundler-->
+<script src="pkg/message_from_worker.js"></script>
+<script src="pkg/message_to_worker.js"></script>
+<script src="pkg/web_app.js"></script>
 <!-- source: https://github.com/gzuidhof/coi-serviceworker
     author: Guido Zuidhof
     enable COOP and COEP headers to enable SharedArrayBuffer-->

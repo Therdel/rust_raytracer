@@ -7,15 +7,10 @@
       "WebWorker",
       "es2017.sharedmemory"
     ],
-    "module": "ES6",
-    "rootDir": ".",
-    "outDir": "../../pkg/worker",
-    "composite": true
+    "module": "none",
+    "outDir": "../../pkg",
   },
   "files": [
     "render_worker.ts"
-  ],
-  "references": [
-    { "path": "../messages"}
   ]
 }

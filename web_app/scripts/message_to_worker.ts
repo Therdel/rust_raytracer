@@ -1,9 +1,9 @@
-export type Message = Init |
-                      SceneSelect |
-                      Resize |
-                      TurnCamera
+type MessageToWorker_Message = MessageToWorker_Init |
+                                      MessageToWorker_SceneSelect |
+                                      MessageToWorker_Resize |
+                                      MessageToWorker_TurnCamera
 
-export class Init {
+class MessageToWorker_Init {
     readonly type = "MessageToWorker_Init"
 
     constructor(readonly index: number,
@@ -15,14 +15,14 @@ export class Init {
     }
 }
 
-export class SceneSelect {
+class MessageToWorker_SceneSelect {
     readonly type = "MessageToWorker_SceneSelect"
 
     constructor(readonly scene_file: string) {
     }
 }
 
-export class Resize {
+class MessageToWorker_Resize {
     readonly type = "MessageToWorker_Resize"
 
     constructor(readonly width: number,
@@ -31,7 +31,7 @@ export class Resize {
     }
 }
 
-export class TurnCamera {
+class MessageToWorker_TurnCamera {
     readonly type = "MessageToWorker_TurnCamera"
 
     constructor(readonly drag_begin: { x: number; y: number },

@@ -15,6 +15,11 @@ async function init_wasm() {
 }
 init_wasm()
 
+export enum DidHandleMessage {
+    YES,
+    NO
+}
+
 export class Model {
     private readonly core: ModelCore
 
@@ -22,18 +27,18 @@ export class Model {
         this.core = new ModelCore(view, controller, canvas)
     }
 
-    scene_select(scene_file: string) {
-        this.core.scene_select(scene_file)
+    scene_select(scene_file: string): DidHandleMessage {
+        return this.core.scene_select(scene_file)
     }
 
     resize(width: number,
-           height: number) {
-        this.core.resize(width, height)
+           height: number): DidHandleMessage {
+        return this.core.resize(width, height)
     }
 
     turn_camera(drag_begin: { x: number, y: number },
-                drag_end: { x: number, y: number }) {
-        this.core.turn_camera(drag_begin, drag_end)
+                drag_end: { x: number, y: number }): DidHandleMessage {
+        return this.core.turn_camera(drag_begin, drag_end)
     }
 }
 
@@ -68,7 +73,7 @@ class ModelCore {
     }
 
     transition_state(state: ModelState.State) {
-        console.debug(`Model transition: ${this.state.state_name()} -> ${state.state_name()}`)
+        console.debug(`Model:\ttransition: ${this.state.state_name()} -> ${state.state_name()}`)
         this.state = state
     }
 
@@ -94,19 +99,18 @@ class ModelCore {
         return this.image_data
     }
 
-    scene_select(scene_file: string) {
-        this.state.scene_select(scene_file)
+    scene_select(scene_file: string): DidHandleMessage {
+        return this.state.scene_select(scene_file)
     }
 
     resize(width: number,
-           height: number) {
-        console.debug(`resize event`)
-        this.state.resize(width, height)
+           height: number): DidHandleMessage {
+        return this.state.resize(width, height)
     }
 
     turn_camera(drag_begin: { x: number, y: number },
-                drag_end: { x: number, y: number }) {
-        this.state.turn_camera(drag_begin, drag_end)
+                drag_end: { x: number, y: number }): DidHandleMessage {
+        return this.state.turn_camera(drag_begin, drag_end)
     }
 
     private on_worker_message(message: MessageFromWorker.Message) {
@@ -131,20 +135,15 @@ class ModelCore {
 }
 
 namespace ModelState {
-
-    enum DidHandleMessage {
-        YES,
-        NO
-    }
     export interface State {
-        scene_select(scene_file: string)
+        scene_select(scene_file: string): DidHandleMessage
 
-        resize(width: number, height: number)
+        resize(width: number, height: number): DidHandleMessage
 
         turn_camera(drag_begin: { x: number; y: number },
-                    drag_end: { x: number; y: number })
+                    drag_end: { x: number; y: number }): DidHandleMessage
 
-        on_message(message: MessageFromWorker.Message)
+        on_message(message: MessageFromWorker.Message): DidHandleMessage
 
         state_name(): string
     }
@@ -156,24 +155,28 @@ namespace ModelState {
             this.model = model
         }
 
-        scene_select(scene_file: string) {
+        scene_select(scene_file: string): DidHandleMessage {
             console.error(`ModelCore<${this.state_name()}>: Didn't handle scene_select(${scene_file})`)
+            return DidHandleMessage.NO
         }
 
-        resize(width: number, height: number) {
+        resize(width: number, height: number): DidHandleMessage {
             console.error(`ModelCore<${this.state_name()}>: Didn't handle resize(`, {width, height}, `)`)
+            return DidHandleMessage.NO
         }
 
         turn_camera(drag_begin: { x: number; y: number },
-                    drag_end: { x: number; y: number }) {
+                    drag_end: { x: number; y: number }): DidHandleMessage {
             console.error(`ModelCore<${this.state_name()}>: Didn't handle turn_camera(`, {drag_begin, drag_end}, `)`)
+            return DidHandleMessage.NO
         }
 
-        on_message(message: MessageFromWorker.Message) {
+        on_message(message: MessageFromWorker.Message): DidHandleMessage {
             const result = this.on_message_impl(message)
             if (result == DidHandleMessage.NO) {
                 console.error(`ModelCore<${this.state_name()}>: Didn't handle message:`, message.constructor.name)
             }
+            return result
         }
 
         protected on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
@@ -197,9 +200,9 @@ namespace ModelState {
                 const buffer = this.model.get_worker_buffer(index);
                 const message = new MessageToWorker.Init(index,
                                                          buffer,
-                    amount_workers,
-                    this.model.controller.get_current_scene_file(),
-                    canvas_size.width,
+                                                         amount_workers,
+                                                         this.model.controller.get_current_scene_file(),
+                                                         canvas_size.width,
                                                          canvas_size.height)
                 this.model.render_worker_pool.post(index, message)
             }
@@ -233,7 +236,7 @@ namespace ModelState {
         }
 
         on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
-            if (message.type == "MessageFromWorker_RenderResponse") {
+            if (message.type == "MessageFromWorker_RenderResponse") {                
                 const buffer = new Uint8Array(this.model.get_worker_buffer(message.index));
                 this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer)
 
@@ -276,7 +279,7 @@ namespace ModelState {
             }
         }
 
-        resize(width: number, height: number) {
+        resize(width: number, height: number): DidHandleMessage {
             this.model.init_image_data()
             this.model.create_worker_image_buffers(width, height)
             const amount_workers = this.model.render_worker_pool.amount_workers()
@@ -285,23 +288,26 @@ namespace ModelState {
                 const message = new MessageToWorker.Resize(width, height, buffer)
                 this.model.render_worker_pool.post(index, message)
             }
-
+            
             this.transition_to_rendering()
+            return DidHandleMessage.YES
         }
 
-        scene_select(scene_file: string) {
+        scene_select(scene_file: string): DidHandleMessage {
             const message = new MessageToWorker.SceneSelect(scene_file)
             this.post_all(message)
             this.transition_to_rendering()
+            return DidHandleMessage.YES
         }
 
         turn_camera(drag_begin: { x: number; y: number },
-                    drag_end: { x: number; y: number }) {
+                    drag_end: { x: number; y: number }): DidHandleMessage {
             const message = new MessageToWorker.TurnCamera(drag_begin, drag_end)
 
             console.log("Posting turn_camera: ", message)
             this.post_all(message)
             this.transition_to_rendering()
+            return DidHandleMessage.YES
         }
 
         state_name(): string {

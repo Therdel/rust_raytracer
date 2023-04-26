@@ -10,6 +10,11 @@
             height: 33em;
             width: 33em;
         }
+        #screen {
+            /*  canvas captures panning gestures for camera movement,
+                but leaves pinch zoom to the browser*/
+            touch-action: pinch-zoom;
+        }
     </style>
 </head>
 <body>
@@ -34,20 +39,34 @@
         </select>
         <br>
         <label id="thread-count"></label>
-        
-        <!--    <br>-->
-        <!--    <br>-->
 
-        <!--    <h4>Resources</h4>-->
-        <!--    <ul>-->
-        <!--        <li>-->
-        <!--            <a href="https://www.hellorust.com/demos/canvas/index.html">Geoffroy Couprie - Update a canvas from wasm</a>-->
-        <!--        </li>-->
-        <!--        <li><a href="https://depth-first.com/articles/2020/06/29/compiling-rust-to-webassembly-a-simple-example/">Compiling Rust to WebAssembly: A Simple Example</a> </li>-->
-        <!--        <li>-->
-        <!--            <a href="https://rustwasm.github.io/docs/wasm-bindgen/examples/without-a-bundler.html">The `wasm-bindgen` Guide: Without a Bundler</a>-->
-        <!--        </li>-->
-        <!--    </ul>-->
+<!-- Credits        
+        <br>
+        <br>
+
+        <h4>Resources</h4>
+        <ul>
+            <li>
+                <a href="https://www.hellorust.com/demos/canvas/index.html">Geoffroy Couprie - Update a canvas from wasm</a>
+            </li>
+            <li>
+                <a href="https://depth-first.com/articles/2020/06/29/compiling-rust-to-webassembly-a-simple-example/">Compiling Rust to WebAssembly: A Simple Example</a>
+            </li>
+            <li>
+                <a href="https://rustwasm.github.io/docs/wasm-bindgen/examples/without-a-bundler.html">The `wasm-bindgen` Guide: Without a Bundler</a>
+            </li>
+            <li>
+                <a href="https://github.com/gzuidhof/coi-serviceworker">
+                    Cross-origin isolation (COOP and COEP) through a service worker for situations in which you can't control the headers (e.g. GH pages). (Guido Zuidhof)
+                </a>
+            </li>
+            <li>
+                <a href="https://gist.github.com/developit/220246bc99044af74a6680ce13284f59">
+                    adds support for module workers in "all modern browsers" (Jason Miller)
+                </a>
+            </li>
+        </ul>
+-->
     </center>
 </body>
 <!--source: https://gist.github.com/developit/220246bc99044af74a6680ce13284f59

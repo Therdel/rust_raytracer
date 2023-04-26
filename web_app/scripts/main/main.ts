@@ -3,7 +3,7 @@ import {Controller} from "./controller.js";
 import {Model} from "./model.js";
 
 async function main() {
-    console.log(`Main started`)
+    console.log(`Main:\tstarted`)
     const canvas =
         document.getElementById('screen') as HTMLCanvasElement
 

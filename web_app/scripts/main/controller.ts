@@ -1,4 +1,4 @@
-import {Model} from "./model.js";
+import {Model, DidHandleMessage} from "./model.js";
 
 export class Controller {
     private model: Model
@@ -10,47 +10,78 @@ export class Controller {
     private label_thread_count: HTMLLabelElement
     private select: HTMLSelectElement
 
-    private last_mouse_down: { x: number, y: number }
+    private is_moving_camera: boolean
+    private camera_move_start_point: { x: number, y: number }
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas_resizer = document.getElementById('canvas-resizer') as HTMLDivElement
         this.canvas = canvas
+        this.canvas.width = this.canvas_resizer.clientWidth
+        this.canvas.height = this.canvas_resizer.clientHeight
         this.label_time = document.getElementById('time-measurement') as HTMLLabelElement
         this.label_thread_count = document.getElementById('thread-count') as HTMLLabelElement
         this.select = document.getElementById("select_scenes") as HTMLSelectElement
 
-        this.canvas.width = this.canvas_resizer.clientWidth
-        this.canvas.height = this.canvas_resizer.clientHeight
-        this.init_listeners()
-        this.deactivate_controls()
-    }
-
-    private init_listeners() {
         this.canvas_resizer_observer_context = {
             call_count: 0,
             timeout_id: null,
             prev_width: this.canvas_resizer.clientWidth
         }
+        this.is_moving_camera = false
+        this.camera_move_start_point = null
+
+        this.init_listeners()
+        this.deactivate_controls()
+    }
+
+    private init_listeners() {
+        // canvas resizing
         // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
         // source: https://stackoverflow.com/a/20279485
         const observer = new ResizeObserver(() => this.on_canvas_resize())
         observer.observe(this.canvas_resizer)
 
-        this.canvas.onmousedown = e => {
-            const inverted_y = this.canvas.height - e.offsetY
-            this.last_mouse_down = { x: e.offsetX, y: inverted_y }
-            console.log(`mouse down `, this.last_mouse_down)
-        }
-        this.canvas.onmouseup = e => {
-            const inverted_y = this.canvas.height - e.offsetY
-            const last_mouse_up = { x: e.offsetX, y: inverted_y }
-            console.log(`mouse up `, last_mouse_up)
+        // canvas camera panning 
+        this.canvas.onpointerdown = pointer_event => this.start_moving_camera(pointer_event)
+        this.canvas.onpointermove = pointer_event => this.move_camera(pointer_event)
+        const stop_moving_camera = () => { this.stop_moving_camera() } 
+        this.canvas.onpointerup = stop_moving_camera
+        this.canvas.onpointerleave = stop_moving_camera
+        this.canvas.onpointerout   = stop_moving_camera
+        this.canvas.onpointercancel = stop_moving_camera
 
-
-            this.model.turn_camera(this.last_mouse_down, last_mouse_up)
-        }
-        // TODO: put connect canvas mouse / touch listener
+        // scene selection
         this.select.onchange = (event) => this.on_scene_select(event)
+    }
+
+    // TODO: lock mouse: https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
+    private start_moving_camera(pointer_event: PointerEvent) {
+        // allow camera panning when moving outside of canvas
+        this.canvas.setPointerCapture(pointer_event.pointerId)
+
+        const inverted_y = this.canvas.height - pointer_event.offsetY
+        this.camera_move_start_point = { x: pointer_event.offsetX, y: inverted_y }
+        this.is_moving_camera = true
+        console.debug(`pointer down `, this.camera_move_start_point)
+    }
+
+    private move_camera(pointer_event: PointerEvent) {
+        if (this.is_moving_camera) {
+            const inverted_y = this.canvas.height - pointer_event.offsetY
+            const camera_move_end_point = { x: pointer_event.offsetX, y: inverted_y }
+            console.debug(`camera move by pointer`)
+
+            const turn_camera_result = this.model.turn_camera(this.camera_move_start_point, camera_move_end_point)
+            if (DidHandleMessage.YES == turn_camera_result) {
+                this.camera_move_start_point = camera_move_end_point
+            }
+        } else {
+            console.debug(`inactive pointer move `)
+        }
+    }
+
+    private stop_moving_camera() {
+        this.is_moving_camera = false
     }
 
     private on_canvas_resize() {

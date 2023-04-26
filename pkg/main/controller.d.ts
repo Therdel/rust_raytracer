@@ -7,9 +7,13 @@ export declare class Controller {
     private label_time;
     private label_thread_count;
     private select;
-    private last_mouse_down;
+    private is_moving_camera;
+    private camera_move_start_point;
     constructor(canvas: HTMLCanvasElement);
     private init_listeners;
+    private start_moving_camera;
+    private move_camera;
+    private stop_moving_camera;
     private on_canvas_resize;
     set_model(model: Model): void;
     get_current_scene_file(): string;

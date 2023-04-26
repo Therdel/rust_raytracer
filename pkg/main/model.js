@@ -8,33 +8,34 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import { RenderWorkerPool } from "./render_worker_pool.js";
-// import init, { initThreadPool, main} from "../../pkg/web_app.js"
 import init, { main } from "../../pkg/web_app.js";
 import * as MessageToWorker from "../messages/message_to_worker.js";
 function init_wasm() {
     return __awaiter(this, void 0, void 0, function* () {
         // Load the wasm file
         yield init();
-        // Thread pool initialization with the given number of threads
-        // (pass `navigator.hardwareConcurrency` if you want to use all cores).
-        // await initThreadPool(navigator.hardwareConcurrency);
         // Run main WASM entry point
         main();
     });
 }
 init_wasm();
+export var DidHandleMessage;
+(function (DidHandleMessage) {
+    DidHandleMessage[DidHandleMessage["YES"] = 0] = "YES";
+    DidHandleMessage[DidHandleMessage["NO"] = 1] = "NO";
+})(DidHandleMessage || (DidHandleMessage = {}));
 export class Model {
     constructor(view, controller, canvas) {
         this.core = new ModelCore(view, controller, canvas);
     }
     scene_select(scene_file) {
-        this.core.scene_select(scene_file);
+        return this.core.scene_select(scene_file);
     }
     resize(width, height) {
-        this.core.resize(width, height);
+        return this.core.resize(width, height);
     }
     turn_camera(drag_begin, drag_end) {
-        this.core.turn_camera(drag_begin, drag_end);
+        return this.core.turn_camera(drag_begin, drag_end);
     }
 }
 class ModelCore {
@@ -52,7 +53,7 @@ class ModelCore {
         this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
     }
     transition_state(state) {
-        console.debug(`Model transition: ${this.state.state_name()} -> ${state.state_name()}`);
+        console.debug(`Model:\ttransition: ${this.state.state_name()} -> ${state.state_name()}`);
         this.state = state;
     }
     init_image_data() {
@@ -74,14 +75,13 @@ class ModelCore {
         return this.image_data;
     }
     scene_select(scene_file) {
-        this.state.scene_select(scene_file);
+        return this.state.scene_select(scene_file);
     }
     resize(width, height) {
-        console.debug(`resize event`);
-        this.state.resize(width, height);
+        return this.state.resize(width, height);
     }
     turn_camera(drag_begin, drag_end) {
-        this.state.turn_camera(drag_begin, drag_end);
+        return this.state.turn_camera(drag_begin, drag_end);
     }
     on_worker_message(message) {
         this.state.on_message(message);
@@ -102,29 +102,28 @@ class ModelCore {
 }
 var ModelState;
 (function (ModelState) {
-    let DidHandleMessage;
-    (function (DidHandleMessage) {
-        DidHandleMessage[DidHandleMessage["YES"] = 0] = "YES";
-        DidHandleMessage[DidHandleMessage["NO"] = 1] = "NO";
-    })(DidHandleMessage || (DidHandleMessage = {}));
     class AbstractState {
         constructor(model) {
             this.model = model;
         }
         scene_select(scene_file) {
             console.error(`ModelCore<${this.state_name()}>: Didn't handle scene_select(${scene_file})`);
+            return DidHandleMessage.NO;
         }
         resize(width, height) {
             console.error(`ModelCore<${this.state_name()}>: Didn't handle resize(`, { width, height }, `)`);
+            return DidHandleMessage.NO;
         }
         turn_camera(drag_begin, drag_end) {
             console.error(`ModelCore<${this.state_name()}>: Didn't handle turn_camera(`, { drag_begin, drag_end }, `)`);
+            return DidHandleMessage.NO;
         }
         on_message(message) {
             const result = this.on_message_impl(message);
             if (result == DidHandleMessage.NO) {
                 console.error(`ModelCore<${this.state_name()}>: Didn't handle message:`, message.constructor.name);
             }
+            return result;
         }
         on_message_impl(message) {
             return DidHandleMessage.NO;
@@ -214,17 +213,20 @@ var ModelState;
                 this.model.render_worker_pool.post(index, message);
             }
             this.transition_to_rendering();
+            return DidHandleMessage.YES;
         }
         scene_select(scene_file) {
             const message = new MessageToWorker.SceneSelect(scene_file);
             this.post_all(message);
             this.transition_to_rendering();
+            return DidHandleMessage.YES;
         }
         turn_camera(drag_begin, drag_end) {
             const message = new MessageToWorker.TurnCamera(drag_begin, drag_end);
             console.log("Posting turn_camera: ", message);
             this.post_all(message);
             this.transition_to_rendering();
+            return DidHandleMessage.YES;
         }
         state_name() {
             return this.constructor.name;

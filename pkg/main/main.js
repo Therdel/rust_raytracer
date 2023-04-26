@@ -12,7 +12,7 @@ import { Controller } from "./controller.js";
 import { Model } from "./model.js";
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log(`Main started`);
+        console.log(`Main:\tstarted`);
         const canvas = document.getElementById('screen');
         const view = new View(canvas);
         const controller = new Controller(canvas);

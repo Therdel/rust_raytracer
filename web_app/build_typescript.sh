@@ -1,2 +1,2 @@
 #!/bin/sh
-tsc --project scripts/
+tsc --build scripts/

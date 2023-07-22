@@ -8,7 +8,9 @@
       "es2017.sharedmemory"
     ],
     "module": "ES6",
-    "outDir": "../../pkg",
+    "rootDir": ".",
+    "outDir": "../../pkg/main",
+    "composite": true
   },
   "files": [
     "controller.ts",
@@ -16,5 +18,8 @@
     "model.ts",
     "render_worker_pool.ts",
     "view.ts"
+  ],
+  "references": [
+    { "path": "../messages"}
   ]
 }

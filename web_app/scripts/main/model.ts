@@ -1,18 +1,17 @@
-/// <reference path="../message_to_worker.ts" />
-/// <reference path="../message_from_worker.ts" />
-/// <reference types="../../pkg/web_app" />
-
 import {View} from "./view.js";
 import {Controller} from "./controller.js";
 import {RenderWorkerPool} from "./render_worker_pool.js";
+import init, {main} from "../../pkg/web_app.js"
+import * as MessageToWorker from "../messages/message_to_worker.js"
+import * as MessageFromWorker from "../messages/message_from_worker.js"
 
 async function init_wasm() {
-    // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
-    await wasm_bindgen('pkg/web_app_bg.wasm');
+    // Load the wasm file
+    await init();
 
 
     // Run main WASM entry point
-    wasm_bindgen.main();
+    main();
 }
 init_wasm()
 
@@ -114,7 +113,7 @@ class ModelCore {
         return this.state.turn_camera(drag_begin, drag_end)
     }
 
-    private on_worker_message(message: MessageFromWorker_Message) {
+    private on_worker_message(message: MessageFromWorker.Message) {
         this.state.on_message(message)
     }
 
@@ -144,7 +143,7 @@ namespace ModelState {
         turn_camera(drag_begin: { x: number; y: number },
                     drag_end: { x: number; y: number }): DidHandleMessage
 
-        on_message(message: MessageFromWorker_Message): DidHandleMessage
+        on_message(message: MessageFromWorker.Message): DidHandleMessage
 
         state_name(): string
     }
@@ -172,7 +171,7 @@ namespace ModelState {
             return DidHandleMessage.NO
         }
 
-        on_message(message: MessageFromWorker_Message): DidHandleMessage {
+        on_message(message: MessageFromWorker.Message): DidHandleMessage {
             const result = this.on_message_impl(message)
             if (result == DidHandleMessage.NO) {
                 console.error(`ModelCore<${this.state_name()}>: Didn't handle message:`, message.constructor.name)
@@ -180,7 +179,7 @@ namespace ModelState {
             return result
         }
 
-        protected on_message_impl(message: MessageFromWorker_Message): DidHandleMessage {
+        protected on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
             return DidHandleMessage.NO
         }
 
@@ -199,7 +198,7 @@ namespace ModelState {
             const canvas_size = this.model.controller.get_current_canvas_size()
             for (let index=0; index<amount_workers; ++index) {
                 const buffer = this.model.get_worker_buffer(index);
-                const message = new MessageToWorker_Init(index,
+                const message = new MessageToWorker.Init(index,
                                                          buffer,
                                                          amount_workers,
                                                          this.model.controller.get_current_scene_file(),
@@ -210,7 +209,7 @@ namespace ModelState {
             this.model.transition_state(new Rendering(this.model))
         }
 
-        on_message_impl(message: MessageFromWorker_Message): DidHandleMessage {
+        on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
             if (message.type == "MessageFromWorker_Init") {
                 this.worker_responses += 1
                 if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {
@@ -236,7 +235,7 @@ namespace ModelState {
             this.time_start = performance.now()
         }
 
-        on_message_impl(message: MessageFromWorker_Message): DidHandleMessage {
+        on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
             if (message.type == "MessageFromWorker_RenderResponse") {                
                 const buffer = new Uint8Array(this.model.get_worker_buffer(message.index));
                 this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer)
@@ -273,7 +272,7 @@ namespace ModelState {
             this.model.transition_state(new Rendering(this.model))
         }
 
-        private post_all(message: MessageToWorker_Message) {
+        private post_all(message: MessageToWorker.Message) {
             const amount_workers = this.model.render_worker_pool.amount_workers()
             for (let index=0; index<amount_workers; ++index) {
                 this.model.render_worker_pool.post(index, message)
@@ -286,7 +285,7 @@ namespace ModelState {
             const amount_workers = this.model.render_worker_pool.amount_workers()
             for (let index=0; index<amount_workers; ++index) {
                 const buffer = this.model.get_worker_buffer(index);
-                const message = new MessageToWorker_Resize(width, height, buffer)
+                const message = new MessageToWorker.Resize(width, height, buffer)
                 this.model.render_worker_pool.post(index, message)
             }
             
@@ -295,7 +294,7 @@ namespace ModelState {
         }
 
         scene_select(scene_file: string): DidHandleMessage {
-            const message = new MessageToWorker_SceneSelect(scene_file)
+            const message = new MessageToWorker.SceneSelect(scene_file)
             this.post_all(message)
             this.transition_to_rendering()
             return DidHandleMessage.YES
@@ -303,7 +302,7 @@ namespace ModelState {
 
         turn_camera(drag_begin: { x: number; y: number },
                     drag_end: { x: number; y: number }): DidHandleMessage {
-            const message = new MessageToWorker_TurnCamera(drag_begin, drag_end)
+            const message = new MessageToWorker.TurnCamera(drag_begin, drag_end)
 
             console.log("Posting turn_camera: ", message)
             this.post_all(message)

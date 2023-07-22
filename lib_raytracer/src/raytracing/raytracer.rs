@@ -210,7 +210,7 @@ impl Private for Raytracer {
         let r_dot_v = f32::max(glm::dot(&r, &v), 0.0);
 
         let emissive = hitpoint.material.emissive;
-        let ambient = light.color.ambient + hitpoint.material.ambient;
+        let ambient = light.color.ambient.component_mul(&hitpoint.material.ambient);
         let diffuse = if is_shadow { zero() } else { light.color.diffuse.component_mul(&hitpoint.material.diffuse) * l_dot_n };
         let specular = if is_shadow { zero() } else { light.color.specular.component_mul(&hitpoint.material.specular) * r_dot_v.powf(hitpoint.material.shininess) };
 

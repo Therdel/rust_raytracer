@@ -155,11 +155,7 @@ mod tests {
         use super::*;
 
         fn plane(material: AliasArc<Vec<Material>, Material>) -> Plane {
-            Plane {
-                normal: glm::vec3(0., 0., -1.),
-                distance: 1.,
-                material: material
-            }
+            Plane::new(glm::vec3(0., 0., -1.), 1., material)
         }
 
         #[test]

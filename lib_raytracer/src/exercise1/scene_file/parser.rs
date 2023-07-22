@@ -166,11 +166,8 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
                       materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Plane>, [Plane]> {
         if let Some(planes) = planes {
             Self::convert_vec(planes, |plane|
-                Plane {
-                    normal: plane.normal.into(),
-                    distance: plane.distance,
-                    material: Self::find_material(materials.clone(), &plane.material).unwrap(),
-                },
+                Plane::new(plane.normal.into(), plane.distance,
+                           Self::find_material(materials.clone(), &plane.material).unwrap())
             )
         } else {
             AliasArc::new(Default::default(), Vec::as_slice)

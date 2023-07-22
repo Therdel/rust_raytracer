@@ -1,9 +1,9 @@
-class MessageFromWorker_Init {
+export class Init {
     constructor() {
         this.type = "MessageFromWorker_Init";
     }
 }
-class MessageFromWorker_RenderResponse {
+export class RenderResponse {
     constructor(index) {
         this.index = index;
         this.type = "MessageFromWorker_RenderResponse";

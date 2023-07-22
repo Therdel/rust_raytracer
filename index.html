@@ -35,7 +35,7 @@
         <label>Choose a scene:</label>
         <select id="select_scenes">
             <option value="cornell_box.json">Cornell box</option>
-            <option value="scene_rust.json">Santa and balls</option>
+            <option value="santa_and_balls.json">Santa and balls</option>
         </select>
         <br>
         <label id="thread-count"></label>
@@ -64,10 +64,6 @@
 -->
     </center>
 </body>
-<!--Manual imports to share code with WebWorkers without modules or a bundler-->
-<script src="pkg/message_from_worker.js"></script>
-<script src="pkg/message_to_worker.js"></script>
-<script src="pkg/web_app.js"></script>
 <!-- source: https://github.com/gzuidhof/coi-serviceworker
     author: Guido Zuidhof
     enable COOP and COEP headers to enable SharedArrayBuffer-->

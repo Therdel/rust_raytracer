@@ -1,6 +1,3 @@
-/// <reference path="../message_to_worker.ts" />
-/// <reference path="../message_from_worker.ts" />
-/// <reference types="../../pkg/web_app" />
 var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
     function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
     return new (P || (P = Promise))(function (resolve, reject) {
@@ -10,19 +7,19 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
-importScripts("../../pkg/web_app.js");
-importScripts("../message_to_worker.js");
-importScripts("../message_from_worker.js");
+import * as MessageFromWorker from "../messages/message_from_worker.js";
+import init, { Renderer, main } from "../../pkg/web_app.js";
 const SCENE_BASE_PATH = "../../res/scenes";
 const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
 class RenderWorker {
     constructor(index, buffer, amount_workers, scene, width, height) {
         this.index = index;
-        this.buffer = buffer;
+        this.canvas_buffer = buffer;
+        this.canvas_buffer_u8 = new Uint8Array(this.canvas_buffer);
         this.amount_workers = amount_workers;
         this.width = width;
         this.height = height;
-        this.renderer = new wasm_bindgen.Renderer(width, height, scene, RenderWorker.cheat_obj_file);
+        this.renderer = new Renderer(width, height, scene, RenderWorker.cheat_obj_file);
     }
     static getInstance() {
         return RenderWorker.instance;
@@ -45,14 +42,15 @@ class RenderWorker {
             const instance = RenderWorker.getInstance();
             const scene_url = SCENE_BASE_PATH + '/' + scene_file;
             const scene = yield fetch_into_array(scene_url);
-            instance.renderer = new wasm_bindgen.Renderer(instance.width, instance.height, scene, this.cheat_obj_file);
+            instance.renderer = new Renderer(instance.width, instance.height, scene, this.cheat_obj_file);
         });
     }
     static resize({ width, height, buffer }) {
         const instance = RenderWorker.getInstance();
         instance.width = width;
         instance.height = height;
-        instance.buffer = buffer;
+        instance.canvas_buffer = buffer;
+        instance.canvas_buffer_u8 = new Uint8Array(instance.canvas_buffer);
         instance.renderer.resize_screen(width, height);
     }
     static turn_camera(message) {
@@ -61,10 +59,9 @@ class RenderWorker {
     }
     static render() {
         const instance = RenderWorker.getInstance();
-        const canvas_u8 = new Uint8Array(instance.buffer);
         const y_offset = instance.index;
         const row_jump = instance.amount_workers;
-        instance.renderer.render_interlaced(canvas_u8, y_offset, row_jump);
+        instance.renderer.render_interlaced(instance.canvas_buffer_u8, y_offset, row_jump);
     }
     static index() {
         return RenderWorker.instance.index;
@@ -72,10 +69,10 @@ class RenderWorker {
 }
 function init_wasm() {
     return __awaiter(this, void 0, void 0, function* () {
-        // Load the wasm file by awaiting the Promise returned by `wasm_bindgen`
-        yield wasm_bindgen('../../pkg/web_app_bg.wasm');
+        // Load the wasm file
+        yield init();
         // Run main WASM entry point
-        wasm_bindgen.main();
+        main();
     });
 }
 function fetch_into_array(path) {
@@ -109,12 +106,14 @@ function init_worker() {
             else if (message.type === "MessageToWorker_TurnCamera") {
                 RenderWorker.turn_camera(message);
             }
+            const worker_render_start = performance.now();
             RenderWorker.render();
-            console.debug(`Worker:\tResponding`);
-            const response = new MessageFromWorker_RenderResponse(RenderWorker.index());
+            const worker_render_stop = performance.now() - worker_render_start;
+            console.debug(`Worker:${RenderWorker.index()}\tResponding - Render time: ${worker_render_stop.toFixed(0)} ms`);
+            const response = new MessageFromWorker.RenderResponse(RenderWorker.index());
             postMessage(response);
         });
-        const init_message = new MessageFromWorker_Init();
+        const init_message = new MessageFromWorker.Init();
         postMessage(init_message);
         const worker_init_duration = (performance.now() - worker_init_start).toFixed(0);
         console.debug(`Worker:\tinit took ${worker_init_duration}ms`);

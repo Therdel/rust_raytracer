@@ -5,20 +5,25 @@
       "y": 0,
       "z": 0
     },
-    "orientation": {
+    "orientation_degrees": {
       "x": 0,
       "y": 0,
       "z": 0
     },
-    "yFov": 70,
-    "zNear": 0.1,
-    "zFar": 25,
-    "usePerspective": true
+    "y_fov_degrees": 70,
+    "z_near": 0.1,
+    "z_far": 25,
+    "use_perspective": true,
+    "ortho_world_height": 10
   },
   "screen": {
-    "pixelWidth": 2160,
-    "pixelHeight": 2160,
-    "orthoWorldHeight": 10
+    "pixel_width": 2160,
+    "pixel_height": 2160,
+    "background": {
+      "r": 1.0,
+      "g": 1.0,
+      "b": 1.0
+    }
   },
   "lights": [
     {
@@ -49,7 +54,7 @@
   ],
   "materials": [
     {
-      "id": "chameleon",
+      "name": "chameleon",
       "emissive": {
         "r": 0.2,
         "g": 0,
@@ -70,15 +75,27 @@
         "g": 0.2,
         "b": 0.1
       },
-      "shinyness": 7,
-      "typePhong": {}
+      "shininess": 7,
+      "material_type": "Phong"
+    }
+  ],
+  "spheres": [
+    {
+      "center": {
+        "x": 0,
+        "y": 0,
+        "z": -2
+      },
+      "radius": 0.5,
+      "material": "chameleon"
     }
   ],
   "meshes": [
     {
-      "id": "primitive",
-      "fileName": "sphere_high.obj",
-      "isWindingClockwise": false
+      "name": "primitive",
+      "file_name": "sphere_high.obj",
+      "winding_order": "CounterClockwise",
+      "material": "chameleon"
     }
   ],
   "meshInstances": [
@@ -99,7 +116,7 @@
         "y": 1,
         "z": 1
       },
-      "materialOverride": "chameleon"
+      "material_override": "chameleon"
     }
   ]
 }

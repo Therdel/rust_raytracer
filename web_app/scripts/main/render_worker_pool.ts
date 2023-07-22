@@ -9,8 +9,7 @@ export class RenderWorkerPool {
     private message_delegate: RenderWorkerMessageDelegate
     private workers: Worker[]
 
-    constructor(message_delegate: RenderWorkerMessageDelegate,
-                canvas_width: number, canvas_height: number) {
+    constructor(message_delegate: RenderWorkerMessageDelegate) {
         this.message_delegate = message_delegate
 
         let amount_workers;

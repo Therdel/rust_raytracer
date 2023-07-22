@@ -69,7 +69,7 @@ class ModelCore {
         // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
         // source: https://stackoverflow.com/a/20279485
         const delegate = (message) => this.on_worker_message(message)
-        this.render_worker_pool = new RenderWorkerPool(delegate, this.canvas.width, this.canvas.height)
+        this.render_worker_pool = new RenderWorkerPool(delegate)
         this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
     }
 
@@ -157,18 +157,18 @@ namespace ModelState {
         }
 
         scene_select(scene_file: string): DidHandleMessage {
-            console.error(`ModelCore<${this.state_name()}>: Didn't handle scene_select(${scene_file})`)
+            console.log(`ModelCore<${this.state_name()}>: Didn't handle scene_select(${scene_file})`)
             return DidHandleMessage.NO
         }
 
         resize(width: number, height: number): DidHandleMessage {
-            console.error(`ModelCore<${this.state_name()}>: Didn't handle resize(`, {width, height}, `)`)
+            console.log(`ModelCore<${this.state_name()}>: Didn't handle resize(`, {width, height}, `)`)
             return DidHandleMessage.NO
         }
 
         turn_camera(drag_begin: { x: number; y: number },
                     drag_end: { x: number; y: number }): DidHandleMessage {
-            console.error(`ModelCore<${this.state_name()}>: Didn't handle turn_camera(`, {drag_begin, drag_end}, `)`)
+            console.log(`ModelCore<${this.state_name()}>: Didn't handle turn_camera(`, {drag_begin, drag_end}, `)`)
             return DidHandleMessage.NO
         }
 

@@ -1,7 +1,5 @@
 use std::slice;
 
-use wasm_bindgen::prelude::*;
-
 use crate::color::ColorRgbaU8;
 
 pub fn set_panic_hook() {
@@ -13,13 +11,6 @@ pub fn set_panic_hook() {
     // https://github.com/rustwasm/console_error_panic_hook#readme
     #[cfg(feature = "console_error_panic_hook")]
     console_error_panic_hook::set_once();
-}
-
-pub fn canvas_from_raw(canvas_u8: &[u8]) -> &[ColorRgbaU8] {
-    let canvas_raw_color = canvas_u8.as_ptr() as *const ColorRgbaU8;
-    unsafe {
-        slice::from_raw_parts(canvas_raw_color, canvas_u8.len() / 4)
-    }
 }
 
 pub fn canvas_from_raw_mut(canvas_u8: &mut [u8]) -> &mut [ColorRgbaU8] {

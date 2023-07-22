@@ -11,7 +11,8 @@ const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
 
 class RenderWorker {
     private index: number
-    private buffer: SharedArrayBuffer
+    private canvas_buffer: SharedArrayBuffer
+    private canvas_buffer_u8: Uint8Array
     private amount_workers: number
     private width: number
     private height: number
@@ -26,15 +27,16 @@ class RenderWorker {
                         scene: Uint8Array,
                         width: number,
                         height: number) {
-        this.index = index;
-        this.buffer = buffer;
-        this.amount_workers = amount_workers;
+        this.index = index
+        this.canvas_buffer = buffer
+        this.canvas_buffer_u8 = new Uint8Array(this.canvas_buffer)
+        this.amount_workers = amount_workers
         this.width = width
         this.height = height
         this.renderer = new wasm_bindgen.Renderer(width,
                                                   height,
                                                   scene,
-                                                  RenderWorker.cheat_obj_file);
+                                                  RenderWorker.cheat_obj_file)
     }
 
     private static getInstance() {
@@ -71,7 +73,8 @@ class RenderWorker {
         const instance = RenderWorker.getInstance()
         instance.width = width
         instance.height = height
-        instance.buffer = buffer
+        instance.canvas_buffer = buffer
+        instance.canvas_buffer_u8 = new Uint8Array(instance.canvas_buffer)
         instance.renderer.resize_screen(width, height)
     }
 
@@ -85,10 +88,9 @@ class RenderWorker {
 
     static render() {
         const instance = RenderWorker.getInstance()
-        const canvas_u8 = new Uint8Array(instance.buffer)
         const y_offset = instance.index
         const row_jump = instance.amount_workers
-        instance.renderer.render_interlaced(canvas_u8, y_offset, row_jump)
+        instance.renderer.render_interlaced(instance.canvas_buffer_u8, y_offset, row_jump)
     }
 
     static index() {
@@ -136,9 +138,11 @@ async function init_worker() {
             RenderWorker.turn_camera(message)
         }
 
+        const worker_render_start = performance.now()
         RenderWorker.render()
+        const worker_render_stop = performance.now() - worker_render_start
 
-        console.debug(`Worker:\tResponding`);
+        console.debug(`Worker:${RenderWorker.index()}\tResponding - Render time: ${worker_render_stop.toFixed(0)} ms`);
         const response =
             new MessageFromWorker_RenderResponse(RenderWorker.index())
         postMessage(response)

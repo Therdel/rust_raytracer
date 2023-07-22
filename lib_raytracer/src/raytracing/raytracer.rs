@@ -14,7 +14,7 @@ pub struct Raytracer {
 }
 
 pub trait Public {
-    fn new(scene: Scene) -> Raytracer;
+    fn new(scene: Scene) -> Self;
     fn resize_screen(&mut self, width: usize, height: usize);
     fn turn_camera(&mut self, drag_begin: &glm::Vec2, drag_end: &glm::Vec2);
 
@@ -33,13 +33,13 @@ trait Private {
     fn create_transmitted_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3,
                               n1_current: f32, n2_pierce: f32) -> glm::Vec3;
     fn get_hitpoint_to_light_unit_vector(hitpoint: &Hitpoint, light: &Light) -> glm::Vec3;
-    fn get_fresnel_factor(reflected_ray: &Ray, transmitted_ray: &Ray,
+    fn get_fresnel_factor_reflection(reflected_ray: &Ray, transmitted_ray: &Ray,
                           reflection_normal: &glm::Vec3, n1_current: f32, n2_pierce: f32) -> f32;
 }
 
 impl Public for Raytracer {
-    fn new<'scene>(scene: Scene) -> Raytracer {
-        Raytracer {
+    fn new<'scene>(scene: Scene) -> Self {
+        Self {
             screen_to_world: matrix::screen_to_world(&scene.camera, &scene.screen),
             scene,
         }
@@ -108,7 +108,8 @@ impl Public for Raytracer {
     fn generate_primary_ray(&self, screen_coordinate: &glm::Vec2) -> Ray {
         let p_screen = glm::vec4(screen_coordinate.x, screen_coordinate.y, 0.0, 1.0);
         // TODO: Document that NDC "looks" in *positive* z-axis. Document wrong viewing direction
-        //       Erklärung: Hat was mit der z-Range zutun, wie man die definiert.
+        //       Has to do with how *WE* define the z-range.
+        //       source: https://www.reddit.com/r/wgpu/comments/tilvas/comment/iyo1ml5
         // TODO: Document that this is *always* in camera view direction. (NDC)
         let p_screen_forward = p_screen + glm::vec4(0.0, 0.0, 1.0, 0.0);
 
@@ -151,7 +152,6 @@ impl Private for Raytracer {
         };
 
         let shade_reflect = || {
-            // TODO: why can't we do ```-&ray.direction``` here?
             let direction = Self::create_reflected_ray(&-ray.direction, &hitpoint.hit_normal);
             let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(&direction), };
 
@@ -179,7 +179,7 @@ impl Private for Raytracer {
             let transmitted_color = self.raytrace_impl(&transmitted_ray, ray_recursion_depth + 1)
                 .unwrap_or(self.scene.screen.background);
 
-            let k_reflected = Self::get_fresnel_factor(&reflected_ray, &transmitted_ray,
+            let k_reflected = Self::get_fresnel_factor_reflection(&reflected_ray, &transmitted_ray,
                                                        &hitpoint.hit_normal,
                                                        n1_current, n2_pierce);
             let k_transmitted = 1.0 - k_reflected;
@@ -191,12 +191,12 @@ impl Private for Raytracer {
         };
 
         match &hitpoint.material.material_type {
-            &MaterialType::Phong => shade_phong(),
-            &MaterialType::ReflectAndPhong => color::add_option(shade_reflect(), shade_phong()),
-            &MaterialType::ReflectAndRefract {
+            MaterialType::Phong => shade_phong(),
+            MaterialType::ReflectAndPhong => color::add_option(shade_reflect(), shade_phong()),
+            MaterialType::ReflectAndRefract {
                 index_inner,
                 index_outer
-            } => shade_refract(index_inner, index_outer)
+            } => shade_refract(*index_inner, *index_outer)
         }
     }
 
@@ -214,8 +214,7 @@ impl Private for Raytracer {
         let diffuse = if is_shadow { zero() } else { light.color.diffuse.component_mul(&hitpoint.material.diffuse) * l_dot_n };
         let specular = if is_shadow { zero() } else { light.color.specular.component_mul(&hitpoint.material.specular) * r_dot_v.powf(hitpoint.material.shininess) };
 
-        let radiance = emissive + ambient + diffuse + specular;
-        radiance
+        emissive + ambient + diffuse + specular
     }
 
     fn trace_shadow_ray(&self, world_pos: &glm::Vec3, light: &Light) -> bool {
@@ -253,18 +252,23 @@ impl Private for Raytracer {
         is_shadow
     }
 
+    #[allow(non_snake_case)]
     fn create_reflected_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3) -> glm::Vec3 {
-        *normal * 2. * (glm::dot(normal, to_viewer)) - *to_viewer
+        let V = to_viewer;
+        let N = normal;
+        2. * N.dot(V) * N - V
     }
 
+    #[allow(non_snake_case)]
+    /// determines transmitted vector using the surface normal at the hitpoint
     fn create_transmitted_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3,
                               n1_current: f32, n2_pierce: f32) -> glm::Vec3 {
-        // TODO: Check using rust safe math
+        let L = to_viewer;
+        let N = normal;
         let n = n1_current / n2_pierce;
-        let w = n * glm::dot(to_viewer, normal);
+        let w = n * L.dot(N);
         let k = f32::sqrt(1.0 + (w-n)*(w+n));
-        let t = *normal * (w-k)  - *to_viewer * n;
-        t
+        (w - k)*N - n*L
     }
 
     fn get_hitpoint_to_light_unit_vector(hitpoint: &Hitpoint, light: &Light) -> glm::Vec3 {
@@ -277,12 +281,12 @@ impl Private for Raytracer {
                 light_world_pos - hitpoint.position
             }
         };
-        glm::normalize(&vector)
+        vector.normalize()
     }
 
-    fn get_fresnel_factor(reflected_ray: &Ray, transmitted_ray: &Ray,
-                          reflection_normal: &glm::Vec3,
-                          n1_current: f32, n2_pierce: f32) -> f32 {
+    fn get_fresnel_factor_reflection(reflected_ray: &Ray, transmitted_ray: &Ray,
+                                     reflection_normal: &glm::Vec3,
+                                     n1_current: f32, n2_pierce: f32) -> f32 {
         let transmission_normal = -*reflection_normal;
 
 

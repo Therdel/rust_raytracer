@@ -72,9 +72,9 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         let mesh_instances = Self::convert_mesh_instances(json.mesh_instances, &meshes, &materials);
 
         let scene = Scene {
-            camera: camera,
-            screen: screen,
-            lights: lights,
+            camera,
+            screen,
+            lights,
             materials,
             planes,
             spheres,

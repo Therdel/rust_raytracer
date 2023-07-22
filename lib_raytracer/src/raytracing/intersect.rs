@@ -226,31 +226,29 @@ impl Intersect for AABB {
 
 impl Intersect for BVH {
     type Result = Hitpoint;
-
+    
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
-        fn intersect_node(node: &Node, bvh: &BVH, ray: &Ray) -> Option<Hitpoint> {
-            let mut closest_hitpoint = None;
-
+        fn check_node(node: &Node, bvh: &BVH, ray: &Ray,
+                          closest_hitpoint: &mut Option<Hitpoint>) {
             if node.aabb.intersect(ray).is_some() {
                 match &node.content {
                     NodeType::Node { child_left, child_right } => {
                         let node_left = bvh.get_node(child_left.expect("Left child is empty"));
-                        let hitpoint = intersect_node(node_left, bvh, ray);
-                        utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
+                        check_node(node_left, bvh, ray, closest_hitpoint);
 
                         let node_right = bvh.get_node(child_right.expect("Right child is empty"));
-                        let hitpoint = intersect_node(node_right, bvh, ray);
-                        utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
+                        check_node(node_right, bvh, ray, closest_hitpoint);
                     }
                     NodeType::Leaf { triangles } => {
                         let hitpoint = triangles.as_slice().intersect(ray);
-                        utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
+                        utils::take_hitpoint_if_closer(closest_hitpoint, hitpoint);
                     }
                 }
             }
-            closest_hitpoint
         }
-        intersect_node(self.get_root(), self, ray)
+        let mut closest_hitpoint = None;
+        check_node(self.get_root(), self, ray, &mut closest_hitpoint);
+        closest_hitpoint
     }
 }
 
@@ -330,6 +328,6 @@ fn create_hitpoint(t: f32, hit_position: &glm::Vec3, ray: &Ray, surface_normal: 
         hit_normal,
         position_for_refraction: hit_position_for_refraction,
         on_frontside: intersect_frontside,
-        material: material,
+        material,
     }
 }

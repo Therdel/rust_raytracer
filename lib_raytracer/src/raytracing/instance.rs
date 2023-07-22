@@ -26,7 +26,7 @@ impl<Primitive: Intersect> Instance<Primitive> {
         let model_transform_inverse = glm::inverse(&model_transform);
 
         Instance {
-            primitive: primitive,
+            primitive,
             rotation_scale: rotation_scale_transform,
             rotation_scale_inverse: rotation_scale_transform_inverse,
             model: model_transform,

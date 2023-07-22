@@ -56,7 +56,7 @@ pub mod matrix {
                 position: &glm::Vec3) -> glm::Mat4 {
         let rotation_matrix: glm::Mat4 = rotation(orientation.y, orientation.x, orientation.z);
         // TODO: Document http://www.opengl-tutorial.org/beginners-tutorials/tutorial-3-matrices/#translation-matrices
-        let translation_matrix = translation(&position);
+        let translation_matrix = translation(position);
         // apply rotation first, translation second
         let camera_transorm = translation_matrix * rotation_matrix;
 

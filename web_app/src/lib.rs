@@ -7,7 +7,7 @@ mod renderer;
 
 // Called when the wasm module is instantiated
 #[wasm_bindgen(start)]
-pub fn main() -> Result<(), JsValue> {
+pub fn wasm_main() -> Result<(), JsValue> {
     utils::set_panic_hook();
     Ok(())
 }

@@ -1,19 +1,8 @@
 import {View} from "./view.js";
 import {Controller} from "./controller.js";
 import {RenderWorkerPool} from "./render_worker_pool.js";
-import init, {main} from "../../pkg/web_app.js"
 import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
-
-async function init_wasm() {
-    // Load the wasm file
-    await init();
-
-
-    // Run main WASM entry point
-    main();
-}
-init_wasm()
 
 export enum DidHandleMessage {
     YES,

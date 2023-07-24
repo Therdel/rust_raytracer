@@ -1,6 +1,6 @@
 import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
-import init, {Renderer, main} from "../../pkg/web_app.js"
+import init, {Renderer, wasm_main} from "../../pkg/web_app.js"
 
 const SCENE_BASE_PATH = "../../res/scenes";
 const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
@@ -95,11 +95,9 @@ class RenderWorker {
 }
 
 async function init_wasm() {
-    // Load the wasm file
+    // Load wasm file, run its entry point
     await init();
-
-    // Run main WASM entry point
-    main();
+    wasm_main();
 }
 
 async function fetch_into_array(path) {

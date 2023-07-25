@@ -44,9 +44,16 @@ class RenderWorker {
     }
 
     static async init(message: MessageToWorker.Init) {
+        await init_wasm()
+
+        // FIXME: These fetches are not done by the workers in parallel.
+        //        Move to main?
+        await RenderWorker.init_cheat_obj()
+
         const { index, buffer, amount_workers, scene_file: scene_file, width, height } = message;
         const scene_url = SCENE_BASE_PATH + '/' + scene_file
         const scene = await fetch_into_array(scene_url)
+
         RenderWorker.instance = new RenderWorker(index,
                                                  buffer,
                                                  amount_workers,
@@ -105,6 +112,35 @@ async function fetch_into_array(path) {
     return new Uint8Array(array_buffer);
 }
 
+async function on_message({ data: message }: MessageEvent<MessageToWorker.Message>) {
+    console.debug(`Worker:\tReceived '${message.type}'`);
+
+    if (message.type === "MessageToWorker_Init") {
+        const worker_init_start = performance.now()
+        await RenderWorker.init(message)
+        const worker_init_duration =
+            (performance.now() - worker_init_start).toFixed(0)
+    
+        console.debug(`Worker:\tinit took ${worker_init_duration}ms`)
+    } else if (message.type === "MessageToWorker_SceneSelect") {
+        await RenderWorker.scene_select(message)
+    } else if (message.type === "MessageToWorker_Resize") {
+        RenderWorker.resize(message)
+    } else if (message.type === "MessageToWorker_TurnCamera") {
+        RenderWorker.turn_camera(message)
+    }
+
+    const worker_render_start = performance.now()
+    RenderWorker.render()
+    const worker_render_stop = performance.now() - worker_render_start
+
+    console.debug(`Worker:${RenderWorker.index()}\tResponding - Render time: ${worker_render_stop.toFixed(0)} ms`);
+    const response =
+        new MessageFromWorker.RenderResponse(RenderWorker.index())
+    postMessage(response)
+}
+onmessage = on_message
+
 const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds))
 }
@@ -112,41 +148,7 @@ const sleep = (milliseconds) => {
 async function init_worker() {
     console.log(`Worker:\tstarted`)
 
-    const worker_init_start = performance.now()
-
-    await init_wasm()
-    // FIXME: These fetches are not done by the workers in parallel.
-    //        Move to main?
-    await RenderWorker.init_cheat_obj()
-
-    onmessage = async ({ data: message }: MessageEvent<MessageToWorker.Message>) => {
-        console.debug(`Worker:\tReceived '${message.type}'`);
-
-        if (message.type === "MessageToWorker_Init") {
-            await RenderWorker.init(message)
-        } else if (message.type === "MessageToWorker_SceneSelect") {
-            await RenderWorker.scene_select(message)
-        } else if (message.type === "MessageToWorker_Resize") {
-            RenderWorker.resize(message)
-        } else if (message.type === "MessageToWorker_TurnCamera") {
-            RenderWorker.turn_camera(message)
-        }
-
-        const worker_render_start = performance.now()
-        RenderWorker.render()
-        const worker_render_stop = performance.now() - worker_render_start
-
-        console.debug(`Worker:${RenderWorker.index()}\tResponding - Render time: ${worker_render_stop.toFixed(0)} ms`);
-        const response =
-            new MessageFromWorker.RenderResponse(RenderWorker.index())
-        postMessage(response)
-    }
     const init_message = new MessageFromWorker.Init()
     postMessage(init_message)
-
-    const worker_init_duration =
-        (performance.now() - worker_init_start).toFixed(0)
-
-    console.debug(`Worker:\tinit took ${worker_init_duration}ms`)
 }
 init_worker()

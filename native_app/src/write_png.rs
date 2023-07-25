@@ -1,4 +1,4 @@
-use lib_raytracer::exercise1::Canvas;
+use lib_raytracer::Canvas;
 use std::ffi::CStr;
 use stb::image_write::stbi_write_png;
 

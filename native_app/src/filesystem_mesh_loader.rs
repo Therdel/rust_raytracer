@@ -3,9 +3,9 @@ use std::io;
 use std::io::BufReader;
 use std::path::PathBuf;
 
-use lib_raytracer::exercise1::object_file;
-use lib_raytracer::exercise1::object_file::WindingOrder;
-use lib_raytracer::exercise1::scene_file::MeshLoader;
+use lib_raytracer::object_file;
+use lib_raytracer::object_file::WindingOrder;
+use lib_raytracer::scene_file::MeshLoader;
 use lib_raytracer::raytracing::{Material, Mesh};
 use lib_raytracer::utils::AliasArc;
 

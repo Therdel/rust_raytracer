@@ -1,12 +1,12 @@
 use std::io::{self, BufRead};
 use std::sync::Arc;
 
-use crate::exercise1::Scene;
-use crate::exercise1::scene_file::{json_format, MeshLoader};
+use crate::Scene;
+use crate::scene_file::{json_format, MeshLoader};
 use crate::raytracing::{Camera, Instance, Light, LightColor, Material, Mesh, Plane, Screen, Sphere, Triangle};
 use crate::utils::AliasArc;
 use nalgebra_glm as glm;
-use crate::exercise1::object_file::WindingOrder::{Clockwise, CounterClockwise};
+use crate::object_file::WindingOrder::{Clockwise, CounterClockwise};
 use crate::raytracing::color::ColorRgb;
 use crate::raytracing::MaterialType::{Phong, ReflectAndPhong, ReflectAndRefract};
 

@@ -1,5 +1,5 @@
 use std::io;
-use crate::exercise1::object_file::WindingOrder;
+use crate::object_file::WindingOrder;
 use crate::raytracing::{Material, Mesh};
 use crate::utils::AliasArc;
 

@@ -11,8 +11,8 @@ mod filesystem_mesh_loader;
 
 use filesystem_mesh_loader::*;
 use write_png::*;
-use lib_raytracer::exercise1::{Canvas, Scene};
-use lib_raytracer::exercise1::scene_file::Parser;
+use lib_raytracer::{Canvas, Scene};
+use lib_raytracer::scene_file::Parser;
 use lib_raytracer::raytracing::raytracer::{Public, Raytracer};
 
 // TODO: Grab from args or default to stdout

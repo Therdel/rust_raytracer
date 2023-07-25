@@ -1,4 +1,4 @@
-use crate::exercise1::Scene;
+use crate::Scene;
 use crate::raytracing::transform::matrix;
 use crate::raytracing::{Ray, Intersect, Light, Hitpoint, MaterialType};
 use crate::raytracing::color::{ColorRgb, self};

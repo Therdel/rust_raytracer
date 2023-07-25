@@ -3,7 +3,7 @@ use std::io::Cursor;
 use nalgebra_glm as glm;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-use lib_raytracer::exercise1::scene_file::Parser;
+use lib_raytracer::scene_file::Parser;
 use lib_raytracer::raytracing::color::Color;
 use lib_raytracer::raytracing::raytracer::{Public, Raytracer};
 use lib_raytracer::raytracing::Screen;

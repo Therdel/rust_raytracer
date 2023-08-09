@@ -6,8 +6,6 @@ export class Controller {
     private canvas_resizer: HTMLDivElement
     private canvas_resizer_observer_context: { call_count: number, timeout_id: number, prev_width: number }
     private canvas: HTMLCanvasElement
-    private label_time: HTMLLabelElement
-    private label_thread_count: HTMLLabelElement
     private select: HTMLSelectElement
 
     private is_moving_camera: boolean
@@ -18,8 +16,6 @@ export class Controller {
         this.canvas = canvas
         this.canvas.width = this.canvas_resizer.clientWidth
         this.canvas.height = this.canvas_resizer.clientHeight
-        this.label_time = document.getElementById('time-measurement') as HTMLLabelElement
-        this.label_thread_count = document.getElementById('thread-count') as HTMLLabelElement
         this.select = document.getElementById("select_scenes") as HTMLSelectElement
 
         this.canvas_resizer_observer_context = {

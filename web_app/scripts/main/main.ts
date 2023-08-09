@@ -10,8 +10,7 @@ async function main() {
     await init();
     wasm_main();
 
-    const canvas =
-        document.getElementById('screen') as HTMLCanvasElement
+    const canvas = document.getElementById('screen') as HTMLCanvasElement
 
     const view = new View(canvas)
     const controller = new Controller(canvas)

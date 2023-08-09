@@ -1,10 +1,8 @@
 export class View {
-    private canvas: HTMLCanvasElement
     private canvas_context: CanvasRenderingContext2D
     private label_time_measurement: HTMLLabelElement
 
     constructor(canvas: HTMLCanvasElement) {
-        this.canvas = canvas
         this.canvas_context = canvas.getContext("2d")
         this.label_time_measurement = document.getElementById("time-measurement") as HTMLLabelElement
     }

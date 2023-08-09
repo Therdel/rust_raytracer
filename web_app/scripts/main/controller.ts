@@ -39,7 +39,7 @@ export class Controller {
 
         // canvas camera panning 
         this.canvas.onpointerdown = pointer_event => this.start_moving_camera(pointer_event)
-        this.canvas.onpointermove = pointer_event => this.move_camera(pointer_event)
+        this.canvas.onpointermove = async pointer_event => await this.move_camera(pointer_event)
         const stop_moving_camera = () => { this.stop_moving_camera() } 
         this.canvas.onpointerup = stop_moving_camera
         this.canvas.onpointerleave = stop_moving_camera
@@ -47,7 +47,7 @@ export class Controller {
         this.canvas.onpointercancel = stop_moving_camera
 
         // scene selection
-        this.select.onchange = (event) => this.on_scene_select(event)
+        this.select.onchange = async (event) => await this.on_scene_select(event)
     }
 
     // TODO: lock mouse: https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
@@ -61,13 +61,13 @@ export class Controller {
         console.debug(`pointer down `, this.camera_move_start_point)
     }
 
-    private move_camera(pointer_event: PointerEvent) {
+    private async move_camera(pointer_event: PointerEvent) {
         if (this.is_moving_camera) {
             const inverted_y = this.canvas.height - pointer_event.offsetY
             const camera_move_end_point = { x: pointer_event.offsetX, y: inverted_y }
             console.debug(`camera move by pointer`)
 
-            const turn_camera_result = this.model.turn_camera(this.camera_move_start_point, camera_move_end_point)
+            const turn_camera_result = await this.model.turn_camera(this.camera_move_start_point, camera_move_end_point)
             if (DidHandleMessage.YES == turn_camera_result) {
                 this.camera_move_start_point = camera_move_end_point
             }
@@ -86,11 +86,11 @@ export class Controller {
             return
         }
 
-        const do_resize = () => {
+        const do_resize = async () => {
             console.log("Controller: New canvas size: ", this.get_current_canvas_size())
             this.canvas.width = this.canvas_resizer.clientWidth
             this.canvas.height = this.canvas_resizer.clientHeight
-            this.model.resize(this.canvas.width, this.canvas.height)
+            await this.model.resize(this.canvas.width, this.canvas.height)
         }
 
         // debounce resize events - only react after 100ms of silence
@@ -127,8 +127,8 @@ export class Controller {
         this.select.disabled = false;
     }
 
-    private on_scene_select(_: Event) {
-        this.model.scene_select(this.get_current_scene_file())
+    private async on_scene_select(_: Event) {
+        await this.model.scene_select(this.get_current_scene_file())
 
         console.debug(`Controller: Selected scene ${this.select.value}`)
     }

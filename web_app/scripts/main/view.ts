@@ -8,9 +8,9 @@ export class View {
     }
 
     update_canvas(image_data: ImageData) {
-        window.requestAnimationFrame(() =>
+        // window.requestAnimationFrame(() =>
             this.canvas_context.putImageData(image_data, 0, 0)
-        );
+        // );
     }
 
     display_render_duration(duration: number) {

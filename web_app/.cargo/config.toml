@@ -1,0 +1,7 @@
+[build]
+rustflags = [
+  # Use WebGPU backend instead of WebGL
+  # source: https://github.com/gfx-rs/wgpu/wiki/Running-on-the-Web-with-WebGPU-and-WebGL#webgpu
+  "--cfg=web_sys_unstable_apis"
+]
+target = "wasm32-unknown-unknown"

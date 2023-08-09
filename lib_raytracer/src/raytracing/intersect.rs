@@ -73,12 +73,11 @@ impl Intersect for Sphere {
             //
             // where q = -0.5(b - sqrt(discriminant)  for b < 0
             //           -0.5(b + sqrt(discriminant)  otherwise
-            let q;
-            if b < 0.0 {
-                q = -0.5 * (b - discriminant.sqrt());
+            let q = if b < 0.0 {
+                -0.5 * (b - discriminant.sqrt())
             } else {
-                q = -0.5 * (b + discriminant.sqrt());
-            }
+                -0.5 * (b + discriminant.sqrt())
+            };
             let t0 = q / a;
             let t1 = c / q;
 

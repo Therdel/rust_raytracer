@@ -16,6 +16,6 @@ pub fn set_panic_hook() {
 pub fn canvas_from_raw_mut(canvas_u8: &mut [u8]) -> &mut [ColorRgbaU8] {
     let canvas_raw_color = canvas_u8.as_mut_ptr() as *mut ColorRgbaU8;
     unsafe {
-        slice::from_raw_parts_mut(canvas_raw_color, canvas_u8.len() / 4)
+        slice::from_raw_parts_mut(canvas_raw_color, canvas_u8.len() / std::mem::size_of::<ColorRgbaU8>())
     }
 }

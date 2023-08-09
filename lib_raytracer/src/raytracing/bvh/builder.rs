@@ -86,8 +86,7 @@ impl Builder {
         let get_bin_id = |triangle: &Triangle| {
             let pos_on_axis_absolute = get_axis(&triangle.centroid());
             let pos_on_axis_relative = pos_on_axis_absolute - axis_begin;
-            let id = pos_on_axis_relative / bin_width;
-            id
+            pos_on_axis_relative / bin_width
         };
 
         // iterator of triangles left of a bin, exclusive

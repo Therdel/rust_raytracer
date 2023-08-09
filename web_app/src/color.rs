@@ -10,7 +10,7 @@ pub trait QuantizeToU8 {
 impl QuantizeToU8 for ColorRgba {
     fn quantize(&self) -> ColorRgbaU8 {
         let mut clamped_color = glm::clamp(self, 0.0, 1.0);
-        clamped_color = clamped_color * 255.;
+        clamped_color *= 255.0;
 
         [
             clamped_color.x as u8,

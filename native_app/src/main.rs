@@ -41,7 +41,7 @@ fn main() {
     println!("Rendering took {:.2}s", time_start.elapsed().as_secs_f32());
 
     let path = CString::new(IMAGE_PATH)
-        .expect(&format!("Invalid target image path: ('{}')", IMAGE_PATH));
+        .unwrap_or_else(|_| panic!("Invalid target image path: ('{}')", IMAGE_PATH));
     canvas.write_png(path.as_c_str());
 }
 

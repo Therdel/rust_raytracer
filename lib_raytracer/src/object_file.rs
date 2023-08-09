@@ -57,9 +57,11 @@ pub fn load_mesh(name: String,
 fn parse_models_from_obj_buffer(name: &str, obj_buffer: &mut impl BufRead) -> io::Result<Vec<Model>> {
     // triangulate meshes, resulting in triangles only
     // also build single/unified index for vertices and normals -> shorter code
-    let mut load_options = LoadOptions::default();
-    load_options.triangulate = true;
-    load_options.single_index = true;
+    let load_options = LoadOptions {
+        triangulate: true,
+        single_index: true,
+        ..Default::default()
+    };
 
     /// throws an error on any requested material - material files are *unsupported*
     fn material_loader(_path: &Path) -> MTLLoadResult { Err(LoadError::OpenFileFailed) }
@@ -82,7 +84,7 @@ fn check_and_count_triangles(name: &str, models: &[Model]) -> io::Result<usize> 
             return ObjLoadError::create_err(name, "Mesh vertices not divisible by 3 (not cleanly divisible into triangles)".to_string());
         }
 
-        triangle_count = triangle_count + model.mesh.indices.len() / 3;
+        triangle_count += model.mesh.indices.len() / 3;
     }
 
     Ok(triangle_count)
@@ -100,7 +102,7 @@ fn deflatten_three_vec3s(flattened: &[f32],
 fn deflatten_vec3(flattened: &[f32],
                   index: usize) -> glm::Vec3 {
     glm::vec3(
-        flattened[index * 3 + 0],
+        flattened[index * 3],
         flattened[index * 3 + 1],
         flattened[index * 3 + 2],
     )
@@ -122,7 +124,7 @@ impl<InnerError: 'static + Display + Debug + Send + Sync> ObjLoadError<InnerErro
 
 impl<InnerError: Display + Debug + Send + Sync> Display for ObjLoadError<InnerError> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Failed to load .obj buffer of {}: {}", self.name, self.inner_error.to_string())
+        write!(f, "Failed to load .obj buffer of {}: {}", self.name, self.inner_error)
     }
 }
 

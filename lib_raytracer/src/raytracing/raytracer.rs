@@ -223,8 +223,7 @@ impl<'scene> Raytracer<'scene> {
         let r_parallel = (n_t * cos_ang_i - n_i * cos_ang_t) / (n_t * cos_ang_i + n_i * cos_ang_t);
         let r_orthogonal = (n_i * cos_ang_i - n_t * cos_ang_t) / (n_i * cos_ang_i + n_t * cos_ang_t);
 
-        let fresnel_factor_reflection = 0.5 * (r_parallel*r_parallel + r_orthogonal*r_orthogonal);
-        fresnel_factor_reflection
+        0.5 * (r_parallel*r_parallel + r_orthogonal*r_orthogonal)
     }
 }
 

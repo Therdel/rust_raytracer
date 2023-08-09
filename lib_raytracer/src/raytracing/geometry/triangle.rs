@@ -30,11 +30,8 @@ impl Triangle {
         // barycentric coordinates 1/3 : 1/3 : 1/3
         let mut sum: glm::Vec3 = zero();
         for vertex in &self.vertices {
-            sum = sum + *vertex
+            sum += *vertex
         }
-        // let sum: glm::Vec3 = self.vertices
-        //     .iter()
-        //     .fold(zero(), |acc, vertex| acc + *vertex);
         sum * (1.0/3.0)
     }
 

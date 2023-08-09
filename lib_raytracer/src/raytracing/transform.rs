@@ -17,8 +17,7 @@ pub mod matrix {
         let mat = one();
         let mat = glm::rotate_y(&mat, yaw);
         let mat = glm::rotate_x(&mat, pitch);
-        let mat = glm::rotate_z(&mat, roll);
-        mat
+        glm::rotate_z(&mat, roll)
     }
 
     pub fn model(position: &glm::Vec3,
@@ -28,8 +27,7 @@ pub mod matrix {
         let rotation_matrix = rotation(orientation.y, orientation.x, orientation.z);
         let translation_matrix = translation(position);
 
-        let model_matrix = translation_matrix * scale_matrix * rotation_matrix;
-        model_matrix
+        translation_matrix * scale_matrix * rotation_matrix
     }
 
     pub fn viewport(x: f32, y: f32,
@@ -75,7 +73,6 @@ pub mod matrix {
                                        camera.z_near, camera.z_far);
 
         let world_to_screen_matrix = viewport_matrix * projection_matrix * view_matrix;
-        let screen_to_world_matrix = glm::inverse(&world_to_screen_matrix);
-        screen_to_world_matrix
+        glm::inverse(&world_to_screen_matrix)
     }
 }

@@ -7,9 +7,8 @@ use std::path::Path;
 use nalgebra_glm as glm;
 use tobj::{LoadError, LoadOptions, Model, MTLLoadResult};
 
-use crate::raytracing::{Material, Mesh, Triangle};
+use crate::raytracing::{Mesh, Triangle, MaterialIndex};
 use crate::raytracing::bvh::BVH;
-use crate::utils::AliasArc;
 
 pub enum WindingOrder {
     Clockwise,
@@ -18,7 +17,7 @@ pub enum WindingOrder {
 
 pub fn load_mesh(name: String,
                  obj_buffer: &mut impl BufRead,
-                 material: AliasArc<Vec<Material>, Material>,
+                 material: MaterialIndex,
                  winding_order: WindingOrder) -> io::Result<Mesh> {
     let models = parse_models_from_obj_buffer(&name, obj_buffer)?;
 
@@ -42,7 +41,7 @@ pub fn load_mesh(name: String,
                 }
             }
 
-            let triangle = Triangle::new(vertices, normals, material.clone());
+            let triangle = Triangle::new(vertices, normals, material);
             triangles.push(triangle);
         }
     }

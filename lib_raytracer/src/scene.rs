@@ -1,30 +1,17 @@
-use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Instance, Mesh, Screen};
+use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Mesh, Screen, Instance};
 use crate::utils;
-use crate::utils::AliasArc;
 
 pub struct Scene {
     pub camera: Camera,
     pub screen: Screen,
-    pub lights: AliasArc<Vec<Light>, [Light]>,
-    pub materials: AliasArc<Vec<Material>, [Material]>,
+    pub lights: Vec<Light>,
+    pub materials: Vec<Material>,
 
-    pub planes: AliasArc<Vec<Plane>, [Plane]>,
-    pub spheres: AliasArc<Vec<Sphere>, [Sphere]>,
-    pub triangles: AliasArc<Vec<Triangle>, [Triangle]>,
-    pub meshes: AliasArc<Vec<Mesh>, [Mesh]>,
-    pub mesh_instances: AliasArc<Vec<Instance<Mesh>>, [Instance<Mesh>]>,
-
-    // TODO: why can't we do this?
-    //     - Somehow Instances Primitive (dyn Intersect<_> here) size is implicitly required to be Sized.
-    //     - Then, after a '+ ?Sized' bound is added to the Intersect definition,
-    //       "`(dyn intersect::Intersect<Result = hitpoint::Hitpoint<'_>> + 'static)` cannot be shared between threads safely"
-    //       appears because of not being Sync when used with rayon
-    // pub dyn_instances: Vec<Box<Instance<'a, 'a, dyn Intersect<Result=Hitpoint<'a>>>>>,
-    // TODO: why can't we do this?
-    //     - `(dyn intersect::Intersect<Result = hitpoint::Hitpoint<'_>> + 'static)` cannot be shared between threads safely
-    //       appears because of not being Sync when used with rayon
-    // pub dyn_intersectables: Vec<Box<dyn Intersect<Result=Hitpoint<'a>> >>,
-
+    pub planes: Vec<Plane>,
+    pub spheres: Vec<Sphere>,
+    pub triangles: Vec<Triangle>,
+    pub meshes: Vec<Mesh>,
+    pub mesh_instances: Vec<Instance<Mesh>>,
 }
 
 // impl<'a> Scene<'a> {
@@ -56,10 +43,13 @@ impl raytracing::Intersect for Scene {
         let mut check_hitpoint =
             |hitpoint| utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
 
-        check_hitpoint(self.planes.as_ref().intersect(ray));
-        check_hitpoint(self.spheres.as_ref().intersect(ray));
-        check_hitpoint(self.triangles.as_ref().intersect(ray));
-        check_hitpoint(self.mesh_instances.as_ref().intersect(ray));
+        check_hitpoint(self.planes.as_slice().intersect(ray));
+        check_hitpoint(self.spheres.as_slice().intersect(ray));
+        check_hitpoint(self.triangles.as_slice().intersect(ray));
+        self.mesh_instances.iter()
+            .zip(std::iter::repeat(self.meshes.as_slice()))
+            .map(|tuple| tuple.intersect(ray))
+            .for_each(check_hitpoint);
 
         closest_hitpoint
     }

@@ -190,7 +190,9 @@ impl Private for Raytracer {
             Some(color)
         };
 
-        match &hitpoint.material.material_type {
+        let material = &self.scene.materials[hitpoint.material.0];
+
+        match &material.material_type {
             MaterialType::Phong => shade_phong(),
             MaterialType::ReflectAndPhong => color::add_option(shade_reflect(), shade_phong()),
             MaterialType::ReflectAndRefract {
@@ -201,6 +203,7 @@ impl Private for Raytracer {
     }
 
     fn radiance(&self, ray: &Ray, hitpoint: &Hitpoint, light: &Light, is_shadow: bool) -> ColorRgb {
+        let material = &self.scene.materials[hitpoint.material.0];
         let l = Self::get_hitpoint_to_light_unit_vector(hitpoint, light);
         let n = hitpoint.hit_normal;
         let v = -ray.direction;
@@ -209,10 +212,10 @@ impl Private for Raytracer {
         let l_dot_n = f32::max(glm::dot(&l,&n), 0.0);
         let r_dot_v = f32::max(glm::dot(&r, &v), 0.0);
 
-        let emissive = hitpoint.material.emissive;
-        let ambient = light.color.ambient.component_mul(&hitpoint.material.ambient);
-        let diffuse = if is_shadow { zero() } else { light.color.diffuse.component_mul(&hitpoint.material.diffuse) * l_dot_n };
-        let specular = if is_shadow { zero() } else { light.color.specular.component_mul(&hitpoint.material.specular) * r_dot_v.powf(hitpoint.material.shininess) };
+        let emissive = material.emissive;
+        let ambient = light.color.ambient.component_mul(&material.ambient);
+        let diffuse = if is_shadow { zero() } else { light.color.diffuse.component_mul(&material.diffuse) * l_dot_n };
+        let specular = if is_shadow { zero() } else { light.color.specular.component_mul(&material.specular) * r_dot_v.powf(material.shininess) };
 
         emissive + ambient + diffuse + specular
     }

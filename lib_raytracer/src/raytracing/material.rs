@@ -1,5 +1,8 @@
 use crate::raytracing::color::ColorRgb;
 
+#[derive(Clone, Copy)]
+pub struct MaterialIndex(pub usize);
+
 pub struct Material {
     pub name: String,
 

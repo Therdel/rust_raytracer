@@ -1,7 +1,6 @@
-use crate::raytracing::Material;
+use crate::raytracing::MaterialIndex;
 use num_traits::zero;
 use nalgebra_glm as glm;
-use crate::utils::AliasArc;
 
 #[derive(Clone)]
 pub struct Triangle {
@@ -9,17 +8,17 @@ pub struct Triangle {
     pub normals: [glm::Vec3; 3],
     normal: glm::Vec3,
 
-    pub material: AliasArc<Vec<Material>, Material>,
+    pub material: MaterialIndex,
 }
 
 impl Triangle {
     pub fn new(vertices: [glm::Vec3; 3], normals: [glm::Vec3; 3],
-               material: AliasArc<Vec<Material>, Material>) -> Triangle {
+               material: MaterialIndex) -> Triangle {
         Triangle {
             vertices,
             normals,
             normal: Triangle::calculate_unit_normal(&vertices),
-            material: material
+            material
         }
     }
 

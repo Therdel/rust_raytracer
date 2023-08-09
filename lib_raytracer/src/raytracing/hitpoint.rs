@@ -1,6 +1,5 @@
-use crate::raytracing::Material;
+use crate::raytracing::MaterialIndex;
 use nalgebra_glm as glm;
-use crate::utils::AliasArc;
 
 pub struct Hitpoint {
     pub t: f32, // ray distance
@@ -9,5 +8,5 @@ pub struct Hitpoint {
     pub position_for_refraction: glm::Vec3,
     pub on_frontside: bool,
 
-    pub material: AliasArc<Vec<Material>, Material>,
+    pub material: MaterialIndex,
 }

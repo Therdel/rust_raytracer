@@ -105,36 +105,18 @@ mod tests {
         }
     }
     mod triangles {
-        use std::sync::Arc;
-        use num_traits::zero;
-
-        use crate::raytracing::{AABB, Material, MaterialType, Triangle};
-        use crate::utils::AliasArc;
-
+        use glm::zero;
+        use crate::raytracing::MaterialIndex;
         use super::*;
-
-        fn test_material() -> AliasArc<Vec<Material>, Material> {
-            let arc = Arc::new(vec![Material {
-                name: String::from("marriage_material"),
-                emissive: zero(),
-                ambient: zero(),
-                diffuse: zero(),
-                specular: zero(),
-                shininess: 0.0,
-                material_type: MaterialType::Phong
-            }]);
-            AliasArc::new(arc, |vec|vec.first().unwrap())
-        }
 
         #[test]
         fn smoke_test() {
-            let material = test_material();
             let vertices = [
                 glm::vec3(-1.0, 2.0, 3.0),
                 glm::vec3(1.0, -2.0, 0.0),
                 glm::vec3(0.0, 0.0, 0.0)
             ];
-            let triangles = [Triangle::new(vertices, [zero(); 3], material)];
+            let triangles = [Triangle::new(vertices, [zero(); 3], MaterialIndex(0))];
             let hull = AABB::from_triangles(triangles.iter());
             assert!(hull.is_some());
             let hull = hull.unwrap();

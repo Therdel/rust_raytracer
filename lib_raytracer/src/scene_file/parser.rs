@@ -1,10 +1,8 @@
 use std::io::{self, BufRead};
-use std::sync::Arc;
 
 use crate::Scene;
 use crate::scene_file::{json_format, MeshLoader};
-use crate::raytracing::{Camera, Instance, Light, LightColor, Material, Mesh, Plane, Screen, Sphere, Triangle};
-use crate::utils::AliasArc;
+use crate::raytracing::{Camera, Light, LightColor, Material, Mesh, Plane, Screen, Sphere, Triangle, MaterialIndex, MeshIndex, Instance};
 use nalgebra_glm as glm;
 use crate::object_file::WindingOrder::{Clockwise, CounterClockwise};
 use crate::raytracing::color::ColorRgb;
@@ -85,18 +83,15 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         Ok(scene)
     }
 
-    fn convert_vec<JsonElem, ModelElem, F>(vec: Vec<JsonElem>, convert: F) -> AliasArc<Vec<ModelElem>, [ModelElem]>
+    fn convert_vec<JsonElem, ModelElem, F>(vec: Vec<JsonElem>, convert: F) -> Vec<ModelElem>
         where F: FnMut(JsonElem) -> ModelElem {
-        let arc = Arc::new(
-            vec
-                .into_iter()
-                .map(convert)
-                .collect()
-        );
-        AliasArc::new(arc, Vec::as_slice)
+        vec
+            .into_iter()
+            .map(convert)
+            .collect()
     }
 
-    fn convert_lights(lights: Vec<json_format::Light>) -> AliasArc<Vec<Light>, [Light]>{
+    fn convert_lights(lights: Vec<json_format::Light>) -> Vec<Light> {
         Self::convert_vec(lights, |light|
             Light {
                 position: light.position.into(),
@@ -109,7 +104,7 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         )
     }
 
-    fn convert_materials(materials: Vec<json_format::Material>) -> AliasArc<Vec<Material>, [Material]> {
+    fn convert_materials(materials: Vec<json_format::Material>) -> Vec<Material> {
         use json_format::MaterialType as JsonMat;
 
         Self::convert_vec(materials, |material| {
@@ -132,84 +127,76 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         })
     }
 
-    fn find_material(materials: AliasArc<Vec<Material>, [Material]>,
-                     name: &str) -> Option<AliasArc<Vec<Material>, Material>> {
-        let index = materials
+    fn find_material(materials: &[Material],
+                     name: &str) -> Option<MaterialIndex> {
+        materials
             .iter()
             .enumerate()
             .find(|&(_, material)| {
                 material.name == name
             })
-            .map(|(index, _)| index)?;
-
-        let materials_arc = AliasArc::into_parent(materials);
-        let alias_arc = AliasArc::new(materials_arc, |vec| &vec[index]);
-        Some(alias_arc)
+            .map(|(index, _)| MaterialIndex(index))
     }
 
-    fn find_mesh(meshes: AliasArc<Vec<Mesh>, [Mesh]>,
-                 name: &str) -> Option<AliasArc<Vec<Mesh>, Mesh>> {
-        let index = meshes
+    fn find_mesh(meshes: &[Mesh],
+                 name: &str) -> Option<MeshIndex> {
+        meshes
             .iter()
             .enumerate()
             .find(|&(_, mesh)| {
                 mesh.name == name
             })
-            .map(|(index, _)| index)?;
-
-        let mesh_arc = AliasArc::into_parent(meshes);
-        let alias_arc = AliasArc::new(mesh_arc, |vec| &vec[index]);
-        Some(alias_arc)
+            .map(|(index, _)| MeshIndex(index))
     }
 
     fn convert_planes(planes: Option<Vec<json_format::Plane>>,
-                      materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Plane>, [Plane]> {
+                      materials: &[Material]) -> Vec<Plane> {
         if let Some(planes) = planes {
             Self::convert_vec(planes, |plane|
                 Plane::new(plane.normal.into(), plane.distance,
-                           Self::find_material(materials.clone(), &plane.material).unwrap())
+                           Self::find_material(materials, &plane.material).unwrap())
             )
         } else {
-            AliasArc::new(Default::default(), Vec::as_slice)
+            vec![]
         }
     }
 
     fn convert_spheres(spheres: Option<Vec<json_format::Sphere>>,
-                       materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Sphere>, [Sphere]> {
+                       materials: &[Material]) -> Vec<Sphere> {
         if let Some(spheres) = spheres {
             Self::convert_vec(spheres, |sphere|
                 Sphere {
                     center: sphere.center.into(),
                     radius: sphere.radius,
-                    material: Self::find_material(materials.clone(), &sphere.material).unwrap(),
+                    material: Self::find_material(materials, &sphere.material).unwrap(),
                 }
             )
         } else {
-            AliasArc::new(Default::default(), Vec::as_slice)
+            vec![]
         }
     }
 
     fn convert_triangles(triangles: Option<Vec<json_format::Triangle>>,
-                         materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Triangle>, [Triangle]> {
+                         materials: &[Material]) -> Vec<Triangle> {
         if let Some(triangles) = triangles {
             Self::convert_vec(triangles, |triangle|
                 Triangle::new(
                     triangle.vertices.map(Into::into),
                     triangle.normals.map(Into::into),
-                    Self::find_material(materials.clone(), &triangle.material).unwrap(),
+                    Self::find_material(materials, &triangle.material).unwrap(),
                 )
             )
         } else {
-            AliasArc::new(Default::default(), Vec::as_slice)
+            vec![]
         }
     }
 
     fn convert_meshes(&self,
                       meshes: Option<Vec<json_format::Mesh>>,
-                      materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Mesh>, [Mesh]> {
+                      materials: &[Material]) -> Vec<Mesh> {
         if let Some(meshes) = meshes {
             Self::convert_vec(meshes, |mesh| {
-                let material = Self::find_material(materials.clone(), &mesh.material).unwrap();
+                let material = Self::find_material(materials, &mesh.material).unwrap();
                 let winding_order = match mesh.winding_order {
                     json_format::WindingOrder::Clockwise => Clockwise,
                     json_format::WindingOrder::CounterClockwise => CounterClockwise
@@ -218,28 +205,28 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
                 self.mesh_loader.load(&mesh.name, &mesh.file_name, material, winding_order).unwrap()
             })
         } else {
-            AliasArc::new(Default::default(), Vec::as_slice)
+            vec![]
         }
     }
 
     fn convert_mesh_instances(instances: Option<Vec<json_format::MeshInstance>>,
-                              meshes: &AliasArc<Vec<Mesh>, [Mesh]>,
-                              materials: &AliasArc<Vec<Material>, [Material]>) -> AliasArc<Vec<Instance<Mesh>>, [Instance<Mesh>]> {
+                              meshes: &[Mesh],
+                              materials: &[Material]) -> Vec<Instance<Mesh>> {
         if let Some(instances) = instances {
             Self::convert_vec(instances, |instance| {
-                let mesh = Self::find_mesh(meshes.clone(), &instance.mesh).unwrap();
+                let mesh = Self::find_mesh(meshes, &instance.mesh).unwrap();
                 let material_override = instance.material_override.map(|name|
-                    Self::find_material(materials.clone(), &name).unwrap()
+                    Self::find_material(materials, &name).unwrap()
                 );
-                Instance::new(mesh,
-                              instance.position.into(),
-                              glm::radians(&instance.orientation_degrees.into()),
-                              instance.scale.into(),
-                              material_override,
+                Instance::new(mesh.0,
+                    instance.position.into(),
+                    glm::radians(&instance.orientation_degrees.into()),
+                    instance.scale.into(),
+                    material_override,
                 )
             })
         } else {
-            AliasArc::new(Default::default(), Vec::as_slice)
+            vec![]
         }
     }
 }

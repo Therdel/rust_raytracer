@@ -2,10 +2,9 @@ use nalgebra_glm as glm;
 use num_traits::identities::Zero;
 use num_traits::Signed;
 
-use crate::raytracing::{AABB, Hitpoint, Instance, Material, Mesh, Plane, Ray, Sphere, Triangle};
+use crate::raytracing::{AABB, Hitpoint, Instance, MaterialIndex, Mesh, Plane, Ray, Sphere, Triangle};
 use crate::raytracing::bvh::{BVH, Node, NodeType};
 use crate::utils;
-use crate::utils::AliasArc;
 
 const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-4;
 
@@ -104,7 +103,7 @@ impl Intersect for Sphere {
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
                 let normal = self.normal(&hit_position);
-                let hitpoint = create_hitpoint(t, &hit_position, ray, &normal, &normal, self.material.clone());
+                let hitpoint = create_hitpoint(t, &hit_position, ray, &normal, &normal, self.material);
 
                 result = Some(hitpoint);
             }
@@ -131,7 +130,7 @@ impl Intersect for Plane {
             let does_intersect_in_ray_direction = t >= 0.0;
             if does_intersect_in_ray_direction {
                 let hit_position = utils::ray_equation(ray, t);
-                let hitpoint = create_hitpoint(t, &hit_position, ray, &self.normal, &self.normal, self.material.clone());
+                let hitpoint = create_hitpoint(t, &hit_position, ray, &self.normal, &self.normal, self.material);
 
                 result = Some(hitpoint);
             }
@@ -170,7 +169,7 @@ impl Intersect for Triangle {
         let hit_position = utils::ray_equation(ray, t);
         let hit_normal_gouraud = w * self.normals[0] + u * self.normals[1] + v * self.normals[2];
         let hit_normal_gouraud = glm::normalize(&hit_normal_gouraud);
-        let hitpoint = create_hitpoint(t, &hit_position, ray, self.normal(), &hit_normal_gouraud, self.material.clone());
+        let hitpoint = create_hitpoint(t, &hit_position, ray, self.normal(), &hit_normal_gouraud, self.material);
 
         Some(hitpoint)
     }
@@ -260,11 +259,14 @@ impl Intersect for Mesh {
     }
 }
 
-impl<Primitive> Intersect for Instance<Primitive>
-    where Primitive: Intersect<Result=Hitpoint> {
+impl<Primitive> Intersect for (&Instance<Primitive>, &[Primitive]) 
+    where Primitive: Intersect<Result = Hitpoint> {
     type Result = Primitive::Result;
 
     fn intersect(&self, ray: &Ray) -> Option<Self::Result>{
+        let (instance, primitives) = *self;
+        let primitive = &primitives[instance.primitive_index];
+
         let transform = |vec: &glm::Vec3, mat: &glm::Mat4| -> glm::Vec3 {
             let homogeneous_transformed = *mat * vec.push(1.0);
             // no perspective divide needed as we're only using translate, scale & rotate
@@ -272,33 +274,32 @@ impl<Primitive> Intersect for Instance<Primitive>
         };
 
         // transform ray into model-local coordinate-system
-        let transformed_origin = transform(&ray.origin, &self.model_inverse);
+        let transformed_origin = transform(&ray.origin, &instance.model_inverse);
         let transformed_direction = glm::normalize(
-            &transform(&ray.direction, &self.rotation_scale_inverse)
+            &transform(&ray.direction, &instance.rotation_scale_inverse)
         );
         let transformed_ray = Ray { origin: transformed_origin, direction: transformed_direction };
 
-        let mut hitpoint = self.primitive.intersect(&transformed_ray)?;
+        let mut hitpoint = primitive.intersect(&transformed_ray)?;
         // transform hitpoint back into world-local coordinate-system
-        hitpoint.position = transform(&hitpoint.position, &self.model);
+        hitpoint.position = transform(&hitpoint.position, &instance.model);
         hitpoint.hit_normal = glm::normalize(
-            &transform(&hitpoint.hit_normal, &self.rotation_scale)
+            &transform(&hitpoint.hit_normal, &instance.rotation_scale)
         );
-        hitpoint.position_for_refraction = transform(&hitpoint.position_for_refraction, &self.model);
+        hitpoint.position_for_refraction = transform(&hitpoint.position_for_refraction, &instance.model);
 
         let t_in_world = glm::distance(&ray.origin, &hitpoint.position);
         hitpoint.t = t_in_world;
 
-        // TODO: Why does this work with both ```ref material``` and ```material```?
-        if let Some(ref material) = self.material_override {
-            hitpoint.material = material.clone();
+        if let Some(material) = instance.material_override {
+            hitpoint.material = material;
         }
         Some(hitpoint)
     }
 }
 
 fn create_hitpoint(t: f32, hit_position: &glm::Vec3, ray: &Ray, surface_normal: &glm::Vec3, hit_normal: &glm::Vec3,
-                   material: AliasArc<Vec<Material>, Material>) -> Hitpoint {
+                   material: MaterialIndex) -> Hitpoint {
     let n_dot_rdir = glm::dot(surface_normal, &ray.direction);
     let intersect_frontside = n_dot_rdir < 0.0;
 

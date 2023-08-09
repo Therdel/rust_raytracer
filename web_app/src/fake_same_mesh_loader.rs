@@ -4,15 +4,14 @@ use std::io::Cursor;
 use lib_raytracer::object_file;
 use lib_raytracer::object_file::WindingOrder;
 use lib_raytracer::scene_file::MeshLoader;
-use lib_raytracer::raytracing::{Material, Mesh};
-use lib_raytracer::utils::AliasArc;
+use lib_raytracer::raytracing::{MaterialIndex, Mesh};
 
 pub struct FakeSameMeshLoader<'a> {
     pub mesh_obj: &'a [u8]
 }
 
 impl MeshLoader for FakeSameMeshLoader<'_> {
-    fn load(&self, name: &str, _file_name: &str, material: AliasArc<Vec<Material>, Material>,
+    fn load(&self, name: &str, _file_name: &str, material: MaterialIndex,
             winding_order: WindingOrder) -> io::Result<Mesh> {
         let mut mesh_obj_bufread = Cursor::new(self.mesh_obj);
 

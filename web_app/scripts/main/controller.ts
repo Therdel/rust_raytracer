@@ -39,12 +39,12 @@ export class Controller {
 
         // canvas camera panning 
         this.canvas.onpointerdown = pointer_event => this.start_turning_camera(pointer_event)
-        this.canvas.onpointermove = pointer_event => this.turn_camera(pointer_event)
-        const stop_moving_camera = () => { this.stop_moving_camera() } 
-        this.canvas.onpointerup = stop_moving_camera
-        this.canvas.onpointerleave = stop_moving_camera
-        this.canvas.onpointerout   = stop_moving_camera
-        this.canvas.onpointercancel = stop_moving_camera
+        this.canvas.onpointermove = async pointer_event => await this.move_camera(pointer_event)
+        const stop_turning_camera = () => { this.stop_turning_camera() } 
+        this.canvas.onpointerup = stop_turning_camera
+        this.canvas.onpointerleave = stop_turning_camera
+        this.canvas.onpointerout   = stop_turning_camera
+        this.canvas.onpointercancel = stop_turning_camera
 
         // scene selection
         this.select.onchange = async (event) => await this.on_set_scene(event)
@@ -61,20 +61,20 @@ export class Controller {
         console.debug(`pointer down `, this.turn_camera_start_point)
     }
 
-    private turn_camera(pointer_event: PointerEvent) {
+    private async move_camera(pointer_event: PointerEvent) {
         if (this.is_moving_camera) {
             const inverted_y = this.canvas.height - pointer_event.offsetY
             const camera_move_end_point = { x: pointer_event.offsetX, y: inverted_y }
             console.debug(`camera move by pointer`)
 
-            const turn_camera_result = this.model.turn_camera(this.turn_camera_start_point, camera_move_end_point)
+            const turn_camera_result = await this.model.turn_camera(this.turn_camera_start_point, camera_move_end_point)
             if (DidHandleMessage.YES == turn_camera_result) {
                 this.turn_camera_start_point = camera_move_end_point
             }
         }
     }
 
-    private stop_moving_camera() {
+    private stop_turning_camera() {
         this.is_moving_camera = false
     }
 
@@ -84,11 +84,11 @@ export class Controller {
             return
         }
 
-        const do_resize = () => {
+        const do_resize = async () => {
             console.debug("Controller: New canvas size: ", this.get_current_canvas_size())
             this.canvas.width = this.canvas_resizer.clientWidth
             this.canvas.height = this.canvas_resizer.clientHeight
-            this.model.resize(this.canvas.width, this.canvas.height)
+            await this.model.resize(this.canvas.width, this.canvas.height)
         }
 
         // debounce resize events - only react after 100ms of silence

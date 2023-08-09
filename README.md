@@ -7,3 +7,9 @@
 ![](renders/reflective_bunnies.png)
 ![](renders/mirror-sphere_no-reflective-dimming.png)
 ![](renders/infinity_santa.png)
+
+
+
+### TODO GPGPU
+[x] read buffer into canvas
+[x] Materials Arc --> Material IDs

@@ -13,11 +13,29 @@ default = ["console_error_panic_hook"]
 lib_raytracer = { path = "../lib_raytracer" }
 nalgebra-glm = "0.15"
 num-traits = "0.2"
-wasm-bindgen = "0.2.100"
-web-sys = { version = "0.3.55", features = ['console'] }
+
 # The `console_error_panic_hook` crate provides better debugging of panics by
 # logging them with `console.error`. This is great for development, but requires
 # all the `std::fmt` and `std::panicking` infrastructure, so isn't great for
 # code size when deploying.
-console_error_panic_hook = { version = "0.1.6", optional = true }
-# Todo: Maybe use Wee-Alloc
+console_error_panic_hook = { version = "0.1.7", optional = true }
+bytemuck = "1.13"
+console_log = { version = "1", features = ["color"] }
+futures-intrusive = "0.4"
+
+# fix unresolved linking to "now" function in wasm,
+# caused by usage of `futures_intrusive::channel::shared::oneshot_channel`,
+# which in turn uses parking_lot, which depends on system time - unavailable on wasm. https://github.com/Amanieu/parking_lot/issues/269
+# source: https://github.com/Amanieu/parking_lot/issues/269#issuecomment-952871385
+# `instant/wasm-bindgen` makes sure it will use `js_sys` for getting the system time
+# `instant/inaccurate` uses `Date.now()` instead of `performance.now()`
+instant = {version = "0.1.12", features = ["wasm-bindgen", "inaccurate"] }
+
+log = "0.4.19"
+js-sys = "0.3.64"
+wasm-bindgen = "0.2.100"
+wasm-bindgen-futures = "0.4.37"
+wasm-bindgen-test = "0.3.37"
+parking_lot = "0.12.1"
+web-sys = { version = "0.3.64", features = ['console'] }
+wgpu = "25.0.2"

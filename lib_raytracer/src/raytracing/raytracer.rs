@@ -1,5 +1,4 @@
 use crate::Scene;
-use crate::raytracing::transform::matrix;
 use crate::raytracing::{Ray, Intersect, Light, Hitpoint, MaterialType};
 use crate::raytracing::color::{ColorRgb, self};
 use nalgebra_glm as glm;
@@ -8,95 +7,17 @@ use num_traits::{Zero, zero};
 const MAX_RAY_RECURSION_DEPTH: usize = 10;
 const REFLECTION_DIM_FACTOR: f32 = 0.8;
 
-pub struct Raytracer {
-    scene: Scene,
-    screen_to_world: glm::Mat4
+pub struct Raytracer<'scene> {
+    pub scene: &'scene Scene
 }
 
-pub trait Public {
-    fn new(scene: Scene) -> Self;
-    fn resize_screen(&mut self, width: usize, height: usize);
-    fn turn_camera(&mut self, drag_begin: &glm::Vec2, drag_end: &glm::Vec2);
-
-    fn raytrace(&self, ray: &Ray) -> Option<ColorRgb>;
-    fn depth_map(&self, ray: &Ray) -> Option<ColorRgb>;
-
-    fn generate_primary_ray(&self, screen_coordinate: &glm::Vec2) -> Ray;
-}
-
-trait Private {
-    fn raytrace_impl(&self, ray: &Ray, ray_recursion_depth: usize) -> Option<ColorRgb>;
-    fn shade(&self, ray: &Ray, hitpoint: &Hitpoint, ray_recursion_depth: usize) -> Option<ColorRgb>;
-    fn radiance(&self, ray: &Ray, hitpoint: &Hitpoint, light: &Light, is_shadow: bool) -> ColorRgb;
-    fn trace_shadow_ray(&self, world_pos: &glm::Vec3, light: &Light) -> bool;
-    fn create_reflected_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3) -> glm::Vec3;
-    fn create_transmitted_ray(to_viewer: &glm::Vec3, normal: &glm::Vec3,
-                              n1_current: f32, n2_pierce: f32) -> glm::Vec3;
-    fn get_hitpoint_to_light_unit_vector(hitpoint: &Hitpoint, light: &Light) -> glm::Vec3;
-    fn get_fresnel_factor_reflection(reflected_ray: &Ray, transmitted_ray: &Ray,
-                          reflection_normal: &glm::Vec3, n1_current: f32, n2_pierce: f32) -> f32;
-}
-
-impl Public for Raytracer {
-    fn new<'scene>(scene: Scene) -> Self {
-        Self {
-            screen_to_world: matrix::screen_to_world(&scene.camera, &scene.screen),
-            scene,
-        }
-    }
-
-    fn resize_screen(&mut self, width: usize, height: usize) {
-        self.scene.screen.pixel_width = width;
-        self.scene.screen.pixel_height = height;
-
-        self.screen_to_world = matrix::screen_to_world(&self.scene.camera, &self.scene.screen);
-    }
-
-    fn turn_camera(&mut self, begin: &glm::Vec2, end: &glm::Vec2) {
-        let radians = |degrees: f32| degrees * (glm::pi::<f32>() / 180.0);
-
-        // pixel to degrees mapping
-        let y_fov_degrees = self.scene.camera.y_fov_degrees;
-        let degrees_per_pixel = y_fov_degrees / self.scene.screen.pixel_height as f32;
-        let pixel_to_angle = |pixel| radians(pixel * degrees_per_pixel);
-
-        let pixel_diff_x = end.x - begin.x;
-        let pixel_diff_y = end.y - begin.y;
-
-        let angle_diff_heading = pixel_to_angle(pixel_diff_x);
-        let angle_diff_pitch = pixel_to_angle(pixel_diff_y);
-
-        // "natural scrolling" - turning follows the inverse cursor motion
-        // the heading turn is positive when turning to the left -> when drag_begin is left of drag_end
-        let angle_diff_heading = match begin.x < end.x {
-            true => angle_diff_heading.abs(),
-            false => -angle_diff_heading.abs()
-        };
-        // the pitch turn is positive when turning upwards -> when drag_begin is above drag_end
-        let angle_diff_pitch = match begin.y > end.y {
-            true => angle_diff_pitch.abs(),
-            false => -angle_diff_pitch.abs()
-        };
-
-        let camera_orientation = &mut self.scene.camera.orientation;
-        camera_orientation.x += angle_diff_pitch;
-        camera_orientation.y += angle_diff_heading;
-
-        // clamp pitch
-        camera_orientation.x = camera_orientation.x.clamp(radians(-90.),
-                                                          radians(90.));
-        // modulo heading
-        camera_orientation.y %= radians(360.);
-
-        self.screen_to_world = matrix::screen_to_world(&self.scene.camera, &self.scene.screen);
-    }
-
-    fn raytrace(&self, ray: &Ray) -> Option<ColorRgb> {
+impl<'scene> Raytracer<'scene> {
+    pub fn raytrace(&self, ray: &Ray) -> Option<ColorRgb> {
         self.raytrace_impl(ray, 0)
     }
 
-    fn depth_map(&self, ray: &Ray) -> Option<ColorRgb> {
-        let hitpoint = self.scene.intersect(&ray)?;
+    pub fn depth_map(&self, ray: &Ray) -> Option<ColorRgb> {
+        let hitpoint = self.scene.intersect(ray)?;
 
         let scale = 1.0 / 10.0;
         let brightness = hitpoint.t * scale;
@@ -105,7 +26,7 @@ impl Public for Raytracer {
         Some(color)
     }
 
-    fn generate_primary_ray(&self, screen_coordinate: &glm::Vec2) -> Ray {
+    pub fn generate_primary_ray(&self, screen_coordinate: &glm::Vec2) -> Ray {
         let p_screen = glm::vec4(screen_coordinate.x, screen_coordinate.y, 0.0, 1.0);
         // TODO: Document that NDC "looks" in *positive* z-axis. Document wrong viewing direction
         //       Has to do with how *WE* define the z-range.
@@ -113,8 +34,8 @@ impl Public for Raytracer {
         // TODO: Document that this is *always* in camera view direction. (NDC)
         let p_screen_forward = p_screen + glm::vec4(0.0, 0.0, 1.0, 0.0);
 
-        let p_world = self.screen_to_world * p_screen;
-        let p_world_forward = self.screen_to_world * p_screen_forward;
+        let p_world = self.scene.screen_to_world() * p_screen;
+        let p_world_forward = self.scene.screen_to_world() * p_screen_forward;
 
         let p_world_inhomogeneous = (p_world / p_world.w).xyz();
         let p_world_forward_inhomogeneous = (p_world_forward / p_world_forward.w).xyz();
@@ -127,9 +48,7 @@ impl Public for Raytracer {
             direction: direction_normalized,
         }
     }
-}
 
-impl Private for Raytracer {
     fn raytrace_impl(&self, ray: &Ray, ray_recursion_depth: usize) -> Option<ColorRgb> {
         if ray_recursion_depth < MAX_RAY_RECURSION_DEPTH {
             let hitpoint = self.scene.intersect(ray)?;
@@ -157,7 +76,7 @@ impl Private for Raytracer {
 
             let reflection_color =
                 self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
-                    .unwrap_or(self.scene.screen.background);
+                    .unwrap_or(self.scene.screen().background);
             Some(reflection_color * REFLECTION_DIM_FACTOR)
         };
 
@@ -175,9 +94,9 @@ impl Private for Raytracer {
             let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(&direction_reflected) };
 
             let reflected_color = self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
-                .unwrap_or(self.scene.screen.background);
+                .unwrap_or(self.scene.screen().background);
             let transmitted_color = self.raytrace_impl(&transmitted_ray, ray_recursion_depth + 1)
-                .unwrap_or(self.scene.screen.background);
+                .unwrap_or(self.scene.screen().background);
 
             let k_reflected = Self::get_fresnel_factor_reflection(&reflected_ray, &transmitted_ray,
                                                        &hitpoint.hit_normal,

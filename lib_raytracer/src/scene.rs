@@ -1,9 +1,12 @@
+use nalgebra_glm as glm;
+use crate::raytracing::transform::matrix;
 use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Mesh, Screen, Instance};
 use crate::utils;
 
 pub struct Scene {
-    pub camera: Camera,
-    pub screen: Screen,
+    camera: Camera,
+    screen: Screen,
+    screen_to_world: glm::Mat4,
     pub lights: Vec<Light>,
     pub materials: Vec<Material>,
 
@@ -12,6 +15,82 @@ pub struct Scene {
     pub triangles: Vec<Triangle>,
     pub meshes: Vec<Mesh>,
     pub mesh_instances: Vec<Instance<Mesh>>,
+}
+
+impl Scene {
+    pub fn new(camera: Camera, screen: Screen) -> Self {
+        let screen_to_world = matrix::screen_to_world(&camera, &screen);
+        Self {
+            camera,
+            screen,
+            screen_to_world,
+            lights: vec![],
+            materials: vec![],
+            planes: vec![],
+            spheres: vec![],
+            triangles: vec![],
+            meshes: vec![],
+            mesh_instances: vec![],
+        }
+    }
+
+    pub fn camera(&self) -> &Camera {
+        &self.camera
+    }
+
+    pub fn screen(&self) -> &Screen {
+        &self.screen
+    }
+
+    pub fn screen_to_world(&self) -> &glm::Mat4 {
+        &self.screen_to_world
+    }
+
+    pub fn resize_screen(&mut self, width: usize, height: usize) {
+        self.screen.pixel_width = width;
+        self.screen.pixel_height = height;
+    
+        self.screen_to_world = matrix::screen_to_world(&self.camera, &self.screen);
+    }
+
+    pub fn turn_camera(&mut self, begin: &glm::Vec2, end: &glm::Vec2) {
+        let radians = |degrees: f32| degrees * (glm::pi::<f32>() / 180.0);
+    
+        // pixel to degrees mapping
+        let y_fov_degrees = self.camera.y_fov_degrees;
+        let degrees_per_pixel = y_fov_degrees / self.screen.pixel_height as f32;
+        let pixel_to_angle = |pixel| radians(pixel * degrees_per_pixel);
+    
+        let pixel_diff_x = end.x - begin.x;
+        let pixel_diff_y = end.y - begin.y;
+    
+        let angle_diff_heading = pixel_to_angle(pixel_diff_x);
+        let angle_diff_pitch = pixel_to_angle(pixel_diff_y);
+    
+        // "natural scrolling" - turning follows the inverse cursor motion
+        // the heading turn is positive when turning to the left -> when drag_begin is left of drag_end
+        let angle_diff_heading = match begin.x < end.x {
+            true => angle_diff_heading.abs(),
+            false => -angle_diff_heading.abs()
+        };
+        // the pitch turn is positive when turning upwards -> when drag_begin is above drag_end
+        let angle_diff_pitch = match begin.y > end.y {
+            true => angle_diff_pitch.abs(),
+            false => -angle_diff_pitch.abs()
+        };
+    
+        let camera_orientation = &mut self.camera.orientation;
+        camera_orientation.x += angle_diff_pitch;
+        camera_orientation.y += angle_diff_heading;
+    
+        // clamp pitch
+        camera_orientation.x = camera_orientation.x.clamp(radians(-90.),
+                                                          radians(90.));
+        // modulo heading
+        camera_orientation.y %= radians(360.);
+    
+        self.screen_to_world = matrix::screen_to_world(&self.camera, &self.screen);
+    }
 }
 
 // impl<'a> Scene<'a> {

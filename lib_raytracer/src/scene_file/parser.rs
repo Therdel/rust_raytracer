@@ -61,25 +61,15 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
 
         let camera = json.camera.into();
         let screen = json.screen.into();
-        let lights = Self::convert_lights(json.lights);
-        let materials = Self::convert_materials(json.materials);
-        let planes = Self::convert_planes(json.planes, &materials);
-        let spheres = Self::convert_spheres(json.spheres, &materials);
-        let triangles = Self::convert_triangles(json.triangles, &materials);
-        let meshes = self.convert_meshes(json.meshes, &materials);
-        let mesh_instances = Self::convert_mesh_instances(json.mesh_instances, &meshes, &materials);
 
-        let scene = Scene {
-            camera,
-            screen,
-            lights,
-            materials,
-            planes,
-            spheres,
-            triangles,
-            meshes,
-            mesh_instances,
-        };
+        let mut scene = Scene::new(camera, screen);
+        scene.lights =         Self::convert_lights(json.lights);
+        scene.materials =      Self::convert_materials(json.materials);
+        scene.planes =         Self::convert_planes(json.planes, &scene.materials);
+        scene.spheres =        Self::convert_spheres(json.spheres, &scene.materials);
+        scene.triangles =      Self::convert_triangles(json.triangles, &scene.materials);
+        scene.meshes =         self.convert_meshes(json.meshes, &scene.materials);
+        scene.mesh_instances = Self::convert_mesh_instances(json.mesh_instances, &scene.meshes, &scene.materials);
         Ok(scene)
     }
 

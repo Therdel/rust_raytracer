@@ -13,7 +13,7 @@ use filesystem_mesh_loader::*;
 use write_png::*;
 use lib_raytracer::{Canvas, Scene};
 use lib_raytracer::scene_file::Parser;
-use lib_raytracer::raytracing::raytracer::{Public, Raytracer};
+use lib_raytracer::raytracing::raytracer::Raytracer;
 
 // TODO: Grab from args or default to stdout
 const IMAGE_PATH: &str = "render.png";
@@ -46,9 +46,9 @@ fn main() {
 }
 
 fn paint_scene(scene: Scene) -> Canvas {
-    let mut canvas = Canvas::new(&scene.screen);
-    let pixel_width = scene.screen.pixel_width;
-    let raytracer = Raytracer::new(scene);
+    let mut canvas = Canvas::new(scene.screen());
+    let pixel_width = scene.screen().pixel_width;
+    let raytracer = Raytracer{ scene: &scene };
 
     canvas.borrow_stripes_mut()
         .par_bridge()

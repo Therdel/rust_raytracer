@@ -23,6 +23,7 @@ export class CpuModel implements Model {
     public readonly view: View
     public readonly controller: Controller
 
+    private asset_store: AssetStore
     private state: AbstractState
 
     private readonly canvas: HTMLCanvasElement
@@ -33,41 +34,36 @@ export class CpuModel implements Model {
     private worker_image_buffers: SharedArrayBuffer[]
     public render_worker_pool: RenderWorkerPool
 
-    private asset_store: AssetStore
-
-    private constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
+    private constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore) {
         this.view = view
         this.controller = controller
 
-        this.state = undefined
+        this.asset_store = asset_store
+        const scene_file_name = controller.get_current_scene_file_name()
+        const init_set_scene = new MessageToWorker.SetScene(scene_file_name, this.asset_store.serialize())
+        for (const asset of this.asset_store.iterate()) {
+            console.debug(`asset name: ${asset[0]}`)
+        }
+        this.state = new InitPingPong(this, init_set_scene)
 
         this.canvas = canvas
-        this.canvas_context = canvas.getContext("2d")
-        this.init_image_data()
+        this.canvas_context = canvas_context
+        this.image_data = this.init_image_data()
 
         this.amount_workers = navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4
-        this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
-
-        this.render_worker_pool = undefined
-        this.asset_store = new AssetStore()
-    }
-
-    static async create(view: View, controller: Controller, canvas: HTMLCanvasElement): Promise<CpuModel> {
-        const model_core = new CpuModel(view, controller, canvas)
-
-        const scene_file_name = controller.get_current_scene_file_name()
-
-        await model_core.asset_store.put_scene_and_cache_assets(scene_file_name)
-        const init_set_scene = new MessageToWorker.SetScene(scene_file_name, model_core.asset_store.serialize())
-        for (const bam of model_core.asset_store.iterate()) {
-            console.debug(`asset name: ${bam[0]}`)
-        }
-        model_core.state = new InitPingPong(model_core, init_set_scene)
+        this.worker_image_buffers = this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
 
         // start rendering
-        const delegate = (message) => model_core.on_worker_message(message) // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker source: https://stackoverflow.com/a/20279485
-        model_core.render_worker_pool = new RenderWorkerPool(delegate, model_core.amount_workers)
-        return model_core
+        const delegate = (message: MessageFromWorker.Message) => this.on_worker_message(message)
+        this.render_worker_pool = new RenderWorkerPool(delegate, this.amount_workers)
+    }
+
+    static async create(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D): Promise<CpuModel> {
+        const asset_store = new AssetStore()
+        const scene_file_name = controller.get_current_scene_file_name()
+        asset_store.put_scene_and_cache_assets(scene_file_name)
+
+        return new CpuModel(view, controller, canvas, canvas_context, asset_store)
     }
 
     async set_scene(scene_name: string): Promise<DidHandleMessage> {
@@ -94,15 +90,17 @@ export class CpuModel implements Model {
     init_image_data() {
         const [width, height] = [this.canvas.width, this.canvas.height]
         this.image_data = this.canvas_context.createImageData(width, height)
+        return this.image_data
     }
 
-    create_worker_image_buffers(width: number, height: number) {
+    create_worker_image_buffers(width: number, height: number): SharedArrayBuffer[] {
         this.worker_image_buffers = []
         const image_buf_size = width * height * 4
         for (let i = 0; i < this.amount_workers; ++i) {
             const image_buffer = new SharedArrayBuffer(image_buf_size);
             this.worker_image_buffers.push(image_buffer);
         }
+        return this.worker_image_buffers
     }
 
     get_worker_buffer(index: number): SharedArrayBuffer {
@@ -317,15 +315,15 @@ export class GpuModel implements Model {
 
     private readonly gpu_renderer: GpuRenderer
 
-    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, gpu_renderer: GpuRenderer) {
+    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D, gpu_renderer: GpuRenderer) {
         this.view = view
         this.controller = controller
 
         this.state = new GpuModelState.AcceptUserControl(this)
 
         this.canvas = canvas
-        this.canvas_context = canvas.getContext("2d")
-        this.init_image_data()
+        this.canvas_context = canvas_context
+        this.image_data = this.init_image_data()
 
         this.gpu_renderer = gpu_renderer
         this.render()
@@ -336,9 +334,10 @@ export class GpuModel implements Model {
         this.state = state
     }
 
-    init_image_data() {
+    init_image_data(): ImageData {
         const [width, height] = [this.canvas.width, this.canvas.height]
         this.image_data = this.canvas_context.createImageData(width, height)
+        return this.image_data
     }
 
     get_image_data() {

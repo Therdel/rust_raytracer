@@ -12,8 +12,12 @@ async function main() {
     wasm_log_init();
 
     const canvas = document.getElementById('screen') as HTMLCanvasElement
+    const canvas_context = canvas.getContext("2d")
+    if (canvas_context == null) {
+        throw new Error('canvas context is undefined')
+    }
 
-    const view = new View(canvas)
+    const view = new View(canvas_context)
     const controller = new Controller(canvas)
 
     // TODO: UI CPU/GPU switch
@@ -21,10 +25,10 @@ async function main() {
     const USE_GPU = true
     if (USE_GPU) {
         const gpu_renderer = await GpuRenderer.new(canvas.width, canvas.height)
-        const gpu_model = new GpuModel(view, controller, canvas, gpu_renderer)
+        const gpu_model = new GpuModel(view, controller, canvas, canvas_context, gpu_renderer)
         controller.set_model(gpu_model)
     } else {
-        const cpu_model = await CpuModel.create(view, controller, canvas)
+        const cpu_model = await CpuModel.create(view, controller, canvas, canvas_context)
         controller.set_model(cpu_model)
     }
 }

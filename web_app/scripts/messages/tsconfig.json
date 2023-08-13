@@ -6,7 +6,8 @@
     "module": "ES6",
     "rootDir": ".",
     "outDir": "../../pkg/messages",
-    "composite": true
+    "composite": true,
+    "strict": true
   },
   "files": [
     "asset_store.ts",

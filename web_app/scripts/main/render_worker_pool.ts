@@ -2,7 +2,7 @@ import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
 
 export interface RenderWorkerMessageDelegate {
-    (message: MessageFromWorker.Message)
+    (message: MessageFromWorker.Message): void
 }
 
 export class RenderWorkerPool {
@@ -12,10 +12,10 @@ export class RenderWorkerPool {
     // starts the workers
     constructor(message_delegate: RenderWorkerMessageDelegate, amount_workers: number) {
         this.message_delegate = message_delegate
-        this.init_workers(amount_workers)
+        this.workers = this.init_workers(amount_workers)
     }
 
-    private init_workers(amount_workers: number) {
+    private init_workers(amount_workers: number): Worker[] {
         this.workers = []
         for (let index=0; index<amount_workers; ++index) {
             const worker = new Worker("pkg/worker/render_worker.js", {type:'module'});
@@ -26,6 +26,7 @@ export class RenderWorkerPool {
 
             this.workers.push(worker)
         }
+        return this.workers
     }
 
     amount_workers(): number {

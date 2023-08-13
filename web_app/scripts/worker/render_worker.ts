@@ -126,10 +126,6 @@ async function on_message({ data: message }: MessageEvent<MessageToWorker.Messag
 }
 onmessage = on_message
 
-const sleep = (milliseconds) => {
-    return new Promise(resolve => setTimeout(resolve, milliseconds))
-}
-
 async function init_worker() {
     console.log(`Worker:\tstarted`)
 

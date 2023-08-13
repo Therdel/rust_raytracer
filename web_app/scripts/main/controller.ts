@@ -1,15 +1,15 @@
 import {Model, DidHandleMessage} from "./model.js";
 
 export class Controller {
-    private model: Model
+    private model?: Model
 
     private canvas_resizer: HTMLDivElement
-    private canvas_resizer_observer_context: { call_count: number, timeout_id: number, prev_width: number }
+    private canvas_resizer_observer_context: { call_count: number, timeout_id?: number, prev_width: number }
     private canvas: HTMLCanvasElement
     private select: HTMLSelectElement
 
     private is_moving_camera: boolean
-    private turn_camera_start_point: { x: number, y: number }
+    private turn_camera_start_point?: { x: number, y: number }
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas_resizer = document.getElementById('canvas-resizer') as HTMLDivElement
@@ -20,11 +20,11 @@ export class Controller {
 
         this.canvas_resizer_observer_context = {
             call_count: 0,
-            timeout_id: null,
+            timeout_id: undefined,
             prev_width: this.canvas_resizer.clientWidth
         }
         this.is_moving_camera = false
-        this.turn_camera_start_point = null
+        this.turn_camera_start_point = undefined
 
         this.init_listeners()
         this.deactivate_controls()
@@ -39,7 +39,7 @@ export class Controller {
 
         // canvas camera panning 
         this.canvas.onpointerdown = pointer_event => this.start_turning_camera(pointer_event)
-        this.canvas.onpointermove = async pointer_event => await this.move_camera(pointer_event)
+        this.canvas.onpointermove = async pointer_event => await this.turn_camera(pointer_event)
         const stop_turning_camera = () => { this.stop_turning_camera() } 
         this.canvas.onpointerup = stop_turning_camera
         this.canvas.onpointerleave = stop_turning_camera
@@ -61,15 +61,17 @@ export class Controller {
         console.debug(`pointer down `, this.turn_camera_start_point)
     }
 
-    private async move_camera(pointer_event: PointerEvent) {
+    private async turn_camera(pointer_event: PointerEvent) {
         if (this.is_moving_camera) {
             const inverted_y = this.canvas.height - pointer_event.offsetY
-            const camera_move_end_point = { x: pointer_event.offsetX, y: inverted_y }
+            const turn_camera_end_point = { x: pointer_event.offsetX, y: inverted_y }
             console.debug(`camera move by pointer`)
 
-            const turn_camera_result = await this.model.turn_camera(this.turn_camera_start_point, camera_move_end_point)
+            if (this.turn_camera_start_point == undefined) return
+            if (this.model == undefined) throw Error(`Controller::turn_camera: Model undefined`)
+            const turn_camera_result = await this.model.turn_camera(this.turn_camera_start_point, turn_camera_end_point)
             if (DidHandleMessage.YES == turn_camera_result) {
-                this.turn_camera_start_point = camera_move_end_point
+                this.turn_camera_start_point = turn_camera_end_point
             }
         }
     }
@@ -88,6 +90,8 @@ export class Controller {
             console.debug("Controller: New canvas size: ", this.get_current_canvas_size())
             this.canvas.width = this.canvas_resizer.clientWidth
             this.canvas.height = this.canvas_resizer.clientHeight
+
+            if (this.model == undefined) throw Error(`Controller::on_canvas_resize: Model undefined`)
             await this.model.resize(this.canvas.width, this.canvas.height)
         }
 
@@ -126,7 +130,9 @@ export class Controller {
     }
 
     private async on_set_scene(_: Event) {
+        if (this.model == undefined) throw Error(`Controller::on_set_scene: Model undefined`)
         await this.model.set_scene(this.get_current_scene_file_name())
+
         console.debug(`Controller: Selected scene ${this.select.value}`)
     }
 }

@@ -1,4 +1,4 @@
-import init, {wasm_main, wasm_log_init, GpuRenderer} from "../../pkg/web_app.js"
+import init, {wasm_main, wasm_log_init} from "../../pkg/web_app.js"
 import {View} from "./view.js";
 import {Controller} from "./controller.js";
 import {GpuModel, CpuModel} from "./model.js";
@@ -24,8 +24,7 @@ async function main() {
         // TODO: wasm: Animator - shared by CPU/GPU
     const USE_GPU = true
     if (USE_GPU) {
-        const gpu_renderer = await GpuRenderer.new(canvas.width, canvas.height)
-        const gpu_model = new GpuModel(view, controller, canvas, canvas_context, gpu_renderer)
+        const gpu_model = await GpuModel.create(view, controller, canvas, canvas_context)
         controller.set_model(gpu_model)
     } else {
         const cpu_model = await CpuModel.create(view, controller, canvas, canvas_context)

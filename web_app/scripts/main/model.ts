@@ -61,7 +61,7 @@ export class CpuModel implements Model {
     static async create(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D): Promise<CpuModel> {
         const asset_store = new AssetStore()
         const scene_file_name = controller.get_current_scene_file_name()
-        asset_store.put_scene_and_cache_assets(scene_file_name)
+        await asset_store.put_scene_and_cache_assets(scene_file_name)
 
         return new CpuModel(view, controller, canvas, canvas_context, asset_store)
     }
@@ -327,6 +327,17 @@ export class GpuModel implements Model {
 
         this.gpu_renderer = gpu_renderer
         this.render()
+    }
+
+    static async create(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D): Promise<GpuModel> {
+        const asset_store = new AssetStore()
+        const scene_file_name = controller.get_current_scene_file_name()
+        await asset_store.put_scene_and_cache_assets(scene_file_name)
+        
+        const gpu_renderer = await GpuRenderer.new(canvas.width, canvas.height, asset_store, scene_file_name)
+        const gpu_model = new GpuModel(view, controller, canvas, canvas_context, gpu_renderer)
+        
+        return gpu_model
     }
 
     transition_state(state: GpuModelState.State) {

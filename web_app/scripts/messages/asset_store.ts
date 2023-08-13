@@ -1,8 +1,8 @@
 import { fetch_into_shared_buffer, isAbsoluteURL } from "./util.js"
 
 export class AssetStore {
-    public readonly MODELS_BASE_PATH = "../res/models"
-    public readonly SCENES_BASE_PATH = "../res/scenes"
+    public readonly MODELS_BASE_PATH = "./res/models"
+    public readonly SCENES_BASE_PATH = "./res/scenes"
 
     private assets = new Map<string, SharedArrayBuffer>()
 

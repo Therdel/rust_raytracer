@@ -1,20 +1,20 @@
 use std::borrow::Cow;
+use std::io::Cursor;
 
-use lib_raytracer::raytracing::transform::matrix;
+use lib_raytracer::raytracing::Sphere;
+use lib_raytracer::{gpu_types, Scene};
+use lib_raytracer::scene_file::Parser;
 use nalgebra_glm as glm;
-use wasm_bindgen::prelude::wasm_bindgen;
-
-use lib_raytracer::raytracing::{Screen, Camera};
-use wgpu::{BufferUsages, Device, Queue};
-use wgpu::util::DeviceExt;
+use wasm_bindgen::prelude::*;
+use wgpu::{BufferUsages, Device, Queue, BindGroupDescriptor, BindGroupEntry, BufferDescriptor, ShaderModuleDescriptor, CommandEncoderDescriptor};
+use wgpu::util::{DeviceExt, BufferInitDescriptor};
 
 use crate::color::ColorRgbaU8;
+use crate::asset_store::AssetStore;
 
 #[wasm_bindgen]
 pub struct GpuRenderer {
-    camera: Camera,
-    screen: Screen,
-    screen_to_world: glm::Mat4,
+    scene: Scene,
 
     device: Device,
     queue: Queue,
@@ -26,37 +26,32 @@ struct ComputePipelineAndBuffers {
     canvas_storage_buf: wgpu::Buffer,
     screen_dimensions_uniform_buf: wgpu::Buffer,
     screen_to_world_uniform_buf: wgpu::Buffer,
+
+    // scene buffers
+    _spheres_storage_buf: wgpu::Buffer,
     compute_pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,
 }
 
 #[wasm_bindgen]
 impl GpuRenderer {
-    pub async fn new(canvas_width: usize, canvas_height: usize) -> GpuRenderer {
-        let camera = Camera {
-            position: glm::vec3(0.0, 0.0, 0.0),
-            orientation: glm::vec3(0.0, 0.0, 0.0),
-            y_fov_degrees: 90.0,
-            z_near: 0.1,
-            z_far: 25.0,
+    pub async fn new(canvas_width: usize, canvas_height: usize,
+                     asset_store: AssetStore, scene_file_name: &str) -> GpuRenderer {
+        let Some(scene_bytes): Option<Vec<u8>> = asset_store.get_scene_bytes(scene_file_name) else {
+            panic!("Loading scene '{scene_file_name}' was undefined")
         };
-
-        let screen = Screen {
-            pixel_width: canvas_width,
-            pixel_height: canvas_height,
-            background: glm::vec3(1., 1., 1.),
-        };
-
-        let screen_to_world = matrix::screen_to_world(&camera, &screen);
+        let mut scene = Parser {
+            file_reader: Cursor::new(scene_bytes),
+            mesh_loader: &asset_store,
+        }.parse_json().unwrap();
+        scene.resize_screen(canvas_width, canvas_height);
 
         let (device, queue) = Self::get_device_and_queue().await.unwrap();
 
-        let compute_pipeline_and_buffers = Self::setup_compute_pipeline(&device, &screen, &screen_to_world);
+        let compute_pipeline_and_buffers = Self::setup_pipeline_and_buffers(&device, &scene);
 
         GpuRenderer {
-            camera,
-            screen,
-            screen_to_world,
+            scene,
 
             device,
             queue,
@@ -64,56 +59,82 @@ impl GpuRenderer {
         }
     }
 
-    fn setup_compute_pipeline(device: &Device, screen: &Screen, screen_to_world: &glm::Mat4) -> ComputePipelineAndBuffers {
+    fn wgsl_array_storage_buffer_from_primitives<Primitive, GpuPrimitive>(label: Option<&str>, device: &Device, primitives: &[Primitive]) -> wgpu::Buffer where
+        for<'p> &'p Primitive: Into<GpuPrimitive>,
+        GpuPrimitive: Sized + bytemuck::Pod {
+
+        // TODO: Why can't this be const here?
+        // const gpu_primitive_size: usize = std::mem::size_of::<GpuPrimitive>();
+        let gpu_primitive_size: usize = std::mem::size_of::<GpuPrimitive>();
+        let mut gpu_bytes = Vec::with_capacity(gpu_primitive_size + gpu_primitive_size * primitives.len());
+    
+        gpu_bytes.resize(gpu_primitive_size, 0);
+        for primitive in primitives {
+            let gpu_primitive: GpuPrimitive = primitive.into();
+            let as_slice = std::slice::from_ref(&gpu_primitive);
+            let byte_slice = bytemuck::cast_slice(as_slice);
+            gpu_bytes.extend(byte_slice.iter());
+        }
+    
+        device.create_buffer_init(&BufferInitDescriptor {
+            label,
+            contents: gpu_bytes.as_slice(),
+            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
+        })
+    }
+
+    fn setup_pipeline_and_buffers(device: &Device, scene: &Scene) -> ComputePipelineAndBuffers {
         // Loads the shader from WGSL
-        let cs_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        let cs_module = device.create_shader_module(ShaderModuleDescriptor {
             label: None,
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader.wgsl"))),
         });
-    
-        let canvas_size = screen.pixel_width * screen.pixel_height * std::mem::size_of::<ColorRgbaU8>();
-        
+
+        let canvas_size = scene.screen().pixel_width * scene.screen().pixel_height * std::mem::size_of::<ColorRgbaU8>();
+
         // Instantiates buffer without data.
         // `usage` of buffer specifies how it can be used:
         //   `BufferUsages::MAP_READ` allows it to be read (outside the shader).
         //   `BufferUsages::COPY_DST` allows it to be the destination of the copy.
-        let canvas_staging_buf = device.create_buffer(&wgpu::BufferDescriptor {
+        let canvas_staging_buf = device.create_buffer(&BufferDescriptor {
             label: Some("canvas_staging"),
             size: canvas_size as _,
             usage: BufferUsages::MAP_READ | BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
-        
-        let canvas_storage_buf = device.create_buffer(&wgpu::BufferDescriptor {
+
+        let canvas_storage_buf = device.create_buffer(&BufferDescriptor {
             label: Some("canvas_storage"),
             size: canvas_size as _,
             // contents: bytemuck::cast_slice(canvas),
             usage: BufferUsages::STORAGE | BufferUsages::COPY_SRC,
             mapped_at_creation: false,
         });
-    
+
         let canvas_dimensions = glm::vec2(
-            screen.pixel_width as u32,
-            screen.pixel_height as u32
+            scene.screen().pixel_width as u32,
+            scene.screen().pixel_height as u32
         );
-        let screen_dimensions_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let screen_dimensions_uniform_buf = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("screen_dimensions_uniform"),
             contents: bytemuck::cast_slice(canvas_dimensions.as_slice()),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
-    
-        let screen_to_world_uniform_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+
+        let screen_to_world_uniform_buf = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("mat_screen_to_world_uniform"),
-            contents: bytemuck::cast_slice(screen_to_world.as_slice()),
+            contents: bytemuck::cast_slice(scene.screen_to_world().as_slice()),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
-    
+
+        let spheres_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Sphere, gpu_types::Sphere>(Some("spheres_storage"), device, &scene.spheres);
+
         // A bind group defines how buffers are accessed by shaders.
         // It is to WebGPU what a descriptor set is to Vulkan.
         // `binding` here refers to the `binding` of a buffer in the shader (`layout(set = 0, binding = 0) buffer`).
     
         // A pipeline specifies the operation of a shader
-    
+
         // Instantiates the pipeline.
         // TODO: evaluate using wgpu::PipelineCompilationOptions::constants
         let compute_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
@@ -125,24 +146,28 @@ impl GpuRenderer {
             cache: None,
             compilation_options: wgpu::PipelineCompilationOptions::default(),
         });
-    
+
         // Instantiates the bind group, once again specifying the binding of buffers.
         let bind_group_layout = compute_pipeline.get_bind_group_layout(0);
-        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+        let bind_group = device.create_bind_group(&BindGroupDescriptor {
             label: None,
             layout: &bind_group_layout,
             entries: &[
-                wgpu::BindGroupEntry {
+                BindGroupEntry {
                     binding: 0,
                     resource: canvas_storage_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                BindGroupEntry {
                     binding: 1,
                     resource: screen_dimensions_uniform_buf.as_entire_binding(),
                 },
-                wgpu::BindGroupEntry {
+                BindGroupEntry {
                     binding: 2,
                     resource: screen_to_world_uniform_buf.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 3,
+                    resource: spheres_storage_buf.as_entire_binding(),
                 },
             ],
         });
@@ -152,6 +177,7 @@ impl GpuRenderer {
             canvas_storage_buf,
             screen_dimensions_uniform_buf,
             screen_to_world_uniform_buf,
+            _spheres_storage_buf: spheres_storage_buf,
             compute_pipeline,
             bind_group,
         }
@@ -174,18 +200,21 @@ impl GpuRenderer {
         // `request_device` instantiates the feature specific connection to the GPU, defining some parameters,
         //  `features` being the available features.
         adapter
-            .request_device(
-                &wgpu::DeviceDescriptor::default()
-            )
+            .request_device(&wgpu::DeviceDescriptor::default())
             .await
             .map_err(|err| err.to_string())
     }
 
-    pub async fn render(&self, canvas_u8: &mut [u8]) {
+    pub async fn render(&mut self, canvas_u8: &mut [u8]) {
+        let millisecons = js_sys::Date::now();
+        self.scene.update_camera_and_screen(|camera, _| {
+            camera.position.x = ((millisecons/200.0).cos()*0.3) as f32;
+            camera.position.z = ((millisecons/200.0).sin()*0.3) as f32;
+        });
         // TODO: Put background into: SolidColor, NormalColor, EnvironmentTexture
         let canvas_dimensions = glm::vec2(
-            self.screen.pixel_width,
-            self.screen.pixel_height,
+            self.scene.screen().pixel_width,
+            self.scene.screen().pixel_height,
         );
 
         let ComputePipelineAndBuffers {
@@ -193,6 +222,7 @@ impl GpuRenderer {
             canvas_storage_buf,
             screen_dimensions_uniform_buf,
             screen_to_world_uniform_buf,
+            _spheres_storage_buf,
             compute_pipeline,
             bind_group,
         } = &self.compute_pipeline_and_buffers;
@@ -200,7 +230,7 @@ impl GpuRenderer {
         // A command encoder executes one or many pipelines.
         // It is to WebGPU what a command buffer is to Vulkan.
         let mut encoder =
-            self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor { label: None });
+            self.device.create_command_encoder(&CommandEncoderDescriptor { label: None });
 
         {
             let mut cpass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor::default());
@@ -215,7 +245,7 @@ impl GpuRenderer {
         encoder.copy_buffer_to_buffer(canvas_storage_buf, 0, canvas_staging_buf, 0, canvas_size as _);
         let command_buffer = encoder.finish();
 
-        self.queue.write_buffer(screen_to_world_uniform_buf, 0, bytemuck::cast_slice(self.screen_to_world.as_slice()));
+        self.queue.write_buffer(screen_to_world_uniform_buf, 0, bytemuck::cast_slice(self.scene.screen_to_world().as_slice()));
         self.queue.write_buffer(screen_dimensions_uniform_buf, 0, bytemuck::cast_slice(canvas_dimensions.as_slice()));
         self.queue.submit(Some(command_buffer));
     
@@ -251,52 +281,12 @@ impl GpuRenderer {
     }
     
     pub fn resize_screen(&mut self, width: usize, height: usize) {
-        self.screen.pixel_width = width;
-        self.screen.pixel_height = height;
+        self.scene.resize_screen(width, height);
 
-        self.screen_to_world = matrix::screen_to_world(&self.camera, &self.screen);
-
-        self.compute_pipeline_and_buffers = Self::setup_compute_pipeline(&self.device, &self.screen, &self.screen_to_world);
+        self.compute_pipeline_and_buffers = Self::setup_pipeline_and_buffers(&self.device, &self.scene);
     }
 
     pub fn turn_camera(&mut self, drag_begin_x: f32, drag_begin_y: f32, drag_end_x: f32, drag_end_y: f32) {
-        let begin: glm::Vec2 = glm::vec2(drag_begin_x, drag_begin_y);
-        let end: glm::Vec2 = glm::vec2(drag_end_x, drag_end_y);
-        let radians = |degrees: f32| degrees * (glm::pi::<f32>() / 180.0);
-
-        // pixel to degrees mapping
-        let y_fov_degrees = self.camera.y_fov_degrees;
-        let degrees_per_pixel = y_fov_degrees / self.screen.pixel_height as f32;
-        let pixel_to_angle = |pixel| radians(pixel * degrees_per_pixel);
-
-        let pixel_diff_x = end.x - begin.x;
-        let pixel_diff_y = end.y - begin.y;
-
-        let angle_diff_heading = pixel_to_angle(pixel_diff_x);
-        let angle_diff_pitch = pixel_to_angle(pixel_diff_y);
-
-        // "natural scrolling" - turning follows the inverse cursor motion
-        // the heading turn is positive when turning to the left -> when drag_begin is left of drag_end
-        let angle_diff_heading = match begin.x < end.x {
-            true => angle_diff_heading.abs(),
-            false => -angle_diff_heading.abs()
-        };
-        // the pitch turn is positive when turning upwards -> when drag_begin is above drag_end
-        let angle_diff_pitch = match begin.y > end.y {
-            true => angle_diff_pitch.abs(),
-            false => -angle_diff_pitch.abs()
-        };
-
-        let camera_orientation = &mut self.camera.orientation;
-        camera_orientation.x += angle_diff_pitch;
-        camera_orientation.y += angle_diff_heading;
-
-        // clamp pitch
-        camera_orientation.x = camera_orientation.x.clamp(radians(-90.),
-                                                          radians(90.));
-        // modulo heading
-        camera_orientation.y %= radians(360.);
-
-        self.screen_to_world = matrix::screen_to_world(&self.camera, &self.screen);
+        self.scene.turn_camera(&glm::vec2(drag_begin_x, drag_begin_y), &glm::vec2(drag_end_x, drag_end_y))
     }
 }

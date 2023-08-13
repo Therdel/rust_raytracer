@@ -1,6 +1,10 @@
 export async function fetch_into_array(url: string): Promise<Uint8Array> {
-    let array_buffer = await (await fetch(url)).arrayBuffer();
-    return new Uint8Array(array_buffer);
+    let response: Response = await fetch(url)
+    if (!response.ok) {
+        throw new Error(`Error fetching ${url}: ${response.status} ${response.statusText}`)
+    }
+    let array_buffer = await (response.arrayBuffer())
+    return new Uint8Array(array_buffer)
 }
 
 export async function fetch_into_shared_buffer(url: string): Promise<SharedArrayBuffer> {

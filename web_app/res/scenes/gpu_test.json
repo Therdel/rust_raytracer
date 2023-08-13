@@ -1,0 +1,204 @@
+{
+	"camera": {
+		"position": {
+			"x": 0,
+			"y": 0,
+			"z": 0
+		},
+		"orientation_degrees": {
+			"x": 0,
+			"y": 0,
+			"z": 0
+		},
+		"y_fov_degrees": 90,
+		"z_near": 0.1,
+		"z_far": 25,
+		"use_perspective": true,
+		"ortho_world_height": 10
+	},
+	"screen": {
+		"pixel_width": 700,
+		"pixel_height": 700,
+		"background": {
+			"r": 1,
+			"g": 1,
+			"b": 1
+		}
+	},
+	"lights": [
+		{
+			"position": {
+				"x": 0,
+				"y": -1,
+				"z": 0,
+				"w": 1
+			},
+			"color": {
+				"ambient": {
+					"r": 0.4,
+					"g": 0.4,
+					"b": 0.4
+				},
+				"diffuse": {
+					"r": 1,
+					"g": 1,
+					"b": 1
+				},
+				"specular": {
+					"r": 0.5,
+					"g": 0.5,
+					"b": 0.5
+				}
+			}
+		}
+	],
+	"materials": [
+		{
+			"name": "someShinyRed",
+			"emissive": {
+				"r": 0.1,
+				"g": 0,
+				"b": 0
+			},
+			"ambient": {
+				"r": 0.4,
+				"g": 0,
+				"b": 0
+			},
+			"diffuse": {
+				"r": 0.4,
+				"g": 0,
+				"b": 0
+			},
+			"specular": {
+				"r": 0.6,
+				"g": 0.6,
+				"b": 0.6
+			},
+			"shininess": 10,
+			"material_type": "Phong"
+		}
+	],
+	"planes": [
+		{
+			"comment": "wall_down",
+			"normal": {
+				"x": 0,
+				"y": -1,
+				"z": 0
+			},
+			"distance": 1,
+			"material": "someShinyRed"
+		}
+	],
+	"spheres": [
+		{
+			"center": {
+				"x": -0.6,
+				"y": 0.9,
+				"z": 0
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": 0,
+				"y": 0.9,
+				"z": 0
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": 0.6,
+				"y": 0.9,
+				"z": 0
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": -0.6,
+				"y": 0.9,
+				"z": 0.6
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": 0,
+				"y": 0.9,
+				"z": 0.6
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": 0.6,
+				"y": 0.9,
+				"z": 0.6
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": -0.6,
+				"y": 0.9,
+				"z": 1.2
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": 0,
+				"y": 0.9,
+				"z": 1.2
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": 0.6,
+				"y": 0.9,
+				"z": 1.2
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": -0.6,
+				"y": 0.9,
+				"z": 1.7999999999999998
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": 0,
+				"y": 0.9,
+				"z": 1.7999999999999998
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		},
+		{
+			"center": {
+				"x": 0.6,
+				"y": 0.9,
+				"z": 1.7999999999999998
+			},
+			"radius": 0.5,
+			"material": "someShinyRed"
+		}
+	]
+}

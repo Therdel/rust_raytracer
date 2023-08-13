@@ -1,5 +1,6 @@
 use wasm_bindgen::prelude::*;
 
+mod asset_store;
 mod color;
 mod gpu_renderer;
 mod mesh_file_store;

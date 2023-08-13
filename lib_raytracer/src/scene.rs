@@ -42,6 +42,11 @@ impl Scene {
         &self.screen
     }
 
+    pub fn update_camera_and_screen(&mut self, f: impl Fn(&mut Camera, &mut Screen)) {
+        f(&mut self.camera, &mut self.screen);
+        self.screen_to_world = matrix::screen_to_world(&self.camera, &self.screen);
+    }
+
     pub fn screen_to_world(&self) -> &glm::Mat4 {
         &self.screen_to_world
     }

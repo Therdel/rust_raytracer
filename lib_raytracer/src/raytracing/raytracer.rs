@@ -128,7 +128,7 @@ impl<'scene> Raytracer<'scene> {
         let v = -ray.direction;
         let r = Self::create_reflected_ray(&l, &n);
 
-        let l_dot_n = f32::max(glm::dot(&l,&n), 0.0);
+        let l_dot_n = f32::max(glm::dot(&l, &n), 0.0);
         let r_dot_v = f32::max(glm::dot(&r, &v), 0.0);
 
         let emissive = material.emissive;

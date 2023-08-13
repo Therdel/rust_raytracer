@@ -107,7 +107,7 @@ async function init_wasm() {
     wasm_main();
 }
 
-async function fetch_into_array(path) {
+async function fetch_into_array(path: string) {
     let array_buffer = await (await fetch(path)).arrayBuffer();
     return new Uint8Array(array_buffer);
 }
@@ -140,10 +140,6 @@ async function on_message({ data: message }: MessageEvent<MessageToWorker.Messag
     postMessage(response)
 }
 onmessage = on_message
-
-const sleep = (milliseconds) => {
-    return new Promise(resolve => setTimeout(resolve, milliseconds))
-}
 
 async function init_worker() {
     console.log(`Worker:\tstarted`)

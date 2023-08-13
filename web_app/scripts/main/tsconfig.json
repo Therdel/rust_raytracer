@@ -10,7 +10,8 @@
     "module": "ES6",
     "rootDir": ".",
     "outDir": "../../pkg/main",
-    "composite": true
+    "composite": true,
+    "strict": true
   },
   "files": [
     "controller.ts",

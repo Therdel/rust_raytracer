@@ -31,21 +31,21 @@ export class CpuModel implements Model {
     private worker_image_buffers: SharedArrayBuffer[]
     public readonly render_worker_pool: RenderWorkerPool
 
-    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
+    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D) {
         this.view = view
         this.controller = controller
 
         this.state = new CpuModelState.InitPingPong(this)
 
         this.canvas = canvas
-        this.canvas_context = canvas.getContext("2d")
-        this.init_image_data()
+        this.canvas_context = canvas_context
+        this.image_data = this.init_image_data()
 
         // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
         // source: https://stackoverflow.com/a/20279485
-        const delegate = (message) => this.on_worker_message(message)
+        const delegate = (message: MessageFromWorker.Message) => this.on_worker_message(message)
         this.render_worker_pool = new RenderWorkerPool(delegate)
-        this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
+        this.worker_image_buffers = this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
     }
 
     transition_state(state: CpuModelState.State) {
@@ -56,15 +56,17 @@ export class CpuModel implements Model {
     init_image_data() {
         const [width, height] = [this.canvas.width, this.canvas.height]
         this.image_data = this.canvas_context.createImageData(width, height)
+        return this.image_data
     }
 
-    create_worker_image_buffers(width: number, height: number) {
+    create_worker_image_buffers(width: number, height: number): SharedArrayBuffer[] {
         this.worker_image_buffers = []
         const image_buf_size = width * height * 4
         for (let i = 0; i < this.render_worker_pool.amount_workers(); ++i) {
             const image_buffer = new SharedArrayBuffer(image_buf_size);
             this.worker_image_buffers.push(image_buffer);
         }
+        return this.worker_image_buffers
     }
 
     get_worker_buffer(index: number): SharedArrayBuffer {
@@ -297,15 +299,15 @@ export class GpuModel implements Model {
 
     private readonly gpu_renderer: GpuRenderer
 
-    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, gpu_renderer: GpuRenderer) {
+    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D, gpu_renderer: GpuRenderer) {
         this.view = view
         this.controller = controller
 
         this.state = new GpuModelState.AcceptUserControl(this)
 
         this.canvas = canvas
-        this.canvas_context = canvas.getContext("2d")
-        this.init_image_data()
+        this.canvas_context = canvas_context
+        this.image_data = this.init_image_data()
 
         this.gpu_renderer = gpu_renderer
         this.render()
@@ -316,9 +318,10 @@ export class GpuModel implements Model {
         this.state = state
     }
 
-    init_image_data() {
+    init_image_data(): ImageData {
         const [width, height] = [this.canvas.width, this.canvas.height]
         this.image_data = this.canvas_context.createImageData(width, height)
+        return this.image_data
     }
 
     get_image_data() {

@@ -1,15 +1,15 @@
 import {Model, DidHandleMessage} from "./model.js";
 
 export class Controller {
-    private model: Model
+    private model?: Model
 
     private canvas_resizer: HTMLDivElement
-    private canvas_resizer_observer_context: { call_count: number, timeout_id: number, prev_width: number }
+    private canvas_resizer_observer_context: { call_count: number, timeout_id?: number, prev_width: number }
     private canvas: HTMLCanvasElement
     private select: HTMLSelectElement
 
     private is_moving_camera: boolean
-    private camera_move_start_point: { x: number, y: number }
+    private camera_move_start_point?: { x: number, y: number }
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas_resizer = document.getElementById('canvas-resizer') as HTMLDivElement
@@ -20,11 +20,11 @@ export class Controller {
 
         this.canvas_resizer_observer_context = {
             call_count: 0,
-            timeout_id: null,
+            timeout_id: undefined,
             prev_width: this.canvas_resizer.clientWidth
         }
         this.is_moving_camera = false
-        this.camera_move_start_point = null
+        this.camera_move_start_point = undefined
 
         this.init_listeners()
         this.deactivate_controls()
@@ -67,6 +67,8 @@ export class Controller {
             const camera_move_end_point = { x: pointer_event.offsetX, y: inverted_y }
             console.debug(`camera move by pointer`)
 
+            if (this.camera_move_start_point == undefined) return
+            if (this.model == undefined) throw Error(`Controller::move_camera: Model undefined`)
             const turn_camera_result = await this.model.turn_camera(this.camera_move_start_point, camera_move_end_point)
             if (DidHandleMessage.YES == turn_camera_result) {
                 this.camera_move_start_point = camera_move_end_point
@@ -90,6 +92,8 @@ export class Controller {
             console.log("Controller: New canvas size: ", this.get_current_canvas_size())
             this.canvas.width = this.canvas_resizer.clientWidth
             this.canvas.height = this.canvas_resizer.clientHeight
+
+            if (this.model == undefined) throw Error(`Controller::move_camera: Model undefined`)
             await this.model.resize(this.canvas.width, this.canvas.height)
         }
 
@@ -128,6 +132,7 @@ export class Controller {
     }
 
     private async on_scene_select(_: Event) {
+        if (this.model == undefined) throw Error(`Controller::move_camera: Model undefined`)
         await this.model.scene_select(this.get_current_scene_file())
 
         console.debug(`Controller: Selected scene ${this.select.value}`)

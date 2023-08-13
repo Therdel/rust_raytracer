@@ -10,7 +10,8 @@
     "module": "ES6",
     "rootDir": ".",
     "outDir": "../../pkg/worker",
-    "composite": true
+    "composite": true,
+    "strict": true
   },
   "files": [
     "render_worker.ts"

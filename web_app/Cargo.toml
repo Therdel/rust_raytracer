@@ -11,7 +11,7 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 lib_raytracer = { path = "../lib_raytracer" }
-nalgebra-glm = "0.15"
+nalgebra-glm = "0.18"
 num-traits = "0.2"
 
 # wasm32 dependencies

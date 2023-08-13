@@ -2,6 +2,8 @@ use wasm_bindgen::prelude::*;
 
 mod color;
 mod fake_same_mesh_loader;
+mod mesh_fetcher;
+mod mesh_store;
 mod utils;
 mod renderer;
 mod gpu_renderer;

@@ -103,3 +103,25 @@ impl From<&raytracing::Light> for Light {
         }
     }
 }
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+/// WebGPU version with altered alignment & padding. ([source](https://stackoverflow.com/a/75525055))
+pub struct Triangle {
+    vertices: [glm::Vec4; 3],
+    normals: [glm::Vec4; 3],
+    normal: glm::Vec3,
+
+    material: u32,
+}
+
+impl From<&raytracing::Triangle> for Triangle {
+    fn from(value: &raytracing::Triangle) -> Self {
+        Self {
+            vertices: value.vertices.map(|v| glm::vec3_to_vec4(&v)),
+            normals: value.normals.map(|v| glm::vec3_to_vec4(&v)),
+            normal: *value.normal(),
+            material: value.material.0 as _,
+        }
+    }
+}

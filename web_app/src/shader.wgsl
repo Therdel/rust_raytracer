@@ -17,6 +17,7 @@ const MATERIAL_TYPE_REFLECT_AND_REFRACT: u32 = 2u;
 @group(0) @binding(4) var<storage, read> materials: array<Material>;
 
 @group(0) @binding(5) var<storage, read> spheres: array<Sphere>;
+@group(0) @binding(6) var<storage, read> triangles: array<Triangle>;
 
 /////////////////////
 
@@ -101,6 +102,30 @@ fn spheres_len() -> u32 {
 fn sphere_normal(sphere: Sphere, surface_point: vec3f) -> vec3f {
     let surface_normal = surface_point - sphere.center;
     return normalize(surface_normal);
+}
+
+/////////////////////
+
+struct Triangle {
+    vertices: array<vec3f, 3>,
+    normals: array<vec3f, 3>,
+    normal: vec3f,
+
+    material: u32,
+}
+
+/// TODO: Use pointers
+fn triangles_get(index: u32) -> Triangle {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed
+    return triangles[index + 1u];
+}
+
+fn triangles_len() -> u32 {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed.
+    // so the actual length is 1 lower
+    return arrayLength(&triangles) - 1u;
 }
 
 
@@ -226,6 +251,19 @@ struct OptionF32 {
     value: f32,
 }
 
+fn utils_take_hitpoint_if_closer(closest_hitpoint: ptr<function, OptionHitpoint>,
+                                 hitpoint:         ptr<function, OptionHitpoint>)  {
+    if (*hitpoint).is_some {
+        if (*closest_hitpoint).is_some {
+            if (*hitpoint).value.t < (*closest_hitpoint).value.t {
+                *closest_hitpoint = *hitpoint;
+            }
+        } else {
+                *closest_hitpoint = *hitpoint;
+        }
+    }
+}
+
 fn intersect_scene(ray: Ray) -> OptionHitpoint {
     var closest_hitpoint = option_hitpoint_none();
 
@@ -233,16 +271,16 @@ fn intersect_scene(ray: Ray) -> OptionHitpoint {
     for (var i: u32 = 0u; i < spheres_len; i += 1u) {
         let sphere = spheres_get(i);
 
-        let option_hitpoint = intersect_sphere(sphere, ray);
-        if (option_hitpoint.is_some) {
-            let hitpoint_is_closer = closest_hitpoint.is_some &&
-                option_hitpoint.hitpoint.t < closest_hitpoint.hitpoint.t;
-            let hitpoint_is_first = !closest_hitpoint.is_some;
-            if (hitpoint_is_first || hitpoint_is_closer) {
-                closest_hitpoint.is_some = true;
-                closest_hitpoint.hitpoint = option_hitpoint.hitpoint;
-            }
-        }
+        var option_hitpoint: OptionHitpoint = intersect_sphere(sphere, ray);
+        utils_take_hitpoint_if_closer(&closest_hitpoint, &option_hitpoint);
+    }
+
+    let triangles_len = triangles_len();
+    for (var i: u32 = 0u; i < triangles_len; i += 1u) {
+        let triangle = triangles_get(i);
+
+        var option_hitpoint = intersect_triangle(triangle, ray);
+        utils_take_hitpoint_if_closer(&closest_hitpoint, &option_hitpoint);
     }
 
     return closest_hitpoint;
@@ -320,6 +358,36 @@ fn intersect_sphere(sphere: Sphere, ray: Ray) -> OptionHitpoint {
         }
     }
     return result;
+}
+
+fn intersect_triangle(triangle: Triangle, ray: Ray) -> OptionHitpoint {        
+        let e1 = triangle.vertices[1] - triangle.vertices[0];
+        let e2 = triangle.vertices[2] - triangle.vertices[0];
+        let q = cross(ray.direction, e2);
+        let a = dot(e1, q);
+
+        const EPSILON: f32 = 1e-5;
+        if a > -EPSILON && a < EPSILON { return option_hitpoint_none(); }
+
+        let f = 1.0/a;
+        let s = ray.origin - triangle.vertices[0];
+        let u = f * dot(s, q);
+        if u < 0.0 { return option_hitpoint_none(); }
+
+        let r = cross(s, e1);
+        let v = f * dot(ray.direction, r);
+        if v < 0.0 || u + v > 1.0 { return option_hitpoint_none(); }
+
+        let t = f * dot(e2, r);
+        if t < 0.0 { return option_hitpoint_none(); }
+
+        let w = 1.0 - u - v;
+        let hit_position = utils_ray_equation(ray, t);
+        let hit_normal_gouraud = w * triangle.normals[0] + u * triangle.normals[1] + v * triangle.normals[2];
+        let hit_normal_gouraud_normalized = normalize(hit_normal_gouraud);
+        let hitpoint = create_hitpoint(t, hit_position, ray, triangle.normal, hit_normal_gouraud_normalized, triangle.material);
+
+        return OptionHitpoint(true, hitpoint);
 }
 
 fn create_hitpoint(t: f32, hit_position: vec3f, ray: Ray,
@@ -526,5 +594,5 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
         set_pixel(screen_coordinate, color_rgb);
     }
 
-    let _ensure_bindings_exist = lights_len() + materials_len() + spheres_len();
+    let _ensure_bindings_exist = lights_len() + materials_len() + spheres_len() + triangles_len();
 }

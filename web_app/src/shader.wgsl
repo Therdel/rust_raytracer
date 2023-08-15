@@ -1,20 +1,79 @@
 const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-4;
 
-// const DEPTH_MAP_SCALE: f32 = 1.0 / 10.0;
-// const DEPTH_MAP_SCALE: f32 = 1.0 * 200.0;
 const DEPTH_MAP_SCALE: f32 = 0.85;
 
-@group(0) @binding(0)
-var<storage, read_write> canvas: array<u32>;
+const MAX_RAY_RECURSION_DEPTH: u32 = 10u;
+const REFLECTION_DIM_FACTOR: f32 = 0.8;
 
-@group(0) @binding(1)
-var<uniform> screen_dimensions: vec2u;
+const MATERIAL_TYPE_PHONG: u32 = 0u;
+const MATERIAL_TYPE_REFLECT_AND_PHONG: u32 = 1u;
+const MATERIAL_TYPE_REFLECT_AND_REFRACT: u32 = 2u;
 
-@group(0) @binding(2)
-var<uniform> screen_to_world: mat4x4f;
+@group(0) @binding(0) var<storage, read_write> canvas: array<u32>;
+@group(0) @binding(1) var<uniform> screen_dimensions: vec2u;
+@group(0) @binding(2) var<uniform> screen_to_world: mat4x4f;
 
-@group(0) @binding(3)
-var<storage, read> spheres: array<Sphere>;
+@group(0) @binding(3) var<storage, read> lights: array<Light>;
+@group(0) @binding(4) var<storage, read> materials: array<Material>;
+
+@group(0) @binding(5) var<storage, read> spheres: array<Sphere>;
+
+/////////////////////
+
+struct Light {
+    position: vec4f,
+    color: LightColor,
+}
+
+struct LightColor {
+    ambient: vec3f,
+    diffuse: vec3f,
+    specular: vec3f,
+}
+
+/// TODO: Use pointers
+fn lights_get(index: u32) -> Light {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed
+    return lights[index + 1u];
+}
+
+fn lights_len() -> u32 {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed.
+    // so the actual length is 1 lower
+    return arrayLength(&lights) - 1u;
+}
+
+/////////////////////
+
+struct Material {
+    emissive: vec3f,
+    ambient: vec3f,
+    diffuse: vec3f,
+    specular: vec3f,
+    shininess: f32,
+
+    material_type: u32,
+    /// only set on material_type == ReflectAndRefract
+    index_inner: f32,
+    /// only set on material_type == ReflectAndRefract
+    index_outer: f32,
+}
+
+/// TODO: Use pointers
+fn materials_get(index: u32) -> Material {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed
+    return materials[index + 1u];
+}
+
+fn materials_len() -> u32 {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed.
+    // so the actual length is 1 lower
+    return arrayLength(&materials) - 1u;
+}
 
 /////////////////////
 
@@ -23,11 +82,6 @@ struct Sphere {
     radius: f32,
     material: u32,
     _padding: array<u32, 3>,
-}
-
-fn sphere_normal(sphere: Sphere, surface_point: vec3f) -> vec3f {
-    let surface_normal = surface_point - sphere.center;
-    return normalize(surface_normal);
 }
 
 /// TODO: Use pointers
@@ -43,6 +97,12 @@ fn spheres_len() -> u32 {
     // so the actual length is 1 lower
     return arrayLength(&spheres) - 1u;
 }
+
+fn sphere_normal(sphere: Sphere, surface_point: vec3f) -> vec3f {
+    let surface_normal = surface_point - sphere.center;
+    return normalize(surface_normal);
+}
+
 
 /////////////////////
 
@@ -69,7 +129,7 @@ fn color_rgb_quantize(color: ColorRgb, alpha: u32) -> ColorRgbaU8 {
 
 struct OptionColorRgb {
     is_some: bool,
-    color: ColorRgb
+    value: ColorRgb
 }
 
 fn option_color_rgb_none() -> OptionColorRgb {
@@ -79,7 +139,7 @@ fn option_color_rgb_none() -> OptionColorRgb {
 fn option_color_rgb_add(lhs: OptionColorRgb, rhs: OptionColorRgb) -> OptionColorRgb {
     if lhs.is_some {
         if rhs.is_some {
-            return OptionColorRgb(true, lhs.color + rhs.color);
+            return OptionColorRgb(true, lhs.value + rhs.value);
         } else {
             return lhs;
         }
@@ -127,9 +187,7 @@ fn depth_map(ray: Ray) -> OptionColorRgb {
     let option_hitpoint = intersect_scene(ray);
 
     if (option_hitpoint.is_some) {
-        // let brightness = u32(option_hitpoint.hitpoint.t * DEPTH_MAP_SCALE);
-        // let color = color_rgb_quantize(brightness, brightness, brightness, 255);
-        let brightness = option_hitpoint.hitpoint.t * DEPTH_MAP_SCALE;
+        let brightness = option_hitpoint.value.t * DEPTH_MAP_SCALE;
         let color = ColorRgb(brightness);
         return OptionColorRgb(true, color);
     } else {
@@ -149,7 +207,7 @@ struct Hitpoint {
 
 struct OptionHitpoint {
     is_some: bool,
-    hitpoint: Hitpoint,
+    value: Hitpoint,
 }
 
 fn option_hitpoint_none() -> OptionHitpoint {
@@ -303,6 +361,143 @@ fn utils_ray_equation(ray: Ray, t: f32) -> vec3f {
     return ray.origin + ray.direction * t;
 }
 
+fn raytrace(ray: Ray) -> OptionColorRgb {
+    return raytrace_impl(ray, 0u);
+}
+
+fn raytrace_impl(ray: Ray, ray_recursion_depth: u32) -> OptionColorRgb {
+    if ray_recursion_depth < MAX_RAY_RECURSION_DEPTH {
+        let option_hitpoint = intersect_scene(ray);
+        if option_hitpoint.is_some {
+            return shade(ray, option_hitpoint.value, ray_recursion_depth);
+        } else {
+            return option_color_rgb_none();
+        }
+    } else {
+        return option_color_rgb_none();
+    }
+}
+
+// TODO: Move shades into functions
+fn shade(ray: Ray, hitpoint: Hitpoint, ray_recursion_depth: u32) -> OptionColorRgb {
+    let material = materials_get(hitpoint.material);
+    var result = option_color_rgb_none();
+    
+    switch material.material_type {
+        case MATERIAL_TYPE_PHONG: {
+            var current_color: OptionColorRgb = option_color_rgb_none();
+
+            let lights_len = lights_len();
+            for (var i: u32 = 0u; i < lights_len; i += 1u) {
+                let light = lights_get(i);
+
+                let is_shadow = trace_shadow_ray(hitpoint.position, light);
+                let radiance_color = radiance(ray, hitpoint, light, is_shadow);
+
+                current_color = option_color_rgb_add(current_color, OptionColorRgb(true, radiance_color));
+            }
+            result = option_color_rgb_add(result, current_color);
+        }
+        case MATERIAL_TYPE_REFLECT_AND_PHONG: {
+            result = OptionColorRgb(true, ColorRgb(0.0, 1.0, 0.0));
+
+            // let option_reflection_color = raytrace_impl(reflected_ray, ray_recursion_depth + 1);
+            // var reflection_color = vec3f();
+            // if option_reflection_color.is_some {
+            //     reflection_color = option_reflection_color.value;
+            // } else{
+            //     // TODO: put background
+            //     reflection_color = map_direction_to_color_rgb(reflected_ray);
+            // }
+            // result = option_color_rgb_add(result, OptionColorRgb(true, reflection_color * REFLECTION_DIM_FACTOR));
+        }
+        case MATERIAL_TYPE_REFLECT_AND_REFRACT: {
+            result = OptionColorRgb(true, ColorRgb(0.0, 0.0, 1.0));
+        }
+        case default: {
+            result = OptionColorRgb(true, ColorRgb(1.0, 0.0, 1.0));
+        }
+    }
+    return result;
+}
+
+fn radiance(ray: Ray, hitpoint: Hitpoint, light: Light, is_shadow: bool) -> ColorRgb {
+    let material = materials_get(hitpoint.material);
+    let l = get_hitpoint_to_light_unit_vector(hitpoint, light);
+    let n = hitpoint.hit_normal;
+    let v = -ray.direction;
+    let r = create_reflected_ray(l, n);
+
+    let l_dot_n = max(dot(l, n), 0.0);
+    let r_dot_v = max(dot(r, v), 0.0);
+
+    let emissive = material.emissive;
+    let ambient = light.color.ambient * material.ambient;
+    var diffuse = ColorRgb(0);
+    var specular = ColorRgb(0);
+    if !is_shadow {
+        diffuse = (light.color.diffuse * material.diffuse) * l_dot_n;
+        specular = (light.color.specular * material.specular) * pow(r_dot_v, material.shininess);
+    }
+
+    return emissive + ambient + diffuse + specular;
+}
+
+fn trace_shadow_ray(world_pos: vec3f, light: Light) -> bool {
+    let is_directional_light = light.position.w == 0;
+
+    var direction_unnormalized = vec3f();
+    if is_directional_light {
+        direction_unnormalized = light.position.xyz;
+    } else {
+        let light_world_pos = (light.position / light.position.w).xyz;
+        direction_unnormalized = light_world_pos - world_pos;
+    }
+
+    let direction = normalize(direction_unnormalized);
+
+    let ray = Ray(world_pos, direction);
+
+    var is_shadow = bool();
+    let option_hitpoint = intersect_scene(ray);
+    if option_hitpoint.is_some {
+        let hitpoint = option_hitpoint.value;
+        if is_directional_light {
+            // any intersection puts shadow of infinitely distant (directional light)
+            is_shadow = true;
+        } else {
+            let light_world_pos = (light.position / light.position.w).xyz;
+            let distance_to_light = distance(ray.origin, light_world_pos);
+            let ray_distance_travelled = hitpoint.t;
+
+            is_shadow = ray_distance_travelled < distance_to_light;
+        }
+    } else {
+        is_shadow = false;
+    }
+
+    return is_shadow;
+}
+
+fn create_reflected_ray(to_viewer: vec3f, normal: vec3f) -> vec3f {
+    let V = to_viewer;
+    let N = normal;
+    return 2. * dot(N, V) * N - V;
+}
+
+fn get_hitpoint_to_light_unit_vector(hitpoint: Hitpoint, light: Light) -> vec3f {
+    let is_directional_light = light.position.w == 0.0;
+
+    var vector = vec3f(0);
+    if is_directional_light {
+        vector = light.position.xyz;
+    } else {
+        let light_world_pos = (light.position / light.position.w).xyz;
+        vector = light_world_pos - hitpoint.position;
+    }
+    return normalize(vector);
+}
+
 // TODO: Use canvas context for output https://gpuweb.github.io/gpuweb/explainer/#canvas-output
 fn set_pixel(screen_coordinate: vec2u, color_rgb: ColorRgb) {
     let max_y_index = screen_dimensions.y - 1u;
@@ -325,9 +520,11 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
 
     // TODO: Use canvas context for output https://gpuweb.github.io/gpuweb/explainer/#canvas-output
     if (option_color_rgb.is_some) {
-        set_pixel(screen_coordinate, option_color_rgb.color);
+        set_pixel(screen_coordinate, option_color_rgb.value);
     } else {
         let color_rgb = map_direction_to_color_rgb(ray);
         set_pixel(screen_coordinate, color_rgb);
     }
+
+    let _ensure_bindings_exist = lights_len() + materials_len() + spheres_len();
 }

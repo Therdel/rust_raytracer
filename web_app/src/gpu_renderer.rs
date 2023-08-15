@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::io::Cursor;
 
-use lib_raytracer::raytracing::Sphere;
+use lib_raytracer::raytracing::{Light, Material, Sphere};
 use lib_raytracer::{gpu_types, Scene};
 use lib_raytracer::scene_file::Parser;
 use nalgebra_glm as glm;
@@ -30,6 +30,8 @@ struct ComputePipelineAndBuffers {
     screen_to_world_uniform_buf: wgpu::Buffer,
 
     // scene buffers
+    _lights_storage_buf: wgpu::Buffer,
+    _materials_storage_buf: wgpu::Buffer,
     _spheres_storage_buf: wgpu::Buffer,
     compute_pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,
@@ -115,6 +117,7 @@ impl GpuRenderer {
             scene.screen().pixel_width as u32,
             scene.screen().pixel_height as u32
         );
+
         let screen_dimensions_uniform_buf = device.create_buffer_init(&BufferInitDescriptor {
             label: Some("screen_dimensions_uniform"),
             contents: bytemuck::cast_slice(canvas_dimensions.as_slice()),
@@ -126,6 +129,10 @@ impl GpuRenderer {
             contents: bytemuck::cast_slice(scene.screen_to_world().as_slice()),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
+
+        let lights_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Light, gpu_types::Light>(Some("lights_storage"), device, &scene.lights);
+        
+        let materials_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Material, gpu_types::Material>(Some("materials_storage"), device, &scene.materials);
 
         let spheres_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Sphere, gpu_types::Sphere>(Some("spheres_storage"), device, &scene.spheres);
 
@@ -163,6 +170,14 @@ impl GpuRenderer {
                 },
                 BindGroupEntry {
                     binding: 3,
+                    resource: lights_storage_buf.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 4,
+                    resource: materials_storage_buf.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 5,
                     resource: spheres_storage_buf.as_entire_binding(),
                 },
             ],
@@ -174,6 +189,8 @@ impl GpuRenderer {
             screen_dimensions_uniform_buf,
             screen_to_world_uniform_buf,
             _spheres_storage_buf: spheres_storage_buf,
+            _materials_storage_buf: materials_storage_buf,
+            _lights_storage_buf: lights_storage_buf,
             compute_pipeline,
             bind_group,
         }
@@ -226,6 +243,8 @@ impl GpuRenderer {
             screen_dimensions_uniform_buf,
             screen_to_world_uniform_buf,
             _spheres_storage_buf,
+            _materials_storage_buf,
+            _lights_storage_buf,
             compute_pipeline,
             bind_group,
         } = &self.compute_pipeline_and_buffers;

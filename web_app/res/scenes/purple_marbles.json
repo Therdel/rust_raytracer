@@ -13,18 +13,16 @@
       "y": 10,
       "z": 55
     },
+    "//screen_dimensions": [240, 135],
+    "screen_dimensions": [3840, 2160],
     "y_fov_degrees": 70,
     "z_near": 0.1,
     "z_far": 25,
     "use_perspective": true,
     "ortho_world_height": 10
   },
-  "screen": {
-    "pixel_widthssss": 240,
-    "pixel_heightssss": 135,
-    "pixel_width": 3840,
-    "pixel_height": 2160,
-    "background": {
+  "background": {
+    "SolidColor": {
       "r": 1,
       "g": 1,
       "b": 1

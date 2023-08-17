@@ -1,7 +1,7 @@
 use std::io::Cursor;
 
 use lib_raytracer::raytracing::color::{Color, ColorRgb};
-use lib_raytracer::raytracing::{Camera, Screen};
+use lib_raytracer::raytracing::{Background, Camera};
 use lib_raytracer::raytracing::raytracer::Raytracer;
 use lib_raytracer::Scene;
 use lib_raytracer::scene_file::Parser;
@@ -23,29 +23,27 @@ pub struct Renderer {
 #[wasm_bindgen]
 impl Renderer {
     #[wasm_bindgen(constructor)]
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new(width: u32, height: u32) -> Self {
         let camera = Camera {
             position: zero(),
             orientation: zero(),
+            screen_dimensions: glm::vec2(width, height),
             y_fov_degrees: 90.,
             z_near: 0.1,
             z_far: 25.
         };
-        let screen = Screen {
-            pixel_width: width,
-            pixel_height: height,
-            background: ColorRgb::urple()
-        };
+        let background = Background::SolidColor(ColorRgb::urple());
 
-        let empty_scene = Scene::new(camera, screen);
+        let empty_scene = Scene::new(camera, background);
         let mesh_file_store = MeshFileStore { meshes: Default::default() };
         Self { scene: empty_scene, mesh_file_store }
     }
 
     // TODO: handle failure when json interface cometh
     pub fn set_scene(&mut self, scene: &[u8]) {
-        let width = self.scene.screen().pixel_width;
-        let height = self.scene.screen().pixel_height;
+        // backup current screen dimensions, to restore them after the scene switch
+        let width = self.scene.camera().screen_dimensions.x;
+        let height = self.scene.camera().screen_dimensions.y;
 
         let scene = Parser {
             file_reader: Cursor::new(scene),
@@ -53,14 +51,14 @@ impl Renderer {
         }.parse_json().unwrap();
         self.scene = scene;
 
-        self.resize_screen(width, height)
+        self.resize_screen(width as usize, height as usize)
     }
 
     pub fn render(&self, canvas_u8: &mut [u8]) {
         let canvas = utils::canvas_from_raw_mut(canvas_u8);
 
-        for y in 0..self.scene.screen().pixel_height {
-            for x in 0..self.scene.screen().pixel_width {
+        for y in 0..self.scene.camera().screen_dimensions.y as usize {
+            for x in 0..self.scene.camera().screen_dimensions.x as usize {
                 self.render_pixel(canvas, x, y);
             }
         }
@@ -69,15 +67,15 @@ impl Renderer {
     pub fn render_interlaced(&self, canvas_u8: &mut [u8], y_offset: usize, row_jump: usize) {
         let canvas = utils::canvas_from_raw_mut(canvas_u8);
 
-        for y in (y_offset..self.scene.screen().pixel_height).step_by(row_jump) {
-            for x in 0..self.scene.screen().pixel_width {
+        for y in (y_offset..self.scene.camera().screen_dimensions.y as usize).step_by(row_jump) {
+            for x in 0..self.scene.camera().screen_dimensions.x as usize {
                 self.render_pixel(canvas, x, y);
             }
         }
     }
 
     fn render_pixel(&self, canvas: &mut [ColorRgbaU8], x: usize, y: usize) {
-        let max_y_index = self.scene.screen().pixel_height - 1;
+        let max_y_index = self.scene.camera().screen_dimensions.y as usize - 1;
         let y_inverted = max_y_index - y;
 
         let coordinate = glm::vec2(x as _, y_inverted as _);
@@ -86,10 +84,10 @@ impl Renderer {
 
         let color = match raytracer.raytrace(&ray) {
             Some(hit_color) => hit_color,
-            None => self.scene.screen().background
+            None => raytracer.trace_background(&ray)
         };
         let color = glm::vec4(color.x, color.y, color.z, 1.0);
-        let offset = x + self.scene.screen().pixel_width * y;
+        let offset = x + self.scene.camera().screen_dimensions.x as usize  * y;
 
         canvas[offset] = color.quantize();
     }

@@ -20,6 +20,7 @@
         --> bitcode crate: https://docs.rs/bitcode/latest/bitcode/
     [ ] pre-build BVHs, deploy in GH-pages
         --> bitcode crate: https://docs.rs/bitcode/latest/bitcode/
+[x] Make background an ```enum { Color, DirectionColor, HdrMap }```
 
 ### TODO GPGPU
 [x] read buffer into canvas
@@ -33,7 +34,6 @@
 [ ] Continually draw on frame (optional)
     [example](https://github.com/OmarShehata/webgpu-compute-rasterizer/blob/ca733f2c9dc91143364ca4e1729b2941512102e6/src/main.js#L31-L42)
     [MDN requestAnimationFrame](https://developer.mozilla.org/en-US/docs/Web/API/window/requestAnimationFrame)
-[ ] Make background an ```enum { Color, DirectionColor, HdrMap }```
 [ ] Use pointers in WGSL
 [ ] Change canvas color Endianness("Canvas Format") based on device preference
     [source](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API#get_and_configure_the_canvas_context)

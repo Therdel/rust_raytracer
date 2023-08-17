@@ -1,5 +1,5 @@
 use nalgebra_glm as glm;
-use num_traits::{Float, Zero};
+use num_traits::Float;
 
 use crate::raytracing::{AABB, Triangle};
 use crate::raytracing::bvh::{hull::Hull, node::Node};

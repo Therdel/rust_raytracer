@@ -44,8 +44,8 @@ fn main() {
 }
 
 fn paint_scene(scene: Scene) -> Canvas {
-    let mut canvas = Canvas::new(scene.screen());
-    let pixel_width = scene.screen().pixel_width;
+    let mut canvas = Canvas::new(scene.camera());
+    let pixel_width = scene.camera().screen_dimensions.x as _;
     let raytracer = Raytracer{ scene: &scene };
 
     canvas.borrow_stripes_mut()
@@ -55,9 +55,11 @@ fn paint_scene(scene: Scene) -> Canvas {
             for x in 0..pixel_width {
                 let coordinate = glm::vec2(x as _, y as _);
                 let ray = raytracer.generate_primary_ray(&coordinate);
-                if let Some(hit_color) = raytracer.raytrace(&ray) {
-                    row_stripe.set_pixel(x, &hit_color);
-                }
+                let hit_color = match raytracer.raytrace(&ray) {
+                    Some(hit_color) => hit_color,
+                    None => raytracer.trace_background(&ray)
+                };
+                row_stripe.set_pixel(x, &hit_color);
             }
         });
     canvas

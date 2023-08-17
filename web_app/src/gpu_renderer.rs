@@ -24,8 +24,8 @@ pub struct GpuRenderer {
 struct ComputePipelineAndBuffers {
     canvas_staging_buf: wgpu::Buffer,
     canvas_storage_buf: wgpu::Buffer,
-    screen_dimensions_uniform_buf: wgpu::Buffer,
-    screen_to_world_uniform_buf: wgpu::Buffer,
+    camera_uniform_buf: wgpu::Buffer,
+    _background_uniform_buf: wgpu::Buffer,
 
     // scene buffers
     _lights_storage_buf: wgpu::Buffer,
@@ -94,7 +94,7 @@ impl GpuRenderer {
             source: wgpu::ShaderSource::Wgsl(Cow::Borrowed(include_str!("shader.wgsl"))),
         });
 
-        let canvas_size = scene.screen().pixel_width * scene.screen().pixel_height * std::mem::size_of::<ColorRgbaU8>();
+        let canvas_size = scene.camera().screen_dimensions.x as usize * scene.camera().screen_dimensions.y as usize * std::mem::size_of::<ColorRgbaU8>();
 
         // Instantiates buffer without data.
         // `usage` of buffer specifies how it can be used:
@@ -115,25 +115,22 @@ impl GpuRenderer {
             mapped_at_creation: false,
         });
 
-        let canvas_dimensions = glm::vec2(
-            scene.screen().pixel_width as u32,
-            scene.screen().pixel_height as u32
-        );
-
-        let screen_dimensions_uniform_buf = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("screen_dimensions_uniform"),
-            contents: bytemuck::cast_slice(canvas_dimensions.as_slice()),
+        let gpu_camera = gpu_types::Camera::from(scene);
+        let camera_uniform_buf = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("camera_uniform"),
+            contents: bytemuck::cast_slice(std::slice::from_ref(&gpu_camera)),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
 
-        let screen_to_world_uniform_buf = device.create_buffer_init(&BufferInitDescriptor {
-            label: Some("mat_screen_to_world_uniform"),
-            contents: bytemuck::cast_slice(scene.screen_to_world().as_slice()),
+        let gpu_background = gpu_types::Background::from(&scene.background);
+        let background_uniform_buf = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("background_uniform"),
+            contents: bytemuck::cast_slice(std::slice::from_ref(&gpu_background)),
             usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
         });
 
         let lights_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Light, gpu_types::Light>(Some("lights_storage"), device, &scene.lights);
-        
+
         let materials_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Material, gpu_types::Material>(Some("materials_storage"), device, &scene.materials);
 
         let spheres_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Sphere, gpu_types::Sphere>(Some("spheres_storage"), device, &scene.spheres);
@@ -170,11 +167,11 @@ impl GpuRenderer {
                 },
                 BindGroupEntry {
                     binding: 1,
-                    resource: screen_dimensions_uniform_buf.as_entire_binding(),
+                    resource: camera_uniform_buf.as_entire_binding(),
                 },
                 BindGroupEntry {
                     binding: 2,
-                    resource: screen_to_world_uniform_buf.as_entire_binding(),
+                    resource: background_uniform_buf.as_entire_binding(),
                 },
                 BindGroupEntry {
                     binding: 3,
@@ -198,11 +195,12 @@ impl GpuRenderer {
         ComputePipelineAndBuffers {
             canvas_staging_buf,
             canvas_storage_buf,
-            screen_dimensions_uniform_buf,
-            screen_to_world_uniform_buf,
-            _spheres_storage_buf: spheres_storage_buf,
-            _materials_storage_buf: materials_storage_buf,
+            camera_uniform_buf,
+            _background_uniform_buf: background_uniform_buf,
+
             _lights_storage_buf: lights_storage_buf,
+            _materials_storage_buf: materials_storage_buf,
+            _spheres_storage_buf: spheres_storage_buf,
             _triangles_storage_buf: triangles_storage_buf,
             compute_pipeline,
             bind_group,
@@ -233,24 +231,21 @@ impl GpuRenderer {
 
     pub async fn render(&mut self, canvas_u8: &mut [u8]) {
         let millisecons = js_sys::Date::now();
-        self.scene.update_camera_and_screen(|camera, _| {
-            camera.position.x = ((millisecons/200.0).cos()*0.3) as f32;
-            camera.position.z = ((millisecons/200.0).sin()*0.3) as f32;
+        self.scene.update_camera(|camera| {
+            camera.position.x = ((millisecons/200.0).cos()*0.1) as f32;
+            camera.position.z = ((millisecons/200.0).sin()*0.1) as f32;
         });
-        // TODO: Put background into: SolidColor, NormalColor, EnvironmentTexture
-        let canvas_dimensions = glm::vec2(
-            self.scene.screen().pixel_width,
-            self.scene.screen().pixel_height,
-        );
+        let canvas_dimensions = self.scene.camera().screen_dimensions;
 
         let ComputePipelineAndBuffers {
             canvas_staging_buf,
             canvas_storage_buf,
-            screen_dimensions_uniform_buf,
-            screen_to_world_uniform_buf,
-            _spheres_storage_buf,
-            _materials_storage_buf,
+            camera_uniform_buf,
+            _background_uniform_buf,
+
             _lights_storage_buf,
+            _materials_storage_buf,
+            _spheres_storage_buf,
             _triangles_storage_buf,
             compute_pipeline,
             bind_group,
@@ -266,16 +261,16 @@ impl GpuRenderer {
             cpass.set_pipeline(compute_pipeline);
             cpass.set_bind_group(0, bind_group, &[]);
             cpass.insert_debug_marker("compute canvas");
-            cpass.dispatch_workgroups(canvas_dimensions.x as _, canvas_dimensions.y as _, 1); // Number of cells to run, the (x,y,z) size of item being processed
+            cpass.dispatch_workgroups(canvas_dimensions.x, canvas_dimensions.y, 1); // Number of cells to run, the (x,y,z) size of item being processed
         }
         // Sets adds copy operation to command encoder.
         // Will copy data from storage / canvas buffer on GPU to staging buffer on CPU.
-        let canvas_size = canvas_dimensions.x * canvas_dimensions.y * std::mem::size_of::<ColorRgbaU8>();
+        let canvas_size = (canvas_dimensions.x * canvas_dimensions.y) as usize * std::mem::size_of::<ColorRgbaU8>();
         encoder.copy_buffer_to_buffer(canvas_storage_buf, 0, canvas_staging_buf, 0, canvas_size as _);
         let command_buffer = encoder.finish();
 
-        self.queue.write_buffer(screen_to_world_uniform_buf, 0, bytemuck::cast_slice(self.scene.screen_to_world().as_slice()));
-        self.queue.write_buffer(screen_dimensions_uniform_buf, 0, bytemuck::cast_slice(canvas_dimensions.as_slice()));
+        let gpu_camera = gpu_types::Camera::from(&self.scene);
+        self.queue.write_buffer(camera_uniform_buf, 0, bytemuck::cast_slice(std::slice::from_ref(&gpu_camera)));
         self.queue.submit(Some(command_buffer));
     
         // // Note that we're not calling `.await` here.

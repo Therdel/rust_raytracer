@@ -11,7 +11,7 @@ default = ["console_error_panic_hook"]
 
 [dependencies]
 lib_raytracer = { path = "../lib_raytracer" }
-nalgebra-glm = "0.19"
+nalgebra-glm = { version = "0.19", features = ["convert-bytemuck"] }
 num-traits = "0.2"
 
 # The `console_error_panic_hook` crate provides better debugging of panics by

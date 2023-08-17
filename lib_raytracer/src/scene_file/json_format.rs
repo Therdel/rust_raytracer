@@ -25,7 +25,7 @@ pub struct ColorRgb {
 #[derive(Deserialize)]
 pub struct Scene {
     pub camera: Camera,
-    pub screen: Screen,
+    pub background: Background,
     pub lights: Vec<Light>,
     pub materials: Vec<Material>,
     pub planes: Option<Vec<Plane>>,
@@ -39,16 +39,19 @@ pub struct Scene {
 pub struct Camera {
     pub position: Vec3,
     pub orientation_degrees: Vec3,
+    pub screen_dimensions: (u32, u32),
     pub y_fov_degrees: f32,
     pub z_near: f32,
     pub z_far: f32,
 }
 
 #[derive(Deserialize)]
-pub struct Screen {
-    pub pixel_width: usize,
-    pub pixel_height: usize,
-    pub background: ColorRgb
+pub enum Background {
+    SolidColor(ColorRgb),
+    ColoredDirection,
+    // HdrEnvironmentTexture {
+    //     texture_name: String
+    // },
 }
 
 #[derive(Deserialize)]

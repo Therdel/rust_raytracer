@@ -98,15 +98,7 @@ impl Builder {
 
         let mut min_split_costs = f32::infinity();
         let mut min_split_costs_bin = None;
-        for split_bin in 0..BINS_PER_LAYER {
-            // TODO: Is the upper bound really necessary? The Right cutoff is inclusive, after all.
-            //       Though that would mean the triangle's bin would have to be float-equal or bigger than that number.
-            //       Let's try it.
-            if split_bin.is_zero() {// || split_bin == BINS_PER_LAYER-1 {
-                min_split_costs = f32::infinity();
-                continue;
-            }
-
+        for split_bin in 1..BINS_PER_LAYER {
             let p_left = match AABB::from_triangles(left_iter(split_bin)) {
                 Some(left_hull) => left_hull.surface_area() / volume_aabb.surface_area(),
                 None => 0.0

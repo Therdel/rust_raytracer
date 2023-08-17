@@ -7,7 +7,6 @@ use lib_raytracer::Scene;
 use lib_raytracer::scene_file::Parser;
 use lib_raytracer::raytracing::raytracer::Raytracer;
 
-
 use crate::utils;
 use crate::color::{ColorRgbaU8, QuantizeToU8};
 use crate::fake_same_mesh_loader::FakeSameMeshLoader;
@@ -36,8 +35,8 @@ impl Renderer {
     pub fn render(&self, canvas_u8: &mut [u8]) {
         let canvas = utils::canvas_from_raw_mut(canvas_u8);
 
-        for y in 0..self.scene.screen().pixel_height {
-            for x in 0..self.scene.screen().pixel_width {
+        for y in 0..self.scene.camera().screen_dimensions.y as usize {
+            for x in 0..self.scene.camera().screen_dimensions.x as usize {
                 self.render_pixel(canvas, x, y);
             }
         }
@@ -46,15 +45,15 @@ impl Renderer {
     pub fn render_interlaced(&self, canvas_u8: &mut [u8], y_offset: usize, row_jump: usize) {
         let canvas = utils::canvas_from_raw_mut(canvas_u8);
 
-        for y in (y_offset..self.scene.screen().pixel_height).step_by(row_jump) {
-            for x in 0..self.scene.screen().pixel_width {
+        for y in (y_offset..self.scene.camera().screen_dimensions.y as usize ).step_by(row_jump) {
+            for x in 0..self.scene.camera().screen_dimensions.x as usize  {
                 self.render_pixel(canvas, x, y);
             }
         }
     }
 
     fn render_pixel(&self, canvas: &mut [ColorRgbaU8], x: usize, y: usize) {
-        let max_y_index = self.scene.screen().pixel_height - 1;
+        let max_y_index = self.scene.camera().screen_dimensions.y as usize - 1;
         let y_inverted = max_y_index - y;
 
         let coordinate = glm::vec2(x as _, y_inverted as _);
@@ -63,10 +62,10 @@ impl Renderer {
 
         let color = match raytracer.raytrace(&ray) {
             Some(hit_color) => hit_color,
-            None => self.scene.screen().background
+            None => raytracer.trace_background(&ray)
         };
         let color = glm::vec4(color.x, color.y, color.z, 1.0);
-        let offset = x + self.scene.screen().pixel_width * y;
+        let offset = x + self.scene.camera().screen_dimensions.x as usize  * y;
 
         canvas[offset] = color.quantize();
     }

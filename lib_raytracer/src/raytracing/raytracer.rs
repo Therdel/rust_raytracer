@@ -49,6 +49,18 @@ impl<'scene> Raytracer<'scene> {
         }
     }
 
+    pub fn trace_background(&self, ray: &Ray) -> ColorRgb {
+        match self.scene.background {
+            super::Background::SolidColor(color) => color,
+            super::Background::ColoredDirection => {
+                // all components of the normalized vector mapped to [0, 2]
+                let dir_mapped_0_2 = ray.direction + glm::vec3(1., 1., 1.);
+                // all components of the vector mapped to [0, 1] - interpretable as RGB
+                dir_mapped_0_2*0.5
+            },
+        }
+    }
+
     fn raytrace_impl(&self, ray: &Ray, ray_recursion_depth: usize) -> Option<ColorRgb> {
         if ray_recursion_depth < MAX_RAY_RECURSION_DEPTH {
             let hitpoint = self.scene.intersect(ray)?;
@@ -76,7 +88,7 @@ impl<'scene> Raytracer<'scene> {
 
             let reflection_color =
                 self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
-                    .unwrap_or(self.scene.screen().background);
+                    .unwrap_or(self.trace_background(&reflected_ray));
             Some(reflection_color * REFLECTION_DIM_FACTOR)
         };
 
@@ -94,9 +106,9 @@ impl<'scene> Raytracer<'scene> {
             let reflected_ray = Ray { origin: hitpoint.position, direction: glm::normalize(&direction_reflected) };
 
             let reflected_color = self.raytrace_impl(&reflected_ray, ray_recursion_depth + 1)
-                .unwrap_or(self.scene.screen().background);
+                .unwrap_or(self.trace_background(&reflected_ray));
             let transmitted_color = self.raytrace_impl(&transmitted_ray, ray_recursion_depth + 1)
-                .unwrap_or(self.scene.screen().background);
+                .unwrap_or(self.trace_background(&transmitted_ray));
 
             let k_reflected = Self::get_fresnel_factor_reflection(&reflected_ray, &transmitted_ray,
                                                        &hitpoint.hit_normal,

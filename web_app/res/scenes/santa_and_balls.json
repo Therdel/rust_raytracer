@@ -10,21 +10,14 @@
       "y": 25,
       "z": 0
     },
+    "screen_dimensions": [3840, 2160],
     "y_fov_degrees": 90,
     "z_near": 0.1,
     "z_far": 25,
     "use_perspective": true,
     "ortho_world_height": 10
   },
-  "screen": {
-    "pixel_width": 3840,
-    "pixel_height": 2160,
-    "background": {
-      "r": 0.7,
-      "g": 0.9,
-      "b": 0.9
-    }
-  },
+  "background": "ColoredDirection",
   "lights": [
     {
       "position": {
@@ -257,17 +250,6 @@
           "index_outer": 1.0
         }
       }
-    }
-  ],
-  "planes": [
-    {
-      "normal": {
-        "x": 0,
-        "y": -1,
-        "z": 0
-      },
-      "distance": 5,
-      "material": "someShinyGreen"
     }
   ],
   "spheres": [

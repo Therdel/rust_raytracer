@@ -1,12 +1,12 @@
 use nalgebra_glm as glm;
 use crate::raytracing::transform::matrix;
-use crate::raytracing::{self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Mesh, Screen, Instance};
+use crate::raytracing::{Background, self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Mesh, Instance};
 use crate::utils;
 
 pub struct Scene {
     camera: Camera,
-    screen: Screen,
     screen_to_world: glm::Mat4,
+    pub background: Background,
     pub lights: Vec<Light>,
     pub materials: Vec<Material>,
 
@@ -18,12 +18,12 @@ pub struct Scene {
 }
 
 impl Scene {
-    pub fn new(camera: Camera, screen: Screen) -> Self {
-        let screen_to_world = matrix::screen_to_world(&camera, &screen);
+    pub fn new(camera: Camera, background: Background) -> Self {
+        let screen_to_world = matrix::screen_to_world(&camera);
         Self {
             camera,
-            screen,
             screen_to_world,
+            background,
             lights: vec![],
             materials: vec![],
             planes: vec![],
@@ -38,13 +38,9 @@ impl Scene {
         &self.camera
     }
 
-    pub fn screen(&self) -> &Screen {
-        &self.screen
-    }
-
-    pub fn update_camera_and_screen(&mut self, f: impl Fn(&mut Camera, &mut Screen)) {
-        f(&mut self.camera, &mut self.screen);
-        self.screen_to_world = matrix::screen_to_world(&self.camera, &self.screen);
+    pub fn update_camera(&mut self, f: impl Fn(&mut Camera)) {
+        f(&mut self.camera);
+        self.screen_to_world = matrix::screen_to_world(&self.camera);
     }
 
     pub fn screen_to_world(&self) -> &glm::Mat4 {
@@ -52,10 +48,9 @@ impl Scene {
     }
 
     pub fn resize_screen(&mut self, width: usize, height: usize) {
-        self.screen.pixel_width = width;
-        self.screen.pixel_height = height;
+        self.camera.screen_dimensions = glm::vec2(width as _, height as _);
     
-        self.screen_to_world = matrix::screen_to_world(&self.camera, &self.screen);
+        self.screen_to_world = matrix::screen_to_world(&self.camera);
     }
 
     pub fn turn_camera(&mut self, begin: &glm::Vec2, end: &glm::Vec2) {
@@ -63,7 +58,7 @@ impl Scene {
     
         // pixel to degrees mapping
         let y_fov_degrees = self.camera.y_fov_degrees;
-        let degrees_per_pixel = y_fov_degrees / self.screen.pixel_height as f32;
+        let degrees_per_pixel = y_fov_degrees / self.camera.screen_dimensions.y as f32;
         let pixel_to_angle = |pixel| radians(pixel * degrees_per_pixel);
     
         let pixel_diff_x = end.x - begin.x;
@@ -94,7 +89,7 @@ impl Scene {
         // modulo heading
         camera_orientation.y %= radians(360.);
     
-        self.screen_to_world = matrix::screen_to_world(&self.camera, &self.screen);
+        self.screen_to_world = matrix::screen_to_world(&self.camera);
     }
 }
 

@@ -8,6 +8,6 @@ edition = "2021"
 [dependencies]
 lib_raytracer = { path = "../lib_raytracer" }
 stb = { version = "0.3.2", default-features = false, features = ["stb_image_write"] }
-nalgebra-glm = "0.15"
+nalgebra-glm = "0.18"
 num-traits = "0.2"
 rayon = "1.5.0"

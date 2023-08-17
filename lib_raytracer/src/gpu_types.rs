@@ -4,6 +4,49 @@ use crate::raytracing;
 #[repr(C)]
 #[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
 /// WebGPU version with altered alignment & padding. ([source](https://stackoverflow.com/a/75525055))
+pub struct Camera {
+    screen_to_world: glm::Mat4,
+    screen_dimensions: glm::U32Vec2,
+    _padding: [u32; 2],
+}
+
+impl From<&crate::Scene> for Camera {
+    fn from(value: &crate::Scene) -> Self {
+        Self {
+            screen_to_world: *value.screen_to_world(),
+            screen_dimensions: value.camera().screen_dimensions,
+            _padding: Default::default(),
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+/// WebGPU version with altered alignment & padding. ([source](https://stackoverflow.com/a/75525055))
+pub struct Background {
+    /// only set on background_type == SolidColor
+    solid_color: glm::Vec3,
+    background_type: u32,
+}
+
+impl From<&raytracing::Background> for Background {
+    fn from(value: &raytracing::Background) -> Self {
+        match *value {
+            raytracing::Background::SolidColor(color) => Self {
+                solid_color: color,
+                background_type: 0,
+            },
+            raytracing::Background::ColoredDirection => Self {
+                solid_color: Default::default(),
+                background_type: 1
+            }
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+/// WebGPU version with altered alignment & padding. ([source](https://stackoverflow.com/a/75525055))
 pub struct Sphere {
     center: glm::Vec3,
     radius: f32,

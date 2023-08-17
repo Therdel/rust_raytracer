@@ -2,7 +2,7 @@ use std::io::{self, BufRead};
 
 use crate::Scene;
 use crate::scene_file::{json_format, MeshLoader};
-use crate::raytracing::{Camera, Light, LightColor, Material, Mesh, Plane, Screen, Sphere, Triangle, MaterialIndex, MeshIndex, Instance};
+use crate::raytracing::{Camera, Light, LightColor, Material, Mesh, Plane, Sphere, Triangle, MaterialIndex, MeshIndex, Instance, Background};
 use nalgebra_glm as glm;
 use crate::object_file::WindingOrder::{Clockwise, CounterClockwise};
 use crate::raytracing::color::ColorRgb;
@@ -38,6 +38,7 @@ impl From<json_format::Camera> for Camera {
         Self {
             position: camera.position.into(),
             orientation: glm::radians(&orientation_degrees),
+            screen_dimensions: glm::vec2(camera.screen_dimensions.0, camera.screen_dimensions.1),
             y_fov_degrees: camera.y_fov_degrees,
             z_near: camera.z_near,
             z_far: camera.z_far,
@@ -45,12 +46,13 @@ impl From<json_format::Camera> for Camera {
     }
 }
 
-impl From<json_format::Screen> for Screen {
-    fn from(screen: json_format::Screen) -> Self {
-        Self {
-            pixel_width: screen.pixel_width,
-            pixel_height: screen.pixel_height,
-            background: screen.background.into()
+impl From<json_format::Background> for Background {
+    fn from(background: json_format::Background) -> Self {
+        match background {
+            json_format::Background::SolidColor(color) =>
+                Background::SolidColor(color.into()),
+            json_format::Background::ColoredDirection => 
+                Background::ColoredDirection,
         }
     }
 }
@@ -60,9 +62,9 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         let json: json_format::Scene = serde_json::from_reader(&mut self.file_reader)?;
 
         let camera = json.camera.into();
-        let screen = json.screen.into();
+        let background = json.background.into();
+        let mut scene = Scene::new(camera, background);
 
-        let mut scene = Scene::new(camera, screen);
         scene.lights =         Self::convert_lights(json.lights);
         scene.materials =      Self::convert_materials(json.materials);
         scene.planes =         Self::convert_planes(json.planes, &scene.materials);

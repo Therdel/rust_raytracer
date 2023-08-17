@@ -10,14 +10,24 @@ const MATERIAL_TYPE_REFLECT_AND_PHONG: u32 = 1u;
 const MATERIAL_TYPE_REFLECT_AND_REFRACT: u32 = 2u;
 
 @group(0) @binding(0) var<storage, read_write> canvas: array<u32>;
-@group(0) @binding(1) var<uniform> screen_dimensions: vec2u;
-@group(0) @binding(2) var<uniform> screen_to_world: mat4x4f;
+@group(0) @binding(1) var<uniform> camera: Camera;
+@group(0) @binding(2) var<uniform> background: Background;
 
 @group(0) @binding(3) var<storage, read> lights: array<Light>;
 @group(0) @binding(4) var<storage, read> materials: array<Material>;
 
-@group(0) @binding(5) var<storage, read> spheres: array<Sphere>;
-@group(0) @binding(6) var<storage, read> triangles: array<Triangle>;
+
+/////////////////////
+
+struct Camera {
+    screen_to_world: mat4x4f,
+    screen_dimensions: vec2u,
+}
+
+struct Background {
+    solid_color: vec3f,
+    background_type: u32,
+}
 
 /////////////////////
 
@@ -200,12 +210,18 @@ fn generate_primary_ray(screen_coordinate: vec2f, screen_to_world: mat4x4f) -> R
     return Ray(p_world_inhomogeneous, direction_normalized);
 }
 
-fn map_direction_to_color_rgb(ray: Ray) -> ColorRgb {
-    /// all components of the normalized vector mapped to [0, 2]
-    let dir_mapped_0_2 = ray.direction + 1.0;
-    /// all components of the vector mapped to [0, 1] - interpretable as RGB
-    let dir_mapped_rgb = dir_mapped_0_2*0.5;
-    return dir_mapped_rgb;
+fn trace_background(ray: Ray) -> ColorRgb {
+    if (background.background_type == 0) {
+        // Background::SolidColor
+        return background.solid_color;
+    } else {
+        // Background::ColoredDirection
+        /// all components of the normalized vector mapped to [0, 2]
+        let dir_mapped_0_2 = ray.direction + 1.0;
+        /// all components of the vector mapped to [0, 1] - interpretable as RGB
+        let dir_mapped_rgb = dir_mapped_0_2*0.5;
+        return dir_mapped_rgb;
+    }
 }
 
 fn depth_map(ray: Ray) -> OptionColorRgb {
@@ -474,8 +490,7 @@ fn shade(ray: Ray, hitpoint: Hitpoint, ray_recursion_depth: u32) -> OptionColorR
             // if option_reflection_color.is_some {
             //     reflection_color = option_reflection_color.value;
             // } else{
-            //     // TODO: put background
-            //     reflection_color = map_direction_to_color_rgb(reflected_ray);
+            //     reflection_color = trace_background(reflected_ray);
             // }
             // result = option_color_rgb_add(result, OptionColorRgb(true, reflection_color * REFLECTION_DIM_FACTOR));
         }
@@ -568,9 +583,9 @@ fn get_hitpoint_to_light_unit_vector(hitpoint: Hitpoint, light: Light) -> vec3f 
 
 // TODO: Use canvas context for output https://gpuweb.github.io/gpuweb/explainer/#canvas-output
 fn set_pixel(screen_coordinate: vec2u, color_rgb: ColorRgb) {
-    let max_y_index = screen_dimensions.y - 1u;
+    let max_y_index = camera.screen_dimensions.y - 1u;
     let y_inverted = max_y_index - screen_coordinate.y;
-    let pixel_offset = y_inverted * screen_dimensions.x + screen_coordinate.x;
+    let pixel_offset = y_inverted * camera.screen_dimensions.x + screen_coordinate.x;
 
     let quantized_color = color_rgb_quantize(color_rgb, 255u);
     canvas[pixel_offset] = quantized_color;
@@ -582,7 +597,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
     let screen_coordinate = global_id.xy;
 
     // TODO: The y coord isn't inverted - that's why the y object's y coords are flipped
-    let ray = generate_primary_ray(vec2f(screen_coordinate), screen_to_world);
+    let ray = generate_primary_ray(vec2f(screen_coordinate), camera.screen_to_world);
 
     let option_color_rgb: OptionColorRgb = depth_map(ray);
 
@@ -590,7 +605,7 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
     if (option_color_rgb.is_some) {
         set_pixel(screen_coordinate, option_color_rgb.value);
     } else {
-        let color_rgb = map_direction_to_color_rgb(ray);
+        let color_rgb = trace_background(ray);
         set_pixel(screen_coordinate, color_rgb);
     }
 

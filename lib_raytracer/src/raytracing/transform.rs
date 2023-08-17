@@ -1,7 +1,7 @@
 pub mod matrix {
     use nalgebra_glm as glm;
     use num_traits::one;
-    use crate::raytracing::{Camera, Screen};
+    use crate::raytracing::Camera;
 
     pub fn translation(offset: &glm::Vec3) -> glm::Mat4 {
         glm::translation(offset)
@@ -31,13 +31,13 @@ pub mod matrix {
     }
 
     pub fn viewport(x: f32, y: f32,
-                    width: f32, height: f32,
+                    dimensions: glm::Vec2,
                     z_near: f32, z_far: f32) -> glm::Mat4 {
 
-        let column0 = [width/2.0, 0.0, 0.0, 0.0];
-        let column1 = [0.0, height/2.0, 0.0, 0.0];
-        let column2 = [0.0, 0.0, (z_far - z_near) / 2.0, 0.0];
-        let column3 = [x + width/2.0, y + height/2.0, (z_far + z_near) / 2.0, 1.0];
+        let column0 = [dimensions.x/2.0,     0.0,                  0.0,                    0.0];
+        let column1 = [0.0,                  dimensions.y/2.0,     0.0,                    0.0];
+        let column2 = [0.0,                  0.0,                  (z_far - z_near) / 2.0, 0.0];
+        let column3 = [x + dimensions.x/2.0, y + dimensions.y/2.0, (z_far + z_near) / 2.0, 1.0];
 
         glm::Mat4::from([column0, column1, column2, column3])
     }
@@ -62,14 +62,15 @@ pub mod matrix {
         glm::inverse(&camera_transorm)
     }
 
-    pub fn screen_to_world(camera: &Camera, screen: &Screen) -> glm::Mat4 {
-        let aspect = screen.pixel_width as f32 / screen.pixel_height as f32;
+    pub fn screen_to_world(camera: &Camera) -> glm::Mat4 {
+        let screen_dimensions: glm::Vec2 = glm::vec2(camera.screen_dimensions.x as _ , camera.screen_dimensions.y as _);
+        let aspect = screen_dimensions.x / screen_dimensions.y;
 
         let view_matrix = view(&camera.orientation, &camera.position);
         let projection_matrix = projection(camera.y_fov_degrees, aspect,
                                            camera.z_near, camera.z_far);
         let viewport_matrix = viewport(0.0, 0.0,
-                                       screen.pixel_width as f32, screen.pixel_height as f32,
+                                       screen_dimensions,
                                        camera.z_near, camera.z_far);
 
         let world_to_screen_matrix = viewport_matrix * projection_matrix * view_matrix;

@@ -1,11 +1,12 @@
+use std::ops::Range;
+
 use crate::raytracing::bvh::BVH;
-use crate::raytracing::Triangle;
 
 #[derive(Clone, Copy)]
 pub struct MeshIndex(pub usize);
 
 pub struct Mesh {
     pub name: String,
-    pub triangles: Vec<Triangle>,
+    pub triangle_indices: Range<usize>,
     pub bvh: BVH,
 }

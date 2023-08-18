@@ -2,7 +2,7 @@ use std::io::{self, BufRead};
 
 use crate::Scene;
 use crate::scene_file::{json_format, MeshLoader};
-use crate::raytracing::{Camera, Light, LightColor, Material, Mesh, Plane, Sphere, Triangle, MaterialIndex, MeshIndex, Instance, Background};
+use crate::raytracing::{Camera, Light, LightColor, Material, Mesh, Plane, Sphere, Triangle, MaterialIndex, MeshIndex, MeshTriangle, Instance, bvh, Background};
 use nalgebra_glm as glm;
 use crate::object_file::WindingOrder::{Clockwise, CounterClockwise};
 use crate::raytracing::color::ColorRgb;
@@ -65,12 +65,14 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
         let background = json.background.into();
         let mut scene = Scene::new(camera, background);
 
-        scene.lights =         Self::convert_lights(json.lights);
-        scene.materials =      Self::convert_materials(json.materials);
-        scene.planes =         Self::convert_planes(json.planes, &scene.materials);
-        scene.spheres =        Self::convert_spheres(json.spheres, &scene.materials);
-        scene.triangles =      Self::convert_triangles(json.triangles, &scene.materials);
-        scene.meshes =         self.convert_meshes(json.meshes, &scene.materials);
+        scene.lights = Self::convert_lights(json.lights);
+        scene.materials = Self::convert_materials(json.materials);
+        scene.planes = Self::convert_planes(json.planes, &scene.materials);
+        scene.spheres = Self::convert_spheres(json.spheres, &scene.materials);
+        scene.triangles = Self::convert_triangles(json.triangles, &scene.materials);
+        (scene.mesh_triangles,
+         scene.mesh_bvh_nodes,
+         scene.meshes) = self.convert_meshes(json.meshes, &scene.materials);
         scene.mesh_instances = Self::convert_mesh_instances(json.mesh_instances, &scene.meshes, &scene.materials);
         Ok(scene)
     }
@@ -185,19 +187,24 @@ impl<S: BufRead, M: MeshLoader> Parser<S, M> {
 
     fn convert_meshes(&self,
                       meshes: Option<Vec<json_format::Mesh>>,
-                      materials: &[Material]) -> Vec<Mesh> {
+                      materials: &[Material]) -> (Vec<MeshTriangle>, Vec<bvh::Node>, Vec<Mesh>) {
         if let Some(meshes) = meshes {
-            Self::convert_vec(meshes, |mesh| {
+            let mut mesh_triangles = Vec::new();
+            let mut mesh_bvh_nodes = Vec::new();
+            let meshes = Self::convert_vec(meshes, |mesh| {
                 let material = Self::find_material(materials, &mesh.material).unwrap();
                 let winding_order = match mesh.winding_order {
                     json_format::WindingOrder::Clockwise => Clockwise,
                     json_format::WindingOrder::CounterClockwise => CounterClockwise
                 };
 
-                self.mesh_loader.load(&mesh.name, &mesh.file_name, material, winding_order).unwrap()
-            })
+                // TODO: Speed-up by bulk-reserving all mesh triangles once
+                self.mesh_loader.load(&mesh.name, &mesh.file_name, material, winding_order,
+                                      &mut mesh_triangles, &mut mesh_bvh_nodes).unwrap()
+            });
+            (mesh_triangles, mesh_bvh_nodes, meshes)
         } else {
-            vec![]
+            Default::default()
         }
     }
 

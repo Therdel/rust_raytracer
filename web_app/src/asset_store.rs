@@ -5,7 +5,7 @@ use std::io::Cursor;
 use lib_raytracer::object_file;
 use lib_raytracer::object_file::WindingOrder;
 use lib_raytracer::scene_file::MeshLoader;
-use lib_raytracer::raytracing::{MaterialIndex, Mesh};
+use lib_raytracer::raytracing::{bvh, MaterialIndex, Mesh, MeshTriangle};
 
 #[wasm_bindgen]
 extern "C" {
@@ -37,7 +37,9 @@ impl AssetStore {
 
 impl MeshLoader for &AssetStore {
     fn load(&self, name: &str, file_name: &str, material: MaterialIndex,
-            winding_order: WindingOrder) -> io::Result<Mesh> {
+            winding_order: WindingOrder,
+            mesh_triangles: &mut Vec<MeshTriangle>,
+            mesh_bvh_nodes: &mut Vec<bvh::Node>) -> io::Result<Mesh> {
         let mesh_obj = self.get_asset_bytes(file_name);
         let Some(mesh_obj) = mesh_obj else {
             panic!("Loading mesh '{file_name}' was undefined")
@@ -47,6 +49,8 @@ impl MeshLoader for &AssetStore {
         object_file::load_mesh(name.to_string(),
                                &mut mesh_obj_bufread,
                                material,
-                               winding_order)
+                               winding_order,
+                               mesh_triangles,
+                               mesh_bvh_nodes)
     }
 }

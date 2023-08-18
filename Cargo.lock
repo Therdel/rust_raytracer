@@ -511,6 +511,7 @@ dependencies = [
  "num-traits",
  "serde",
  "serde_json",
+ "tinyvec",
  "tobj",
 ]
 
@@ -1145,6 +1146,12 @@ dependencies = [
  "quote",
  "syn",
 ]
+
+[[package]]
+name = "tinyvec"
+version = "1.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "09b3661f17e86524eccd4371ab0429194e0d7c008abb45f7a7495b1719463c71"
 
 [[package]]
 name = "tobj"

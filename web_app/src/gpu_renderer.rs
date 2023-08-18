@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::io::Cursor;
 
-use lib_raytracer::raytracing::{Light, Material, Sphere, Triangle};
+use lib_raytracer::raytracing::{Light, Material, Sphere, MeshTriangle, bvh, Instance, Mesh};
 use lib_raytracer::{gpu_types, Scene};
 use lib_raytracer::scene_file::Parser;
 use nalgebra_glm as glm;
@@ -33,6 +33,10 @@ struct ComputePipelineAndBuffers {
     _materials_storage_buf: wgpu::Buffer,
     _planes_and_triangles_uniform_buf: wgpu::Buffer,
     _spheres_storage_buf: wgpu::Buffer,
+    _mesh_triangles_storage_buf: wgpu::Buffer,
+    _mesh_bvh_nodes_storage_buf: wgpu::Buffer,
+    _meshes_storage_buf: wgpu::Buffer,
+    _mesh_instances_storage_buf: wgpu::Buffer,
 
     compute_pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,
@@ -140,6 +144,14 @@ impl GpuRenderer {
 
         let spheres_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Sphere, gpu_types::Sphere>(Some("spheres_storage"), device, &scene.spheres);
 
+        let mesh_triangles_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<MeshTriangle, gpu_types::Triangle>(Some("mesh_triangles_storage"), device, &scene.mesh_triangles);
+
+        let mesh_bvh_nodes_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<bvh::Node, gpu_types::BvhNode>(Some("mesh_bvh_nodes_storage"), device, &scene.mesh_bvh_nodes);
+
+        let meshes_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Mesh, gpu_types::Mesh>(Some("meshes_storage"), device, &scene.meshes);
+
+        let mesh_instances_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Instance<Mesh>, gpu_types::MeshInstance>(Some("mesh_instances_storage"), device, &scene.mesh_instances);
+
         // A bind group defines how buffers are accessed by shaders.
         // It is to WebGPU what a descriptor set is to Vulkan.
         // `binding` here refers to the `binding` of a buffer in the shader (`layout(set = 0, binding = 0) buffer`).
@@ -188,6 +200,22 @@ impl GpuRenderer {
                     binding: 6,
                     resource: spheres_storage_buf.as_entire_binding(),
                 },
+                BindGroupEntry {
+                    binding: 7,
+                    resource: mesh_triangles_storage_buf.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 8,
+                    resource: mesh_bvh_nodes_storage_buf.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 9,
+                    resource: meshes_storage_buf.as_entire_binding(),
+                },
+                BindGroupEntry {
+                    binding: 10,
+                    resource: mesh_instances_storage_buf.as_entire_binding(),
+                },
             ],
         });
 
@@ -201,6 +229,10 @@ impl GpuRenderer {
             _materials_storage_buf: materials_storage_buf,
             _planes_and_triangles_uniform_buf: planes_and_triangles_uniform_buf,
             _spheres_storage_buf: spheres_storage_buf,
+            _mesh_triangles_storage_buf: mesh_triangles_storage_buf,
+            _mesh_bvh_nodes_storage_buf: mesh_bvh_nodes_storage_buf,
+            _meshes_storage_buf: meshes_storage_buf,
+            _mesh_instances_storage_buf: mesh_instances_storage_buf,
 
             compute_pipeline,
             bind_group,
@@ -258,6 +290,11 @@ impl GpuRenderer {
             _materials_storage_buf,
             _planes_and_triangles_uniform_buf,
             _spheres_storage_buf,
+            _mesh_triangles_storage_buf,
+            _mesh_bvh_nodes_storage_buf,
+            _meshes_storage_buf,
+            _mesh_instances_storage_buf,
+
             compute_pipeline,
             bind_group,
         } = &self.compute_pipeline_and_buffers;

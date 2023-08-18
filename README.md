@@ -60,3 +60,24 @@
     }
   ```
 - WGSL doesn't allow recursion
+- somehow, this has **huge** performance implications:
+  Evaluating `triangles_len()` in for's condition causes a ~600ms increase in runtime (from 10ms for the whole shader). Calling it once fixes it.
+  ```wgsl
+  @group(0) @binding(5) var<uniform> planes_and_triangles: PlanesAndTriangles;
+  struct PlanesAndTriangles {
+      planes: array<Plane, 64>,
+      triangles: array<Triangle, 64>,
+      planes_len: u32,
+      triangles_len: u32,
+      padding0: u32,
+      padding1: u32,
+  }
+  fn triangles_len() -> u32 { return planes_and_triangles.triangles_len; }
+  fn intersect_scene(ray: Ray) -> OptionHitpoint {
+      // omitted...
+      let triangles_len = triangles_len();
+      for (var i: u32 = 0u; i < triangles_len; i += 1u) {
+          // omitted...
+      }
+  }
+  ```

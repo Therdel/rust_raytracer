@@ -31,8 +31,8 @@ struct ComputePipelineAndBuffers {
     // scene buffers
     _lights_storage_buf: wgpu::Buffer,
     _materials_storage_buf: wgpu::Buffer,
+    _planes_and_triangles_uniform_buf: wgpu::Buffer,
     _spheres_storage_buf: wgpu::Buffer,
-    _triangles_storage_buf: wgpu::Buffer,
 
     compute_pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,
@@ -131,9 +131,14 @@ impl GpuRenderer {
 
         let materials_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Material, gpu_types::Material>(Some("materials_storage"), device, &scene.materials);
 
-        let spheres_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Sphere, gpu_types::Sphere>(Some("spheres_storage"), device, &scene.spheres);
+        let planes_and_triangles: gpu_types::PlanesAndTriangles = (&scene.planes[..], &scene.triangles[..]).try_into().unwrap();
+        let planes_and_triangles_uniform_buf = device.create_buffer_init(&BufferInitDescriptor {
+            label: Some("planes_and_triangles_uniform"),
+            contents: bytemuck::cast_slice(std::slice::from_ref(&planes_and_triangles)),
+            usage: BufferUsages::UNIFORM,
+        });
 
-        let triangles_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Triangle, gpu_types::Triangle>(Some("triangles_storage"), device, &scene.triangles);
+        let spheres_storage_buf = Self::wgsl_array_storage_buffer_from_primitives::<Sphere, gpu_types::Sphere>(Some("spheres_storage"), device, &scene.spheres);
 
         // A bind group defines how buffers are accessed by shaders.
         // It is to WebGPU what a descriptor set is to Vulkan.
@@ -177,11 +182,11 @@ impl GpuRenderer {
                 },
                 BindGroupEntry {
                     binding: 5,
-                    resource: spheres_storage_buf.as_entire_binding(),
+                    resource: planes_and_triangles_uniform_buf.as_entire_binding(),
                 },
                 BindGroupEntry {
                     binding: 6,
-                    resource: triangles_storage_buf.as_entire_binding(),
+                    resource: spheres_storage_buf.as_entire_binding(),
                 },
             ],
         });
@@ -192,9 +197,11 @@ impl GpuRenderer {
             camera_uniform_buf,
             _background_uniform_buf: background_uniform_buf,
 
-            _materials_storage_buf: materials_storage_buf,
             _lights_storage_buf: lights_storage_buf,
-            _triangles_storage_buf: triangles_storage_buf,
+            _materials_storage_buf: materials_storage_buf,
+            _planes_and_triangles_uniform_buf: planes_and_triangles_uniform_buf,
+            _spheres_storage_buf: spheres_storage_buf,
+
             compute_pipeline,
             bind_group,
         }
@@ -243,9 +250,10 @@ impl GpuRenderer {
             camera_uniform_buf,
             _background_uniform_buf,
 
-            _materials_storage_buf,
             _lights_storage_buf,
-            _triangles_storage_buf,
+            _materials_storage_buf,
+            _planes_and_triangles_uniform_buf,
+            _spheres_storage_buf,
             compute_pipeline,
             bind_group,
         } = &self.compute_pipeline_and_buffers;

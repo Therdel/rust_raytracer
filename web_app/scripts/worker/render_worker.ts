@@ -1,9 +1,10 @@
 import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
 import init, {Renderer, wasm_main} from "../../pkg/web_app.js"
+import {AssetStore} from "../main/asset_store.js"
 
 const SCENE_BASE_PATH = "../../res/scenes";
-const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
+const MODEL_BASE_PATH = "../../res/models";
 
 class RenderWorker {
     private index: number
@@ -15,61 +16,55 @@ class RenderWorker {
     private renderer: Renderer
 
     private static instance: RenderWorker
-    private static cheat_obj_file: Uint8Array
+    private static asset_store: AssetStore
 
     private constructor(index: number,
                         buffer: SharedArrayBuffer,
                         amount_workers: number,
-                        scene: Uint8Array,
                         width: number,
-                        height: number) {
+                        height: number,
+                        renderer: Renderer) {
         this.index = index
         this.canvas_buffer = buffer
         this.canvas_buffer_u8 = new Uint8Array(this.canvas_buffer)
         this.amount_workers = amount_workers
         this.width = width
         this.height = height
-        this.renderer = new Renderer(width,
-                                     height,
-                                     scene,
-                                     RenderWorker.cheat_obj_file);
+        this.renderer = renderer;
+    }
+
+    private static async create_renderer(scene_file_name: string, width: number, height: number): Promise<Renderer> {
+        await this.asset_store.prefetch_scene_meshes(scene_file_name)
+        const scene = await this.asset_store.load_scene(scene_file_name)
+        const renderer = Renderer.new(width,
+            height,
+            scene,
+            this.asset_store)
+        return renderer
     }
 
     private static getInstance() {
         return RenderWorker.instance
     }
 
-    static async init_cheat_obj() {
-        this.cheat_obj_file = await fetch_into_array(CHEAT_MODEL_PATH)
-    }
-
-    static async init(message: MessageToWorker.Init) {
+    static async init({ index, buffer, amount_workers,
+                        scene_file, width, height }: MessageToWorker.Init) {
         await init_wasm()
 
-        // FIXME: These fetches are not done by the workers in parallel.
-        //        Move to main?
-        await RenderWorker.init_cheat_obj()
-
-        const { index, buffer, amount_workers, scene_file: scene_file, width, height } = message;
-        const scene_url = SCENE_BASE_PATH + '/' + scene_file
-        const scene = await fetch_into_array(scene_url)
-
+        RenderWorker.asset_store = new AssetStore(SCENE_BASE_PATH, MODEL_BASE_PATH)
+        const renderer = await this.create_renderer(scene_file, width, height)
         RenderWorker.instance = new RenderWorker(index,
                                                  buffer,
                                                  amount_workers,
-                                                 scene,
                                                  width,
-                                                 height)
+                                                 height,
+                                                 renderer)
     }
 
-    static async scene_select({ scene_file: scene_file }: MessageToWorker.SceneSelect) {
+    static async scene_select({ scene_file }: MessageToWorker.SceneSelect) {
         const instance = RenderWorker.getInstance()
-        const scene_url = SCENE_BASE_PATH + '/' + scene_file
-        const scene = await fetch_into_array(scene_url)
-        instance.renderer = new Renderer(instance.width,
-                                         instance.height,
-                                         scene,
-                                         this.cheat_obj_file)
+        const renderer = await this.create_renderer(scene_file, instance.width, instance.height)
+        instance.renderer = renderer
     }
 
     static resize({ width, height, buffer }: MessageToWorker.Resize) {
@@ -105,11 +100,6 @@ async function init_wasm() {
     // Load wasm file, run its entry point
     await init();
     wasm_main();
-}
-
-async function fetch_into_array(path: string) {
-    let array_buffer = await (await fetch(path)).arrayBuffer();
-    return new Uint8Array(array_buffer);
 }
 
 async function on_message({ data: message }: MessageEvent<MessageToWorker.Message>) {

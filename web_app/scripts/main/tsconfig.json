@@ -16,6 +16,7 @@
   "files": [
     "controller.ts",
     "main.ts",
+    "asset_store.ts",
     "model.ts",
     "render_worker_pool.ts",
     "view.ts"

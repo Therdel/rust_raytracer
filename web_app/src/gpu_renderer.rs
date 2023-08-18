@@ -11,11 +11,10 @@ use wgpu::util::{DeviceExt, BufferInitDescriptor};
 
 use crate::color::ColorRgbaU8;
 use crate::mesh_fetcher::MeshFetcher;
-use crate::mesh_store::MeshStore;
+use crate::asset_store::AssetStore;
 
 #[wasm_bindgen]
 pub struct GpuRenderer {
-    _mesh_store: MeshStore,
     scene: Scene,
 
     device: Device,
@@ -42,10 +41,10 @@ struct ComputePipelineAndBuffers {
 #[wasm_bindgen]
 impl GpuRenderer {
     pub async fn new(canvas_width: usize, canvas_height: usize,
-                     scene: &[u8], mesh_store: MeshStore) -> GpuRenderer {
+                     scene: &[u8], asset_store: AssetStore) -> GpuRenderer {
         let mut scene = Parser {
             file_reader: Cursor::new(scene),
-            mesh_loader: MeshFetcher { mesh_store: &mesh_store },
+            mesh_loader: MeshFetcher { asset_store: &asset_store },
         }.parse_json().unwrap();
         scene.resize_screen(canvas_width, canvas_height);
 
@@ -54,7 +53,6 @@ impl GpuRenderer {
         let compute_pipeline_and_buffers = Self::setup_pipeline_and_buffers(&device, &scene);
 
         GpuRenderer {
-            _mesh_store: mesh_store,
             scene,
 
             device,

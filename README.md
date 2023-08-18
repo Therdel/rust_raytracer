@@ -10,11 +10,12 @@
 
 ### TODO
 [x] rename "exercise1" shit
+[x] Cheat obj --> loader
+  [x] use `MeshFetcher` in CPU renderer
+[x] fetch objs from workers
 [ ] web_app: put wasm-bindgen into build script
 [ ] web_app: copy resources within build script - https://github.com/sotrh/learn-wgpu/blob/0.13/code/intermediate/tutorial12-camera/build.rs
-[ ] Cheat obj --> loader
 [ ] Load cheat objects from main?
-[ ] fetch objs from workers
 [ ] do cheat obj BVHs in seperate worker, async, while displaying cornell in parallel
     [ ] BVH serde to pass between workers
         --> bitcode crate: https://docs.rs/bitcode/latest/bitcode/

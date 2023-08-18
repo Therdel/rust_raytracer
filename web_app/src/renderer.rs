@@ -9,7 +9,8 @@ use lib_raytracer::raytracing::raytracer::Raytracer;
 
 use crate::utils;
 use crate::color::{ColorRgbaU8, QuantizeToU8};
-use crate::fake_same_mesh_loader::FakeSameMeshLoader;
+use crate::mesh_fetcher::MeshFetcher;
+use crate::asset_store::AssetStore;
 
 #[wasm_bindgen]
 pub struct Renderer {
@@ -18,12 +19,11 @@ pub struct Renderer {
 
 #[wasm_bindgen]
 impl Renderer {
-    #[wasm_bindgen(constructor)]
     pub fn new(width: usize, height: usize,
-               scene: &[u8], mesh_obj: &[u8]) -> Self {
+               scene: &[u8], asset_store: AssetStore) -> Self {
         let mut scene = Parser {
             file_reader: Cursor::new(scene),
-            mesh_loader: FakeSameMeshLoader { mesh_obj },
+            mesh_loader: MeshFetcher { asset_store: &asset_store },
         }.parse_json().unwrap();
         scene.resize_screen(width, height);
 

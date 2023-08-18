@@ -31,13 +31,13 @@ export class CpuModel implements Model {
     private worker_image_buffers: SharedArrayBuffer[]
     public readonly render_worker_pool: RenderWorkerPool
 
-    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D) {
+    constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D) {
         this.view = view
         this.controller = controller
 
         this.state = new CpuModelState.InitPingPong(this)
 
-        this.canvas = canvas
+        this.canvas = canvas_context.canvas
         this.canvas_context = canvas_context
         this.image_data = this.init_image_data()
 
@@ -299,14 +299,14 @@ export class GpuModel implements Model {
 
     private readonly gpu_renderer: GpuRenderer
 
-    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D, gpu_renderer: GpuRenderer) {
+    constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, gpu_renderer: GpuRenderer) {
         this.view = view
         this.controller = controller
 
         this.state = new GpuModelState.AcceptUserControl(this)
 
-        this.canvas = canvas
         this.canvas_context = canvas_context
+        this.canvas = canvas_context.canvas
         this.image_data = this.init_image_data()
 
         this.gpu_renderer = gpu_renderer

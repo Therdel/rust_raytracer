@@ -1,6 +1,6 @@
 use nalgebra_glm as glm;
 use crate::raytracing::transform::matrix;
-use crate::raytracing::{Background, self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Mesh, Instance};
+use crate::raytracing::{Background, bvh, self, Ray, Hitpoint, Sphere, Plane, Triangle, Light, Camera, Material, Mesh, Instance, MeshTriangle};
 use crate::utils;
 
 pub struct Scene {
@@ -13,6 +13,8 @@ pub struct Scene {
     pub planes: Vec<Plane>,
     pub spheres: Vec<Sphere>,
     pub triangles: Vec<Triangle>,
+    pub mesh_triangles: Vec<MeshTriangle>,
+    pub mesh_bvh_nodes: Vec<bvh::Node>,
     pub meshes: Vec<Mesh>,
     pub mesh_instances: Vec<Instance<Mesh>>,
 }
@@ -29,6 +31,8 @@ impl Scene {
             planes: vec![],
             spheres: vec![],
             triangles: vec![],
+            mesh_triangles: vec![],
+            mesh_bvh_nodes: vec![],
             meshes: vec![],
             mesh_instances: vec![],
         }
@@ -125,10 +129,11 @@ impl raytracing::Intersect for Scene {
         check_hitpoint(self.planes.as_slice().intersect(ray));
         check_hitpoint(self.spheres.as_slice().intersect(ray));
         check_hitpoint(self.triangles.as_slice().intersect(ray));
-        self.mesh_instances.iter()
-            .zip(std::iter::repeat(self.meshes.as_slice()))
-            .map(|tuple| tuple.intersect(ray))
-            .for_each(check_hitpoint);
+
+        for mesh_instance in &self.mesh_instances {
+            let hitpoint = (mesh_instance, self).intersect(ray);
+            check_hitpoint(hitpoint);
+        };
 
         closest_hitpoint
     }

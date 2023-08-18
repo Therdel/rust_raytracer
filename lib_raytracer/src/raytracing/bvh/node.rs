@@ -1,17 +1,15 @@
-use crate::raytracing::{AABB, Triangle};
+use tinyvec::*;
+use crate::raytracing::AABB;
 
 pub type NodeIndex = usize;
 
-pub type OptNodeIndex = Option<NodeIndex>;
-
 pub enum NodeType {
     Node {
-        child_left: OptNodeIndex,
-        child_right: OptNodeIndex
+        child_left: NodeIndex,
+        child_right: NodeIndex
     },
     Leaf {
-        // TODO: Try storing the Triangles locally
-        triangles: Vec<Triangle>
+        triangle_indices: ArrayVec<[usize; Node::LEAF_TRIANGLES]>,
     },
 }
 
@@ -21,8 +19,11 @@ pub struct Node {
 }
 
 impl Node {
+    pub const LEAF_TRIANGLES: usize = 5;
+
     pub fn create_node(aabb: AABB,
-                       child_left: OptNodeIndex, child_right: OptNodeIndex) -> Node {
+                       child_left: NodeIndex,
+                       child_right: NodeIndex) -> Self {
         Node {
             aabb,
             content: NodeType::Node { child_left, child_right },
@@ -30,10 +31,15 @@ impl Node {
     }
 
     pub fn create_leaf(aabb: AABB,
-                       triangles: Vec<Triangle>) -> Node {
+                       triangle_indices: impl Clone + Iterator<Item=usize>) -> Self {
+        let triangles_len = triangle_indices.clone().count();
+        if triangles_len > Node::LEAF_TRIANGLES {
+            panic!("Tried to create BVH leaf node with {triangles_len} triangles, higher than the maximum of {}", Node::LEAF_TRIANGLES)
+        }
+        let triangle_indices = ArrayVec::from_iter(triangle_indices);
         Node {
             aabb,
-            content: NodeType::Leaf { triangles },
+            content: NodeType::Leaf { triangle_indices },
         }
     }
 }

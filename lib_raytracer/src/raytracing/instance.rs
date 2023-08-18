@@ -1,9 +1,9 @@
 use std::marker::PhantomData;
 
-use crate::raytracing::{MaterialIndex, Intersect, transform::matrix};
+use crate::raytracing::{MaterialIndex, transform::matrix};
 use nalgebra_glm as glm;
 
-pub struct Instance<Primitive: Intersect> {
+pub struct Instance<Primitive> {
     pub primitive_index: usize,
     pub rotation_scale: glm::Mat4,
     pub rotation_scale_inverse: glm::Mat4,
@@ -13,7 +13,7 @@ pub struct Instance<Primitive: Intersect> {
     _phantom: PhantomData<Primitive>,
 }
 
-impl<Primitive: Intersect> Instance<Primitive> {
+impl<Primitive> Instance<Primitive> {
     pub fn new(
         primitive_index: usize,
         position: glm::Vec3,

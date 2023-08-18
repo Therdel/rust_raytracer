@@ -18,7 +18,7 @@ impl Plane {
             normal: normal.normalize(),
             distance,
             material,
-            _force_constructor_use: PhantomData::default()
+            _force_constructor_use: PhantomData
         }
     }
 }

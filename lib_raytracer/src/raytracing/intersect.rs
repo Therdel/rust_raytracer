@@ -2,9 +2,9 @@ use nalgebra_glm as glm;
 use num_traits::identities::Zero;
 use num_traits::Signed;
 
-use crate::raytracing::{AABB, Hitpoint, Instance, MaterialIndex, Mesh, Plane, Ray, Sphere, Triangle};
+use crate::raytracing::{AABB, Hitpoint, Instance, MeshTriangle, MaterialIndex, Mesh, Plane, Ray, Sphere, Triangle};
 use crate::raytracing::bvh::{BVH, Node, NodeType};
-use crate::utils;
+use crate::{utils, Scene};
 
 const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-4;
 
@@ -174,6 +174,14 @@ impl Intersect for Triangle {
     }
 }
 
+impl Intersect for MeshTriangle {
+    type Result = Hitpoint;
+
+    fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
+        self.0.intersect(ray)
+    }
+}
+
 impl Intersect for AABB {
     type Result = ();
 
@@ -217,54 +225,72 @@ impl Intersect for AABB {
     }
 }
 
-impl Intersect for BVH {
+impl Intersect for (&BVH, &Scene) {
     type Result = Hitpoint;
     
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
-        fn check_node(node: &Node, bvh: &BVH, ray: &Ray,
-                          closest_hitpoint: &mut Option<Hitpoint>) {
+        let (bvh, scene) = *self;
+        let node_indices = &bvh.bvh_node_indices;
+        let mesh_triangles = &scene.mesh_triangles;
+        let mesh_bvh_nodes = &scene.mesh_bvh_nodes;
+
+        if node_indices.is_empty() {
+            return None;
+        }
+
+        fn check_node(node: &Node, nodes: &[Node], triangles: &[MeshTriangle], ray: &Ray,
+                      closest_hitpoint: &mut Option<Hitpoint>) {
             if node.aabb.intersect(ray).is_some() {
                 match &node.content {
-                    NodeType::Node { child_left, child_right } => {
-                        let node_left = bvh.get_node(child_left.expect("Left child is empty"));
-                        check_node(node_left, bvh, ray, closest_hitpoint);
+                    &NodeType::Node { child_left, child_right } => {
+                        let node_left = &nodes[child_left];
+                        check_node(node_left, nodes, triangles, ray, closest_hitpoint);
 
-                        let node_right = bvh.get_node(child_right.expect("Right child is empty"));
-                        check_node(node_right, bvh, ray, closest_hitpoint);
+                        let node_right = &nodes[child_right];
+                        check_node(node_right, nodes, triangles, ray, closest_hitpoint);
                     }
-                    NodeType::Leaf { triangles } => {
-                        let hitpoint = triangles.as_slice().intersect(ray);
-                        utils::take_hitpoint_if_closer(closest_hitpoint, hitpoint);
+                    NodeType::Leaf { triangle_indices } => {
+                        for index in triangle_indices {
+                            let triangle = &triangles[*index].0;
+                            let hitpoint = triangle.intersect(ray);
+                            utils::take_hitpoint_if_closer(closest_hitpoint, hitpoint);
+                        }
                     }
                 }
             }
         }
         let mut closest_hitpoint = None;
-        check_node(self.get_root(), self, ray, &mut closest_hitpoint);
+        let root = &mesh_bvh_nodes[node_indices.start];
+        check_node(root, mesh_bvh_nodes, mesh_triangles, ray, &mut closest_hitpoint);
         closest_hitpoint
     }
 }
 
-impl Intersect for Mesh {
+impl Intersect for (&Mesh, &Scene) {
     type Result = Hitpoint;
 
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
+        let (mesh, scene) = *self;
         const USE_BVH: bool = true;
         if USE_BVH {
-            self.bvh.intersect(ray)
+            (&mesh.bvh, scene).intersect(ray)
+        } else if !mesh.triangle_indices.is_empty() {
+            let Some(mesh_triangles) = scene.mesh_triangles.get(mesh.triangle_indices.clone()) else {
+                panic!("Mesh '{}'  triangle indices ({:?}) out of bounds", mesh.name, mesh.triangle_indices);
+            };
+            mesh_triangles.intersect(ray)
         } else {
-            self.triangles.as_slice().intersect(ray)
+            None
         }
     }
 }
 
-impl<Primitive> Intersect for (&Instance<Primitive>, &[Primitive]) 
-    where Primitive: Intersect<Result = Hitpoint> {
-    type Result = Primitive::Result;
+impl<'a> Intersect for (&'a Instance<Mesh>, &Scene) {
+    type Result = Hitpoint;
 
-    fn intersect(&self, ray: &Ray) -> Option<Self::Result>{
-        let (instance, primitives) = *self;
-        let primitive = &primitives[instance.primitive_index];
+    fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
+        let (instance, scene) = *self;
+        let mesh = &scene.meshes[instance.primitive_index];
 
         let transform = |vec: &glm::Vec3, mat: &glm::Mat4| -> glm::Vec3 {
             let homogeneous_transformed = *mat * vec.push(1.0);
@@ -279,7 +305,7 @@ impl<Primitive> Intersect for (&Instance<Primitive>, &[Primitive])
         );
         let transformed_ray = Ray { origin: transformed_origin, direction: transformed_direction };
 
-        let mut hitpoint = primitive.intersect(&transformed_ray)?;
+        let mut hitpoint = (mesh, scene).intersect(&transformed_ray)?;
         // transform hitpoint back into world-local coordinate-system
         hitpoint.position = transform(&hitpoint.position, &instance.model);
         hitpoint.hit_normal = glm::normalize(
@@ -296,6 +322,45 @@ impl<Primitive> Intersect for (&Instance<Primitive>, &[Primitive])
         Some(hitpoint)
     }
 }
+
+// impl<Primitive> Intersect for (&Instance<Primitive>, &[Primitive]) 
+//     where Primitive: Intersect<Result = Hitpoint> {
+//     type Result = Primitive::Result;
+
+//     fn intersect(&self, ray: &Ray) -> Option<Self::Result>{
+//         let (instance, primitives) = *self;
+//         let primitive = &primitives[instance.primitive_index];
+
+//         let transform = |vec: &glm::Vec3, mat: &glm::Mat4| -> glm::Vec3 {
+//             let homogeneous_transformed = *mat * vec.push(1.0);
+//             // no perspective divide needed as we're only using translate, scale & rotate
+//             homogeneous_transformed.xyz()
+//         };
+
+//         // transform ray into model-local coordinate-system
+//         let transformed_origin = transform(&ray.origin, &instance.model_inverse);
+//         let transformed_direction = glm::normalize(
+//             &transform(&ray.direction, &instance.rotation_scale_inverse)
+//         );
+//         let transformed_ray = Ray { origin: transformed_origin, direction: transformed_direction };
+
+//         let mut hitpoint = primitive.intersect(&transformed_ray)?;
+//         // transform hitpoint back into world-local coordinate-system
+//         hitpoint.position = transform(&hitpoint.position, &instance.model);
+//         hitpoint.hit_normal = glm::normalize(
+//             &transform(&hitpoint.hit_normal, &instance.rotation_scale)
+//         );
+//         hitpoint.position_for_refraction = transform(&hitpoint.position_for_refraction, &instance.model);
+
+//         let t_in_world = glm::distance(&ray.origin, &hitpoint.position);
+//         hitpoint.t = t_in_world;
+
+//         if let Some(material) = instance.material_override {
+//             hitpoint.material = material;
+//         }
+//         Some(hitpoint)
+//     }
+// }
 
 fn create_hitpoint(t: f32, hit_position: &glm::Vec3, ray: &Ray, surface_normal: &glm::Vec3, hit_normal: &glm::Vec3,
                    material: MaterialIndex) -> Hitpoint {

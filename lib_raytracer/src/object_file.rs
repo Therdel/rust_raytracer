@@ -1,14 +1,14 @@
 use std::error::Error;
 use std::fmt::{self, Debug, Display};
 use std::io::{self, BufRead, ErrorKind};
-use std::ops::Neg;
+use std::ops::{Neg, Range};
 use std::path::Path;
 
 use nalgebra_glm as glm;
 use tobj::{LoadError, LoadOptions, Model, MTLLoadResult};
 
-use crate::raytracing::{Mesh, Triangle, MaterialIndex};
-use crate::raytracing::bvh::BVH;
+use crate::raytracing::{Mesh, Triangle, MeshTriangle, MaterialIndex};
+use crate::raytracing::bvh;
 
 pub enum WindingOrder {
     Clockwise,
@@ -18,12 +18,18 @@ pub enum WindingOrder {
 pub fn load_mesh(name: String,
                  obj_buffer: &mut impl BufRead,
                  material: MaterialIndex,
-                 winding_order: WindingOrder) -> io::Result<Mesh> {
+                 winding_order: WindingOrder,
+                 mesh_triangles: &mut Vec<MeshTriangle>,
+                 mesh_bvh_nodes: &mut Vec<bvh::Node>) -> io::Result<Mesh> {
     let models = parse_models_from_obj_buffer(&name, obj_buffer)?;
 
     let amount_triangles_total = check_and_count_triangles(&name, &models)?;
-    let mut triangles = vec![];
-    triangles.reserve_exact(amount_triangles_total);
+    mesh_triangles.reserve_exact(amount_triangles_total);
+    let triangle_indices: Range<usize> =
+        match amount_triangles_total > 0 {
+            true => mesh_triangles.len() .. mesh_triangles.len() + amount_triangles_total,
+            false => 0..0
+        };
 
     for model in models {
         let vertices_flat = &model.mesh.positions;
@@ -42,14 +48,14 @@ pub fn load_mesh(name: String,
             }
 
             let triangle = Triangle::new(vertices, normals, material);
-            triangles.push(triangle);
+            mesh_triangles.push(MeshTriangle(triangle));
         }
     }
 
-    let bvh = BVH::from(triangles.clone());
+    let bvh = bvh::BVH::build(triangle_indices.clone(), mesh_triangles, mesh_bvh_nodes);
     Ok(Mesh {
         name,
-        triangles,
+        triangle_indices,
         bvh,
     })
 }

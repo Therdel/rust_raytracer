@@ -34,19 +34,16 @@ export class CpuModel implements Model {
     private worker_image_buffers: SharedArrayBuffer[]
     public render_worker_pool: RenderWorkerPool
 
-    private constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore) {
+    private constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore) {
         this.view = view
         this.controller = controller
 
         this.asset_store = asset_store
         const scene_file_name = controller.get_current_scene_file_name()
-        const init_set_scene = new MessageToWorker.SetScene(scene_file_name, this.asset_store.serialize())
-        for (const asset of this.asset_store.iterate()) {
-            console.debug(`asset name: ${asset[0]}`)
-        }
+        const init_set_scene = new MessageToWorker.SetScene(scene_file_name, this.asset_store.getAssetsMap())
         this.state = new InitPingPong(this, init_set_scene)
 
-        this.canvas = canvas
+        this.canvas = canvas_context.canvas
         this.canvas_context = canvas_context
         this.image_data = this.init_image_data()
 
@@ -58,17 +55,17 @@ export class CpuModel implements Model {
         this.render_worker_pool = new RenderWorkerPool(delegate, this.amount_workers)
     }
 
-    static async create(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D): Promise<CpuModel> {
+    static async create(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D): Promise<CpuModel> {
         const asset_store = new AssetStore()
         const scene_file_name = controller.get_current_scene_file_name()
-        await asset_store.put_scene_and_cache_assets(scene_file_name)
+        await asset_store.putScene(scene_file_name)
 
-        return new CpuModel(view, controller, canvas, canvas_context, asset_store)
+        return new CpuModel(view, controller, canvas_context, asset_store)
     }
 
     async set_scene(scene_name: string): Promise<DidHandleMessage> {
-        await this.asset_store.put_scene_and_cache_assets(scene_name)
-        const set_scene = new MessageToWorker.SetScene(scene_name, this.asset_store.serialize())
+        await this.asset_store.putScene(scene_name)
+        const set_scene = new MessageToWorker.SetScene(scene_name, this.asset_store.getAssetsMap())
         return this.state.set_scene(set_scene)
     }
 
@@ -309,19 +306,17 @@ export class GpuModel implements Model {
 
     private state: GpuModelState.State
 
-    private readonly canvas: HTMLCanvasElement
     private readonly canvas_context: CanvasRenderingContext2D
     private image_data: ImageData
 
     private readonly gpu_renderer: GpuRenderer
 
-    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D, gpu_renderer: GpuRenderer) {
+    constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, gpu_renderer: GpuRenderer) {
         this.view = view
         this.controller = controller
 
         this.state = new GpuModelState.AcceptUserControl(this)
 
-        this.canvas = canvas
         this.canvas_context = canvas_context
         this.image_data = this.init_image_data()
 
@@ -329,13 +324,14 @@ export class GpuModel implements Model {
         this.render()
     }
 
-    static async create(view: View, controller: Controller, canvas: HTMLCanvasElement, canvas_context: CanvasRenderingContext2D): Promise<GpuModel> {
+    static async create(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D): Promise<GpuModel> {
         const asset_store = new AssetStore()
         const scene_file_name = controller.get_current_scene_file_name()
-        await asset_store.put_scene_and_cache_assets(scene_file_name)
+        await asset_store.putScene(scene_file_name)
         
+        const canvas = canvas_context.canvas
         const gpu_renderer = await GpuRenderer.new(canvas.width, canvas.height, asset_store, scene_file_name)
-        const gpu_model = new GpuModel(view, controller, canvas, canvas_context, gpu_renderer)
+        const gpu_model = new GpuModel(view, controller, canvas_context, gpu_renderer)
         
         return gpu_model
     }
@@ -346,7 +342,8 @@ export class GpuModel implements Model {
     }
 
     init_image_data(): ImageData {
-        const [width, height] = [this.canvas.width, this.canvas.height]
+        const canvas = this.canvas_context.canvas
+        const [width, height] = [canvas.width, canvas.height]
         this.image_data = this.canvas_context.createImageData(width, height)
         return this.image_data
     }

@@ -9,8 +9,8 @@ use wasm_bindgen::prelude::*;
 use wgpu::{BufferUsages, Device, Queue, BindGroupDescriptor, BindGroupEntry, BufferDescriptor, ShaderModuleDescriptor, CommandEncoderDescriptor};
 use wgpu::util::{DeviceExt, BufferInitDescriptor};
 
-use crate::color::ColorRgbaU8;
 use crate::asset_store::AssetStore;
+use crate::color::ColorRgbaU8;
 
 #[wasm_bindgen]
 pub struct GpuRenderer {
@@ -41,11 +41,11 @@ struct ComputePipelineAndBuffers {
 impl GpuRenderer {
     pub async fn new(canvas_width: usize, canvas_height: usize,
                      asset_store: AssetStore, scene_file_name: &str) -> GpuRenderer {
-        let Some(scene_bytes): Option<Vec<u8>> = asset_store.get_scene_bytes(scene_file_name) else {
+        let Some(scene_buffer): Option<Vec<u8>> = asset_store.get_asset_bytes(scene_file_name) else {
             panic!("Loading scene '{scene_file_name}' was undefined")
         };
         let mut scene = Parser {
-            file_reader: Cursor::new(scene_bytes),
+            file_reader: Cursor::new(scene_buffer),
             mesh_loader: &asset_store,
         }.parse_json().unwrap();
         scene.resize_screen(canvas_width, canvas_height);

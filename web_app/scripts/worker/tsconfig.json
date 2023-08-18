@@ -17,6 +17,7 @@
     "render_worker.ts"
   ],
   "references": [
-    { "path": "../messages"}
+    { "path": "../messages"},
+    { "path": "../main"}
   ]
 }

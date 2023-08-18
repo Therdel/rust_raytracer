@@ -45,21 +45,10 @@ class RenderWorker {
         await this.set_scene(set_scene)
     }
 
-    static async set_scene({scene_url_or_filename, assets_serialized}: MessageToWorker.SetScene) {
+    static set_scene({scene_url_or_filename, assets_serialized}: MessageToWorker.SetScene) {
         const instance = RenderWorker.getInstance()
-
-        const asset_store = AssetStore.deserialize(assets_serialized)
-        for (const [asset_name, asset_buffer] of asset_store.iterate()) {
-            const asset_buffer_u8 = new Uint8Array(asset_buffer)
-            instance.renderer.load_mesh(asset_name, asset_buffer_u8)
-        }
-
-        const scene_file_buffer = await asset_store.get_scene(scene_url_or_filename)
-        if (scene_file_buffer === undefined) {
-            throw new Error(`SetScene message with scene missing from asset store`)
-        }
-        const scene_file_buffer_u8 = new Uint8Array(scene_file_buffer)
-        instance.renderer.set_scene(scene_file_buffer_u8)
+        const asset_store = AssetStore.fromMap(assets_serialized)
+        instance.renderer.set_scene(asset_store, scene_url_or_filename)
     }
 
     static resize({ width, height, buffer }: MessageToWorker.Resize) {

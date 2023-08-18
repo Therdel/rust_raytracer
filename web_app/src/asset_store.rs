@@ -13,24 +13,16 @@ extern "C" {
     pub type AssetStore;
 
     #[wasm_bindgen(method)]
-    fn get_mesh(this: &AssetStore, name: &str) -> JsValue;
-
-    #[wasm_bindgen(method)]
-    fn get_scene(this: &AssetStore, name: &str) -> JsValue;
+    fn get(this: &AssetStore, key: &str) -> JsValue;
 }
 
 impl AssetStore {
-    pub fn get_scene_bytes(&self, name: &str) -> Option<Vec<u8>> {
-        let js_val = self.get_scene(name);
-        Self::mesh_or_scene_js_value_to_bytes(js_val)
+    pub fn get_asset_bytes(&self, name: &str) -> Option<Vec<u8>> {
+        let js_val = self.get(name);
+        Self::asset_js_value_to_bytes(js_val)
     }
 
-    pub fn get_mesh_bytes(&self, name: &str) -> Option<Vec<u8>> {
-        let js_val = self.get_mesh(name);
-        Self::mesh_or_scene_js_value_to_bytes(js_val)
-    }
-
-    fn mesh_or_scene_js_value_to_bytes(value: JsValue) -> Option<Vec<u8>> {
+    fn asset_js_value_to_bytes(value: JsValue) -> Option<Vec<u8>> {
         if value.is_undefined() || value.is_null() {
             return None;
         }
@@ -46,7 +38,7 @@ impl AssetStore {
 impl MeshLoader for &AssetStore {
     fn load(&self, name: &str, file_name: &str, material: MaterialIndex,
             winding_order: WindingOrder) -> io::Result<Mesh> {
-        let mesh_obj = self.get_mesh_bytes(file_name);
+        let mesh_obj = self.get_asset_bytes(file_name);
         let Some(mesh_obj) = mesh_obj else {
             panic!("Loading mesh '{file_name}' was undefined")
         };

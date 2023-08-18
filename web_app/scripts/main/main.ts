@@ -24,10 +24,10 @@ async function main() {
         // TODO: wasm: Animator - shared by CPU/GPU
     const USE_GPU = true
     if (USE_GPU) {
-        const gpu_model = await GpuModel.create(view, controller, canvas, canvas_context)
+        const gpu_model = await GpuModel.create(view, controller, canvas_context)
         controller.set_model(gpu_model)
     } else {
-        const cpu_model = await CpuModel.create(view, controller, canvas, canvas_context)
+        const cpu_model = await CpuModel.create(view, controller, canvas_context)
         controller.set_model(cpu_model)
     }
 }

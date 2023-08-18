@@ -78,17 +78,6 @@
       "material_type": "Phong"
     }
   ],
-  "spheres": [
-    {
-      "center": {
-        "x": 0,
-        "y": 0,
-        "z": -2
-      },
-      "radius": 0.5,
-      "material": "chameleon"
-    }
-  ],
   "meshes": [
     {
       "name": "primitive",
@@ -97,7 +86,7 @@
       "material": "chameleon"
     }
   ],
-  "meshInstances": [
+  "mesh_instances": [
     {
       "mesh": "primitive",
       "position": {
@@ -105,7 +94,7 @@
         "y": 0,
         "z": -2
       },
-      "orientation": {
+      "orientation_degrees": {
         "x": 0,
         "y": 0,
         "z": 0

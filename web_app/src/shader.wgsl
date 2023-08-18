@@ -73,6 +73,7 @@ struct Material {
     index_inner: f32,
     /// only set on material_type == ReflectAndRefract
     index_outer: f32,
+    _padding: u32
 }
 
 /// TODO: Use pointers
@@ -141,7 +142,9 @@ struct Sphere {
     center: vec3f,
     radius: f32,
     material: u32,
-    _padding: array<u32, 3>,
+    _padding0: u32,
+    _padding1: u32,
+    _padding2: u32,
 }
 
 /// TODO: Use pointers

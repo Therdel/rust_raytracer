@@ -15,7 +15,7 @@ impl From<&crate::Scene> for Camera {
         Self {
             screen_to_world: *value.screen_to_world(),
             screen_dimensions: value.camera().screen_dimensions,
-            _padding: Default::default(),
+            _padding: Default::default()
         }
     }
 }
@@ -135,7 +135,7 @@ pub struct Sphere {
     material: u32,
     /// array stride padding - make size a multiple of 16 to correctly align the vec3 elements
     /// ([source](https://stackoverflow.com/a/75525055))
-    _padding: [u8; 12],
+    _padding: [u32; 3],
 }
 
 impl From<&raytracing::Sphere> for Sphere {
@@ -164,7 +164,7 @@ pub struct Material {
     index_inner: f32,
     /// only set on material_type == ReflectAndRefract
     index_outer: f32,
-    _padding: [u8; 4],
+    _padding: [u32; 1],
 }
 
 impl From<&raytracing::Material> for Material {

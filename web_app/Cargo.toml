@@ -31,6 +31,8 @@ futures-intrusive = "0.4"
 # `instant/wasm-bindgen` makes sure it will use `js_sys` for getting the system time
 # `instant/inaccurate` uses `Date.now()` instead of `performance.now()`
 instant = {version = "0.1.12", features = ["wasm-bindgen", "inaccurate"] }
+# fix wasm*-unknown-unknown target from indirect getrandom dependency
+getrandom = { version = "0.2", features = ["js"] }
 
 log = "0.4.19"
 js-sys = "0.3.64"

@@ -236,12 +236,16 @@ impl GpuRenderer {
             .map_err(|err| err.to_string())
     }
 
-    pub async fn render(&mut self, canvas_u8: &mut [u8]) {
+    fn camera_bob(&mut self) {
         let millisecons = js_sys::Date::now();
         self.scene.update_camera(|camera| {
             camera.position.x = ((millisecons/200.0).cos()*0.1) as f32;
             camera.position.z = ((millisecons/200.0).sin()*0.1) as f32;
         });
+    }
+
+    pub async fn render(&mut self, canvas_u8: &mut [u8]) {
+        self.camera_bob();
         let canvas_dimensions = self.scene.camera().screen_dimensions;
 
         let ComputePipelineAndBuffers {

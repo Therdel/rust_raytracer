@@ -1,6 +1,7 @@
 const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-4;
 
-const DEPTH_MAP_SCALE: f32 = 0.85;
+const DEPTH_MAP_EXP_BASE: f32 = 2.0f;
+const DEPTH_MAP_BRIGHTNESS_SCALE: f32 = 1.5f;
 
 const MAX_RAY_RECURSION_DEPTH: u32 = 10u;
 const REFLECTION_DIM_FACTOR: f32 = 0.8;
@@ -354,7 +355,7 @@ fn depth_map(ray: Ray) -> OptionColorRgb {
     let option_hitpoint = intersect_scene(ray);
 
     if (option_hitpoint.is_some) {
-        let brightness = option_hitpoint.value.t * DEPTH_MAP_SCALE;
+        let brightness = pow(DEPTH_MAP_EXP_BASE, -option_hitpoint.value.t) * DEPTH_MAP_BRIGHTNESS_SCALE;
         let color = ColorRgb(brightness);
         return OptionColorRgb(true, color);
     } else {

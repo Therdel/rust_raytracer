@@ -4,6 +4,8 @@ use crate::raytracing::color::{ColorRgb, self};
 use nalgebra_glm as glm;
 use num_traits::{Zero, zero};
 
+const DEPTH_MAP_EXP_BASE: f32 = 2.0;
+const DEPTH_MAP_BRIGHTNESS_SCALE: f32 = 1.5;
 const MAX_RAY_RECURSION_DEPTH: usize = 10;
 const REFLECTION_DIM_FACTOR: f32 = 0.8;
 
@@ -19,8 +21,7 @@ impl<'scene> Raytracer<'scene> {
     pub fn depth_map(&self, ray: &Ray) -> Option<ColorRgb> {
         let hitpoint = self.scene.intersect(ray)?;
 
-        let scale = 1.0 / 10.0;
-        let brightness = hitpoint.t * scale;
+        let brightness = f32::powf(DEPTH_MAP_EXP_BASE, -hitpoint.t) * DEPTH_MAP_BRIGHTNESS_SCALE;
         let color = glm::vec3(brightness, brightness, brightness);
 
         Some(color)

@@ -262,3 +262,124 @@ impl From<&raytracing::Triangle> for Triangle {
         }
     }
 }
+
+impl From<&raytracing::MeshTriangle> for Triangle {
+    fn from(value: &raytracing::MeshTriangle) -> Self {
+        Self {
+            vertices: value.0.vertices.map(|v| glm::vec3_to_vec4(&v)),
+            normals: value.0.normals.map(|v| glm::vec3_to_vec4(&v)),
+            normal: *value.0.normal(),
+            material: value.0.material.0 as _,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+/// WebGPU version with altered alignment & padding. ([source](https://stackoverflow.com/a/75525055))
+pub struct BvhNode {
+    aabb_min: glm::Vec4,
+    aabb_max: glm::Vec3,
+    is_leaf: u32,
+    child_left_index: u32,
+    child_right_index: u32,
+    triangle_indices: [u32; raytracing::bvh::Node::LEAF_TRIANGLES],
+    triangle_indices_len: u32,
+}
+
+impl From<&raytracing::bvh::Node> for BvhNode {
+    fn from(value: &raytracing::bvh::Node) -> Self {
+        let is_leaf;
+        let child_left_index;
+        let child_right_index;
+        let triangle_indices: [u32; raytracing::bvh::Node::LEAF_TRIANGLES];
+        let triangle_indices_len;
+
+        match &value.content {
+            &raytracing::bvh::NodeType::Node { child_left: value_child_left, child_right: value_child_right } => {
+                is_leaf = 0;
+                child_left_index = value_child_left as _;
+                child_right_index = value_child_right as _;
+                triangle_indices = Default::default();
+                triangle_indices_len = Default::default();
+            },
+            raytracing::bvh::NodeType::Leaf { triangle_indices: value_triangle_indices } => {
+                is_leaf = 1;
+                child_left_index = Default::default();
+                child_right_index = Default::default();
+
+                let mut triangle_indices_mut = [0u32; raytracing::bvh::Node::LEAF_TRIANGLES];
+                triangle_indices_mut.iter_mut().zip(value_triangle_indices.iter())
+                    .for_each(|(lhs, rhs)| *lhs = *rhs as _);
+                triangle_indices = triangle_indices_mut;
+                triangle_indices_len = 30;
+            },
+        }
+        Self {
+            aabb_min: glm::vec3_to_vec4(&value.aabb.min),
+            aabb_max: value.aabb.max,
+            is_leaf,
+            child_left_index,
+            child_right_index,
+            triangle_indices,
+            triangle_indices_len,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+/// WebGPU version with altered alignment & padding. ([source](https://stackoverflow.com/a/75525055))
+pub struct Mesh {
+    triangle_indices_start: u32,
+    triangle_indices_end: u32,
+    bvh_node_indices_start: u32,
+    bvh_node_indices_end: u32,
+    bvh_max_depth: u32
+}
+
+impl From<&raytracing::Mesh> for Mesh {
+    fn from(value: &raytracing::Mesh) -> Self {
+        Self {
+            triangle_indices_start: value.triangle_indices.start as _,
+            triangle_indices_end: value.triangle_indices.end as _,
+            bvh_node_indices_start: value.bvh.bvh_node_indices.start as _,
+            bvh_node_indices_end: value.bvh.bvh_node_indices.end as _,
+            bvh_max_depth: value.bvh.max_depth as _,
+        }
+    }
+}
+
+#[repr(C)]
+#[derive(Copy, Clone, bytemuck::Pod, bytemuck::Zeroable)]
+/// WebGPU version with altered alignment & padding. ([source](https://stackoverflow.com/a/75525055))
+pub struct MeshInstance {
+    rotation_scale: glm::Mat4,
+    rotation_scale_inverse: glm::Mat4,
+    model: glm::Mat4,
+    model_inverse: glm::Mat4,
+    mesh_index: u32,
+    material_override: u32,
+    material_override_is_some: u32,
+    _padding: [u32; 1],
+}
+
+impl From<&raytracing::Instance<raytracing::Mesh>> for MeshInstance {
+    fn from(value: &raytracing::Instance<raytracing::Mesh>) -> Self {
+        let (material_override, material_override_is_some) =
+            match value.material_override {
+                Some(material) => (material.0 as _, 1),
+                None => (0, 0)
+            };
+        Self {
+            mesh_index: value.primitive_index as _,
+            rotation_scale: value.rotation_scale,
+            rotation_scale_inverse: value.rotation_scale_inverse,
+            model: value.model,
+            model_inverse: value.model_inverse,
+            material_override,
+            material_override_is_some,
+            _padding: Default::default(),
+        }
+    }
+}

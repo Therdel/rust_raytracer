@@ -19,6 +19,10 @@ const MATERIAL_TYPE_REFLECT_AND_REFRACT: u32 = 2u;
 /// Fixed-size array to reduce amount of needed storage buffers
 @group(0) @binding(5) var<uniform> planes_and_triangles: PlanesAndTriangles;
 @group(0) @binding(6) var<storage, read> spheres: array<Sphere>;
+@group(0) @binding(7) var<storage, read> mesh_triangles: array<Triangle>;
+@group(0) @binding(8) var<storage, read> mesh_bvh_nodes: array<BVHNode>;
+@group(0) @binding(9) var<storage, read> meshes: array<Mesh>;
+@group(0) @binding(10) var<storage, read> mesh_instances: array<MeshInstance>;
 
 /////////////////////
 
@@ -165,6 +169,99 @@ fn sphere_normal(sphere: Sphere, surface_point: vec3f) -> vec3f {
     let surface_normal = surface_point - sphere.center;
     return normalize(surface_normal);
 }
+
+/////////////////////
+/// TODO: Use pointers
+fn mesh_triangles_get(index: u32) -> Triangle {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed
+    return mesh_triangles[index + 1u];
+}
+
+fn mesh_triangles_len() -> u32 {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed.
+    // so the actual length is 1 lower
+    return arrayLength(&mesh_triangles) - 1u;
+}
+
+/////////////////////
+
+struct BVHNode {
+    aabb_min: vec3f,
+    aabb_max: vec3f,
+    is_leaf: u32,
+    child_left_index: u32,
+    child_right_index: u32,
+    triangle_indices: array<u32, 5>,
+    triangle_indices_len: u32,
+}
+
+/// TODO: Use pointers
+fn mesh_bvh_nodes_get(index: u32) -> BVHNode {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed
+    return mesh_bvh_nodes[index + 1u];
+}
+
+fn mesh_bvh_nodes_len() -> u32 {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed.
+    // so the actual length is 1 lower
+    return arrayLength(&mesh_bvh_nodes) - 1u;
+}
+
+/////////////////////
+
+struct Mesh {
+    triangle_indices_start: u32,
+    triangle_indices_end: u32,
+    bvh_node_indices_start: u32,
+    bvh_node_indices_end: u32,
+    bvh_max_depth: u32
+}
+
+/// TODO: Use pointers
+fn meshes_get(index: u32) -> Mesh {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed
+    return meshes[index + 1u];
+}
+
+fn meshes_len() -> u32 {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed.
+    // so the actual length is 1 lower
+    return arrayLength(&meshes) - 1u;
+}
+
+/////////////////////
+
+struct MeshInstance {
+    rotation_scale: mat4x4f,
+    rotation_scale_inverse: mat4x4f,
+    model: mat4x4f,
+    model_inverse: mat4x4f,
+    mesh_index: u32,
+    material_override: u32,
+    material_override_is_some: u32,
+    _padding: u32,
+}
+
+/// TODO: Use pointers
+fn mesh_instances_get(index: u32) -> MeshInstance {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed
+    return mesh_instances[index + 1u];
+}
+
+fn mesh_instances_len() -> u32 {
+    // the first element is always a dummy, as empty 
+    // runtime-sized arrays aren't allowed.
+    // so the actual length is 1 lower
+    return arrayLength(&mesh_instances) - 1u;
+}
+
 
 /////////////////////
 
@@ -672,5 +769,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
     }
 
     let _ensure_bindings_exist = lights_len() + materials_len() + planes_len() +
-                                spheres_len() + triangles_len();
+                                spheres_len() + triangles_len() + mesh_triangles_len() +
+                                mesh_bvh_nodes_len() + meshes_len() + mesh_instances_len();
 }

@@ -16,8 +16,9 @@ const MATERIAL_TYPE_REFLECT_AND_REFRACT: u32 = 2u;
 @group(0) @binding(3) var<storage, read> lights: array<Light>;
 @group(0) @binding(4) var<storage, read> materials: array<Material>;
 
-@group(0) @binding(5) var<storage, read> spheres: array<Sphere>;
-@group(0) @binding(6) var<storage, read> triangles: array<Triangle>;
+/// Fixed-size array to reduce amount of needed storage buffers
+@group(0) @binding(5) var<uniform> planes_and_triangles: PlanesAndTriangles;
+@group(0) @binding(6) var<storage, read> spheres: array<Sphere>;
 
 /////////////////////
 
@@ -90,6 +91,52 @@ fn materials_len() -> u32 {
 
 /////////////////////
 
+struct PlanesAndTriangles {
+    planes: array<Plane, 64>,
+    triangles: array<Triangle, 64>,
+    planes_len: u32,
+    triangles_len: u32,
+    padding0: u32,
+    padding1: u32,
+}
+
+struct Plane {
+    normal: vec3f,
+    distance: f32,
+    material: u32,
+    _padding0: u32,
+    _padding1: u32,
+    _padding2: u32,
+}
+
+struct Triangle {
+    vertices: array<vec3f, 3>,
+    normals: array<vec3f, 3>,
+    normal: vec3f,
+
+    material: u32,
+}
+
+/// TODO: Use pointers
+fn planes_get(index: u32) -> Plane {
+    return planes_and_triangles.planes[index];
+}
+
+fn planes_len() -> u32 {
+    return planes_and_triangles.planes_len;
+}
+
+/// TODO: Use pointers
+fn triangles_get(index: u32) -> Triangle {
+    return planes_and_triangles.triangles[index];
+}
+
+fn triangles_len() -> u32 {
+    return planes_and_triangles.triangles_len;
+}
+
+/////////////////////
+
 struct Sphere {
     center: vec3f,
     radius: f32,
@@ -117,29 +164,6 @@ fn sphere_normal(sphere: Sphere, surface_point: vec3f) -> vec3f {
 }
 
 /////////////////////
-
-struct Triangle {
-    vertices: array<vec3f, 3>,
-    normals: array<vec3f, 3>,
-    normal: vec3f,
-
-    material: u32,
-}
-
-/// TODO: Use pointers
-fn triangles_get(index: u32) -> Triangle {
-    // the first element is always a dummy, as empty 
-    // runtime-sized arrays aren't allowed
-    return triangles[index + 1u];
-}
-
-fn triangles_len() -> u32 {
-    // the first element is always a dummy, as empty 
-    // runtime-sized arrays aren't allowed.
-    // so the actual length is 1 lower
-    return arrayLength(&triangles) - 1u;
-}
-
 
 /////////////////////
 
@@ -285,6 +309,15 @@ fn utils_take_hitpoint_if_closer(closest_hitpoint: ptr<function, OptionHitpoint>
 fn intersect_scene(ray: Ray) -> OptionHitpoint {
     var closest_hitpoint = option_hitpoint_none();
 
+    // TODO: Evaluating the length in the condition has huge (100's of ms) performance implications
+    let planes_len = planes_len();
+    for (var i: u32 = 0u; i < planes_len; i += 1u) {
+        let plane = planes_get(i);
+
+        var option_hitpoint: OptionHitpoint = intersect_plane(plane, ray);
+        utils_take_hitpoint_if_closer(&closest_hitpoint, &option_hitpoint);
+    }
+
     let spheres_len = spheres_len();
     for (var i: u32 = 0u; i < spheres_len; i += 1u) {
         let sphere = spheres_get(i);
@@ -293,6 +326,7 @@ fn intersect_scene(ray: Ray) -> OptionHitpoint {
         utils_take_hitpoint_if_closer(&closest_hitpoint, &option_hitpoint);
     }
 
+    // TODO: Evaluating the length in the condition has huge (100's of ms) performance implications
     let triangles_len = triangles_len();
     for (var i: u32 = 0u; i < triangles_len; i += 1u) {
         let triangle = triangles_get(i);
@@ -302,6 +336,29 @@ fn intersect_scene(ray: Ray) -> OptionHitpoint {
     }
 
     return closest_hitpoint;
+}
+
+fn intersect_plane(plane: Plane, ray: Ray) -> OptionHitpoint {
+    var result = option_hitpoint_none();
+
+    let n_dot_rdir = dot(plane.normal, ray.direction);
+    let parallel = n_dot_rdir == 0.0;
+    if !parallel {
+        // t = d - N * rOrg
+        //     ------------
+        //       N * rDir
+        let t = (plane.distance - dot(plane.normal, ray.origin))
+            / n_dot_rdir;
+
+        let does_intersect_in_ray_direction = t >= 0.0;
+        if does_intersect_in_ray_direction {
+            let hit_position = utils_ray_equation(ray, t);
+            let hitpoint = create_hitpoint(t, hit_position, ray, plane.normal, plane.normal, plane.material);
+
+            result = OptionHitpoint(true, hitpoint);
+        }
+    }
+    return result;
 }
 
 fn intersect_sphere(sphere: Sphere, ray: Ray) -> OptionHitpoint {
@@ -611,5 +668,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
         set_pixel(screen_coordinate, color_rgb);
     }
 
-    let _ensure_bindings_exist = lights_len() + materials_len() + spheres_len() + triangles_len();
+    let _ensure_bindings_exist = lights_len() + materials_len() + planes_len() +
+                                spheres_len() + triangles_len();
 }

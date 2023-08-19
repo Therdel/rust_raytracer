@@ -34,11 +34,11 @@ fn main() {
         file_reader: scene_file,
         mesh_loader,
     }.parse_json().unwrap();
-    println!("Parsing took {:.2}s", time_start.elapsed().as_secs_f32());
+    println!("Parsing took {:.3}s", time_start.elapsed().as_secs_f32());
 
     let time_start = Instant::now();
     let canvas = paint_scene(scene);
-    println!("Rendering took {:.2}s", time_start.elapsed().as_secs_f32());
+    println!("Rendering took {:.3}s", time_start.elapsed().as_secs_f32());
 
     let path = CString::new(IMAGE_PATH)
         .unwrap_or_else(|_| panic!("Invalid target image path: ('{}')", IMAGE_PATH));

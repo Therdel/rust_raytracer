@@ -263,7 +263,6 @@ fn mesh_instances_len() -> u32 {
     return arrayLength(&mesh_instances) - 1u;
 }
 
-
 /////////////////////
 
 /////////////////////

@@ -435,6 +435,14 @@ fn intersect_scene(ray: Ray) -> OptionHitpoint {
         utils_take_hitpoint_if_closer(&closest_hitpoint, &option_hitpoint);
     }
 
+    let mesh_instances_len = mesh_instances_len();
+    for (var i: u32 = 0u; i < mesh_instances_len; i += 1u) {
+        let mesh_instance = mesh_instances_get(i);
+
+        var option_hitpoint = intersect_mesh_instance(mesh_instance, ray);
+        utils_take_hitpoint_if_closer(&closest_hitpoint, &option_hitpoint);
+    }
+
     return closest_hitpoint;
 }
 
@@ -563,6 +571,172 @@ fn intersect_triangle(triangle: Triangle, ray: Ray) -> OptionHitpoint {
         let hitpoint = create_hitpoint(t, hit_position, ray, triangle.normal, hit_normal_gouraud_normalized, triangle.material);
 
         return OptionHitpoint(true, hitpoint);
+}
+
+// TODO: optimize branching at the end
+fn intersect_aabb(aabb_min: vec3f, aabb_max: vec3f, ray: Ray) -> bool {
+    let dirfrac = vec3f(
+        // r.dir is unit direction vector of ray
+        1.0 / ray.direction.x,
+        1.0 / ray.direction.y,
+        1.0 / ray.direction.z,
+    );
+    // lb is the corner of AABB with minimal coordinates - left bottom, rt is maximal corner
+    // r.org is origin of ray
+    let lb = aabb_min;
+    let rt = aabb_max;
+    let t1 = (lb.x - ray.origin.x)*dirfrac.x;
+    let t2 = (rt.x - ray.origin.x)*dirfrac.x;
+    let t3 = (lb.y - ray.origin.y)*dirfrac.y;
+    let t4 = (rt.y - ray.origin.y)*dirfrac.y;
+    let t5 = (lb.z - ray.origin.z)*dirfrac.z;
+    let t6 = (rt.z - ray.origin.z)*dirfrac.z;
+
+    let tmin = max(max(min(t1, t2), min(t3, t4)), min(t5, t6));
+    let tmax = min(min(max(t1, t2), max(t3, t4)), max(t5, t6));
+
+    // if tmax < 0, ray (line) is intersecting AABB, but the whole AABB is behind us
+    var _t = f32();
+    if tmax < 0.0 {
+        _t = tmax;
+        return false;
+    }
+
+    // if tmin > tmax, ray doesn't intersect AABB
+    if tmin > tmax {
+        _t = tmax;
+        return false;
+    }
+
+    _t = tmin;
+    return true;
+}
+
+const STACK_LEN: u32 = 32;
+struct BvhNodeStack {
+    stack: array<u32, STACK_LEN>,
+    stack_len: u32,
+}
+
+fn bvh_node_stack_new() -> BvhNodeStack {
+    return BvhNodeStack(array<u32, STACK_LEN>(), 0);
+}
+
+fn bvh_node_stack_push(stack: ptr<function, BvhNodeStack>, node_index: u32) {
+    let next_index = (*stack).stack_len;
+    (*stack).stack[next_index] = node_index;
+    (*stack).stack_len += 1u;
+}
+
+fn bvh_node_stack_pop(stack: ptr<function, BvhNodeStack>) -> u32 {
+    let current_index = (*stack).stack_len - 1u;
+    (*stack).stack_len -= 1u;
+    return (*stack).stack[current_index];
+}
+
+fn intersect_bvh(bvh_node_indices_start: u32, bvh_node_indices_end: u32, ray: Ray) -> OptionHitpoint {
+    var closest_hitpoint = option_hitpoint_none();
+
+    let is_empty = bvh_node_indices_start >= bvh_node_indices_end;
+    if is_empty {
+        return option_hitpoint_none();
+    }
+
+    let root_index = bvh_node_indices_start;
+    var stack: BvhNodeStack = bvh_node_stack_new();
+    bvh_node_stack_push(&stack, root_index);
+    while (stack.stack_len > 0u) {
+        let node_index = bvh_node_stack_pop(&stack);
+        let node = mesh_bvh_nodes_get(node_index);
+
+        let did_hit_aabb = intersect_aabb(node.aabb_min, node.aabb_max, ray);
+        // visualizes root AABB 👀
+        // return debug_bool(did_hit_aabb);
+        if (!did_hit_aabb) {
+            continue;
+        }
+
+        let is_node = node.is_leaf == 0u;
+        if (is_node) {
+            bvh_node_stack_push(&stack, node.child_left_index);
+            bvh_node_stack_push(&stack, node.child_right_index);
+        } else {
+            let triangle_indices_len = node.triangle_indices_len;
+            for (var i = 0u; i < triangle_indices_len; i += 1u) {
+                let triangle_index = node.triangle_indices[i];
+                let triangle = mesh_triangles_get(triangle_index);
+                
+                var option_hitpoint: OptionHitpoint = intersect_triangle(triangle, ray);
+                utils_take_hitpoint_if_closer(&closest_hitpoint, &option_hitpoint);
+            }
+        }
+    }
+
+    return closest_hitpoint;
+}
+
+fn intersect_mesh(mesh: Mesh, ray: Ray) -> OptionHitpoint {
+    const USE_BVH: bool = true;
+    if (USE_BVH) {
+        return intersect_bvh(mesh.bvh_node_indices_start, mesh.bvh_node_indices_end, ray);
+    } else {
+        let triangle_indices_len = mesh.triangle_indices_end - mesh.triangle_indices_start;
+        if (triangle_indices_len > 0) {
+            // return OptionHitpoint(Hiptoint(), true)
+            var closest_hitpoint = option_hitpoint_none();
+            for (var i: u32 = mesh.triangle_indices_start; i < mesh.triangle_indices_end; i += 1u) {
+                let triangle = mesh_triangles_get(i);
+
+                var option_hitpoint = intersect_triangle(triangle, ray);
+                utils_take_hitpoint_if_closer(&closest_hitpoint, &option_hitpoint);
+            }
+            return closest_hitpoint;
+        } else {
+            return option_hitpoint_none();
+        }
+    }
+}
+
+fn transform_unhomogeneous(vector: vec3f, matrix: mat4x4f) -> vec3f {
+    let homogeneous_transformed = matrix * vec4f(vector, 1.0);
+    // no perspective divide needed as we're only using translate, scale & rotate
+    return homogeneous_transformed.xyz; 
+}
+
+fn intersect_mesh_instance(instance: MeshInstance, ray: Ray) -> OptionHitpoint {
+    let mesh = meshes_get(instance.mesh_index);
+
+    if (DEPTH_MAP_LINEAR_FOR_DEBUGGING) {
+        return intersect_mesh(mesh, ray);
+    }
+
+    // transform ray into model-local coordinate-system
+    let transformed_origin = transform_unhomogeneous(ray.origin, instance.model_inverse);
+    let transformed_direction = normalize(
+        transform_unhomogeneous(ray.direction, instance.rotation_scale_inverse)
+    );
+    let transformed_ray = Ray(transformed_origin, transformed_direction);
+
+    let option_hitpoint = intersect_mesh(mesh, transformed_ray);
+    if (!option_hitpoint.is_some) {
+        return option_hitpoint_none();
+    }
+    var hitpoint = option_hitpoint.value;
+
+    // transform hitpoint back into world-local coordinate-system
+    hitpoint.position = transform_unhomogeneous(hitpoint.position, instance.model);
+    hitpoint.hit_normal = normalize(
+        transform_unhomogeneous(hitpoint.hit_normal, instance.rotation_scale)
+    );
+    hitpoint.position_for_refraction = transform_unhomogeneous(hitpoint.position_for_refraction, instance.model);
+
+    let t_in_world = distance(ray.origin, hitpoint.position);
+    hitpoint.t = t_in_world;
+
+    if (instance.material_override_is_some == 1u) {
+        hitpoint.material = instance.material_override;
+    }
+    return OptionHitpoint(true, hitpoint);
 }
 
 fn create_hitpoint(t: f32, hit_position: vec3f, ray: Ray,
@@ -769,6 +943,6 @@ fn main(@builtin(global_invocation_id) global_id: vec3u) {
     }
 
     let _ensure_bindings_exist = lights_len() + materials_len() + planes_len() +
-                                spheres_len() + triangles_len() + mesh_triangles_len() +
-                                mesh_bvh_nodes_len() + meshes_len() + mesh_instances_len();
+                                 spheres_len() + triangles_len() + mesh_triangles_len() +
+                                 mesh_bvh_nodes_len() + meshes_len() + mesh_instances_len();
 }

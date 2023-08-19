@@ -3,7 +3,7 @@ use num_traits::identities::Zero;
 use num_traits::Signed;
 
 use crate::raytracing::{AABB, Hitpoint, Instance, MeshTriangle, MaterialIndex, Mesh, Plane, Ray, Sphere, Triangle};
-use crate::raytracing::bvh::{BVH, Node, NodeType};
+use crate::raytracing::bvh::{BVH, Node, NodeType, NodeIndex};
 use crate::{utils, Scene};
 
 const NUMERIC_ERROR_COMPENSATION_OFFSET: f32 = 1e-4;
@@ -231,37 +231,39 @@ impl Intersect for (&BVH, &Scene) {
     fn intersect(&self, ray: &Ray) -> Option<Self::Result> {
         let (bvh, scene) = *self;
         let node_indices = &bvh.bvh_node_indices;
-        let mesh_triangles = &scene.mesh_triangles;
-        let mesh_bvh_nodes = &scene.mesh_bvh_nodes;
 
         if node_indices.is_empty() {
             return None;
         }
 
-        fn check_node(node: &Node, nodes: &[Node], triangles: &[MeshTriangle], ray: &Ray,
-                      closest_hitpoint: &mut Option<Hitpoint>) {
-            if node.aabb.intersect(ray).is_some() {
-                match &node.content {
-                    &NodeType::Node { child_left, child_right } => {
-                        let node_left = &nodes[child_left];
-                        check_node(node_left, nodes, triangles, ray, closest_hitpoint);
+        let mut closest_hitpoint = None;
+        const STACK_LEN: usize = 32;
+        let mut stack = tinyvec::ArrayVec::<[NodeIndex; STACK_LEN]>::new();
 
-                        let node_right = &nodes[child_right];
-                        check_node(node_right, nodes, triangles, ray, closest_hitpoint);
-                    }
-                    NodeType::Leaf { triangle_indices } => {
-                        for index in triangle_indices {
-                            let triangle = &triangles[*index].0;
-                            let hitpoint = triangle.intersect(ray);
-                            utils::take_hitpoint_if_closer(closest_hitpoint, hitpoint);
-                        }
+        let root_index = node_indices.start;
+        stack.push(root_index);
+        while let Some(node_index) = stack.pop() {
+            let node: &Node = &scene.mesh_bvh_nodes[node_index];
+            
+            let Some(()) = node.aabb.intersect(ray) else {
+                continue
+            };
+
+            match &node.content {
+                &NodeType::Node { child_left, child_right } => {
+                    stack.push(child_left);
+                    stack.push(child_right);
+                }
+                NodeType::Leaf { triangle_indices } => {
+                    for index in triangle_indices {
+                        let triangle = &scene.mesh_triangles[*index].0;
+                        let hitpoint = triangle.intersect(ray);
+                        utils::take_hitpoint_if_closer(&mut closest_hitpoint, hitpoint);
                     }
                 }
             }
         }
-        let mut closest_hitpoint = None;
-        let root = &mesh_bvh_nodes[node_indices.start];
-        check_node(root, mesh_bvh_nodes, mesh_triangles, ray, &mut closest_hitpoint);
+
         closest_hitpoint
     }
 }

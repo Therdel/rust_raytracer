@@ -4,5 +4,6 @@
 - native app and webapp (WASM)
 
 
+![](renders/reflective_bunnies.png)
 ![](renders/mirror-sphere_no-reflective-dimming.png)
 ![](renders/infinity_santa.png)

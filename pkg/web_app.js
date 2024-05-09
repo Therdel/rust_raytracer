@@ -47,8 +47,8 @@ function passArray8ToWasm0(arg, malloc) {
 }
 /**
 */
-export function main() {
-    wasm.main();
+export function wasm_main() {
+    wasm.wasm_main();
 }
 
 function addHeapObject(obj) {

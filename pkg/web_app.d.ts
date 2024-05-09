@@ -2,7 +2,7 @@
 /* eslint-disable */
 /**
 */
-export function main(): void;
+export function wasm_main(): void;
 /**
 */
 export class Renderer {
@@ -48,7 +48,7 @@ export interface InitOutput {
   readonly renderer_render_interlaced: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly renderer_resize_screen: (a: number, b: number, c: number) => void;
   readonly renderer_turn_camera: (a: number, b: number, c: number, d: number, e: number) => void;
-  readonly main: () => void;
+  readonly wasm_main: () => void;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_free: (a: number, b: number) => void;
   readonly __wbindgen_realloc: (a: number, b: number, c: number) => number;

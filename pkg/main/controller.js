@@ -5,8 +5,6 @@ export class Controller {
         this.canvas = canvas;
         this.canvas.width = this.canvas_resizer.clientWidth;
         this.canvas.height = this.canvas_resizer.clientHeight;
-        this.label_time = document.getElementById('time-measurement');
-        this.label_thread_count = document.getElementById('thread-count');
         this.select = document.getElementById("select_scenes");
         this.canvas_resizer_observer_context = {
             call_count: 0,

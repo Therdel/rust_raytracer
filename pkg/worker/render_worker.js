@@ -8,7 +8,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 import * as MessageFromWorker from "../messages/message_from_worker.js";
-import init, { Renderer, main } from "../../pkg/web_app.js";
+import init, { Renderer, wasm_main } from "../../pkg/web_app.js";
 const SCENE_BASE_PATH = "../../res/scenes";
 const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
 class RenderWorker {
@@ -31,14 +31,18 @@ class RenderWorker {
     }
     static init(message) {
         return __awaiter(this, void 0, void 0, function* () {
+            yield init_wasm();
+            // FIXME: These fetches are not done by the workers in parallel.
+            //        Move to main?
+            yield RenderWorker.init_cheat_obj();
             const { index, buffer, amount_workers, scene_file: scene_file, width, height } = message;
             const scene_url = SCENE_BASE_PATH + '/' + scene_file;
             const scene = yield fetch_into_array(scene_url);
             RenderWorker.instance = new RenderWorker(index, buffer, amount_workers, scene, width, height);
         });
     }
-    static scene_select({ scene_file: scene_file }) {
-        return __awaiter(this, void 0, void 0, function* () {
+    static scene_select(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ scene_file: scene_file }) {
             const instance = RenderWorker.getInstance();
             const scene_url = SCENE_BASE_PATH + '/' + scene_file;
             const scene = yield fetch_into_array(scene_url);
@@ -69,10 +73,9 @@ class RenderWorker {
 }
 function init_wasm() {
     return __awaiter(this, void 0, void 0, function* () {
-        // Load the wasm file
+        // Load wasm file, run its entry point
         yield init();
-        // Run main WASM entry point
-        main();
+        wasm_main();
     });
 }
 function fetch_into_array(path) {
@@ -81,42 +84,41 @@ function fetch_into_array(path) {
         return new Uint8Array(array_buffer);
     });
 }
+function on_message(_a) {
+    return __awaiter(this, arguments, void 0, function* ({ data: message }) {
+        console.debug(`Worker:\tReceived '${message.type}'`);
+        if (message.type === "MessageToWorker_Init") {
+            const worker_init_start = performance.now();
+            yield RenderWorker.init(message);
+            const worker_init_duration = (performance.now() - worker_init_start).toFixed(0);
+            console.debug(`Worker:\tinit took ${worker_init_duration}ms`);
+        }
+        else if (message.type === "MessageToWorker_SceneSelect") {
+            yield RenderWorker.scene_select(message);
+        }
+        else if (message.type === "MessageToWorker_Resize") {
+            RenderWorker.resize(message);
+        }
+        else if (message.type === "MessageToWorker_TurnCamera") {
+            RenderWorker.turn_camera(message);
+        }
+        const worker_render_start = performance.now();
+        RenderWorker.render();
+        const worker_render_stop = performance.now() - worker_render_start;
+        console.debug(`Worker:${RenderWorker.index()}\tResponding - Render time: ${worker_render_stop.toFixed(0)} ms`);
+        const response = new MessageFromWorker.RenderResponse(RenderWorker.index());
+        postMessage(response);
+    });
+}
+onmessage = on_message;
 const sleep = (milliseconds) => {
     return new Promise(resolve => setTimeout(resolve, milliseconds));
 };
 function init_worker() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`Worker:\tstarted`);
-        const worker_init_start = performance.now();
-        yield init_wasm();
-        // FIXME: These fetches are not done by the workers in parallel.
-        //        Move to main?
-        yield RenderWorker.init_cheat_obj();
-        onmessage = ({ data: message }) => __awaiter(this, void 0, void 0, function* () {
-            console.debug(`Worker:\tReceived '${message.type}'`);
-            if (message.type === "MessageToWorker_Init") {
-                yield RenderWorker.init(message);
-            }
-            else if (message.type === "MessageToWorker_SceneSelect") {
-                yield RenderWorker.scene_select(message);
-            }
-            else if (message.type === "MessageToWorker_Resize") {
-                RenderWorker.resize(message);
-            }
-            else if (message.type === "MessageToWorker_TurnCamera") {
-                RenderWorker.turn_camera(message);
-            }
-            const worker_render_start = performance.now();
-            RenderWorker.render();
-            const worker_render_stop = performance.now() - worker_render_start;
-            console.debug(`Worker:${RenderWorker.index()}\tResponding - Render time: ${worker_render_stop.toFixed(0)} ms`);
-            const response = new MessageFromWorker.RenderResponse(RenderWorker.index());
-            postMessage(response);
-        });
         const init_message = new MessageFromWorker.Init();
         postMessage(init_message);
-        const worker_init_duration = (performance.now() - worker_init_start).toFixed(0);
-        console.debug(`Worker:\tinit took ${worker_init_duration}ms`);
     });
 }
 init_worker();

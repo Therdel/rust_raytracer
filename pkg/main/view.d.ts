@@ -1,5 +1,4 @@
 export declare class View {
-    private canvas;
     private canvas_context;
     private label_time_measurement;
     constructor(canvas: HTMLCanvasElement);

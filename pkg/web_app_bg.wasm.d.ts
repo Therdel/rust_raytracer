@@ -7,7 +7,7 @@ export function renderer_render(a: number, b: number, c: number): void;
 export function renderer_render_interlaced(a: number, b: number, c: number, d: number, e: number): void;
 export function renderer_resize_screen(a: number, b: number, c: number): void;
 export function renderer_turn_camera(a: number, b: number, c: number, d: number, e: number): void;
-export function main(): void;
+export function wasm_main(): void;
 export function __wbindgen_malloc(a: number): number;
 export function __wbindgen_free(a: number, b: number): void;
 export function __wbindgen_realloc(a: number, b: number, c: number): number;

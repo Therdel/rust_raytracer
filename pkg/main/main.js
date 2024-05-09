@@ -7,12 +7,16 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
         step((generator = generator.apply(thisArg, _arguments || [])).next());
     });
 };
+import init, { wasm_main } from "../../pkg/web_app.js";
 import { View } from "./view.js";
 import { Controller } from "./controller.js";
 import { Model } from "./model.js";
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`Main:\tstarted`);
+        // Load wasm file, run its entry point
+        yield init();
+        wasm_main();
         const canvas = document.getElementById('screen');
         const view = new View(canvas);
         const controller = new Controller(canvas);

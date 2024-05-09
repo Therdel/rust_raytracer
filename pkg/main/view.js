@@ -1,6 +1,5 @@
 export class View {
     constructor(canvas) {
-        this.canvas = canvas;
         this.canvas_context = canvas.getContext("2d");
         this.label_time_measurement = document.getElementById("time-measurement");
     }

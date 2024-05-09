@@ -4,8 +4,6 @@ export declare class Controller {
     private canvas_resizer;
     private canvas_resizer_observer_context;
     private canvas;
-    private label_time;
-    private label_thread_count;
     private select;
     private is_moving_camera;
     private camera_move_start_point;

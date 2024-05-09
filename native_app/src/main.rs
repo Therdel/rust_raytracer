@@ -1,5 +1,4 @@
-use std::ffi::CString;
-use std::fs::File;
+use std::{fs::File, path::Path};
 use std::io::BufReader;
 use std::time::Instant;
 
@@ -40,9 +39,8 @@ fn main() {
     let canvas = paint_scene(scene);
     println!("Rendering took {:.2}s", time_start.elapsed().as_secs_f32());
 
-    let path = CString::new(IMAGE_PATH)
-        .unwrap_or_else(|_| panic!("Invalid target image path: ('{}')", IMAGE_PATH));
-    canvas.write_png(path.as_c_str());
+    let path = Path::new(IMAGE_PATH);
+    canvas.write_png(path);
 }
 
 fn paint_scene(scene: Scene) -> Canvas {

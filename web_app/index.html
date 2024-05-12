@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>knerz</title>
     <style>
         #canvas-resizer {
@@ -32,13 +33,12 @@
 
         <br>
 
-        <label>Choose a scene:</label>
+        <label for="select_scenes">Choose a scene:</label>
         <select id="select_scenes">
             <option value="cornell_box.json">Cornell box</option>
             <option value="santa_and_balls.json">Santa and balls</option>
         </select>
-        <br>
-        <label id="thread-count"></label>
+    </center>
 
 <!-- Credits        
         <br>
@@ -62,7 +62,6 @@
             </li>
         </ul>
 -->
-    </center>
 </body>
 <!-- source: https://github.com/gzuidhof/coi-serviceworker
     author: Guido Zuidhof

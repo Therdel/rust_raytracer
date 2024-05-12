@@ -18,13 +18,13 @@ class RenderWorker {
     private static cheat_obj_file: Uint8Array
 
     private constructor(index: number,
-                        buffer: SharedArrayBuffer,
+                        canvas_buffer: SharedArrayBuffer,
                         amount_workers: number,
                         scene: Uint8Array,
                         width: number,
                         height: number) {
         this.index = index
-        this.canvas_buffer = buffer
+        this.canvas_buffer = canvas_buffer
         this.canvas_buffer_u8 = new Uint8Array(this.canvas_buffer)
         this.amount_workers = amount_workers
         this.width = width

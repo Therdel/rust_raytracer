@@ -35,7 +35,7 @@ class ModelCore {
     public readonly view: View
     public readonly controller: Controller
 
-    private state: ModelState.State
+    private state: ModelState.AbstractState
 
     private readonly canvas: HTMLCanvasElement
     private readonly canvas_context: CanvasRenderingContext2D
@@ -124,20 +124,7 @@ class ModelCore {
 }
 
 namespace ModelState {
-    export interface State {
-        scene_select(scene_file: string): DidHandleMessage
-
-        resize(width: number, height: number): DidHandleMessage
-
-        turn_camera(drag_begin: { x: number; y: number },
-                    drag_end: { x: number; y: number }): DidHandleMessage
-
-        on_message(message: MessageFromWorker.Message): DidHandleMessage
-
-        state_name(): string
-    }
-
-    abstract class AbstractState implements State {
+    export abstract class AbstractState {
         protected model: ModelCore
 
         constructor(model: ModelCore) {

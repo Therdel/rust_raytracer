@@ -9,7 +9,7 @@ export class Controller {
     private select: HTMLSelectElement
 
     private is_moving_camera: boolean
-    private camera_move_start_point: { x: number, y: number }
+    private turn_camera_start_point: { x: number, y: number }
 
     constructor(canvas: HTMLCanvasElement) {
         this.canvas_resizer = document.getElementById('canvas-resizer') as HTMLDivElement
@@ -24,7 +24,7 @@ export class Controller {
             prev_width: this.canvas_resizer.clientWidth
         }
         this.is_moving_camera = false
-        this.camera_move_start_point = null
+        this.turn_camera_start_point = null
 
         this.init_listeners()
         this.deactivate_controls()
@@ -38,8 +38,8 @@ export class Controller {
         observer.observe(this.canvas_resizer)
 
         // canvas camera panning 
-        this.canvas.onpointerdown = pointer_event => this.start_moving_camera(pointer_event)
-        this.canvas.onpointermove = pointer_event => this.move_camera(pointer_event)
+        this.canvas.onpointerdown = pointer_event => this.start_turning_camera(pointer_event)
+        this.canvas.onpointermove = pointer_event => this.turn_camera(pointer_event)
         const stop_moving_camera = () => { this.stop_moving_camera() } 
         this.canvas.onpointerup = stop_moving_camera
         this.canvas.onpointerleave = stop_moving_camera
@@ -51,28 +51,26 @@ export class Controller {
     }
 
     // TODO: lock mouse: https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
-    private start_moving_camera(pointer_event: PointerEvent) {
+    private start_turning_camera(pointer_event: PointerEvent) {
         // allow camera panning when moving outside of canvas
         this.canvas.setPointerCapture(pointer_event.pointerId)
 
         const inverted_y = this.canvas.height - pointer_event.offsetY
-        this.camera_move_start_point = { x: pointer_event.offsetX, y: inverted_y }
+        this.turn_camera_start_point = { x: pointer_event.offsetX, y: inverted_y }
         this.is_moving_camera = true
-        console.debug(`pointer down `, this.camera_move_start_point)
+        console.debug(`pointer down `, this.turn_camera_start_point)
     }
 
-    private move_camera(pointer_event: PointerEvent) {
+    private turn_camera(pointer_event: PointerEvent) {
         if (this.is_moving_camera) {
             const inverted_y = this.canvas.height - pointer_event.offsetY
             const camera_move_end_point = { x: pointer_event.offsetX, y: inverted_y }
             console.debug(`camera move by pointer`)
 
-            const turn_camera_result = this.model.turn_camera(this.camera_move_start_point, camera_move_end_point)
+            const turn_camera_result = this.model.turn_camera(this.turn_camera_start_point, camera_move_end_point)
             if (DidHandleMessage.YES == turn_camera_result) {
-                this.camera_move_start_point = camera_move_end_point
+                this.turn_camera_start_point = camera_move_end_point
             }
-        } else {
-            console.debug(`inactive pointer move `)
         }
     }
 
@@ -87,7 +85,7 @@ export class Controller {
         }
 
         const do_resize = () => {
-            console.log("Controller: New canvas size: ", this.get_current_canvas_size())
+            console.debug("Controller: New canvas size: ", this.get_current_canvas_size())
             this.canvas.width = this.canvas_resizer.clientWidth
             this.canvas.height = this.canvas_resizer.clientHeight
             this.model.resize(this.canvas.width, this.canvas.height)

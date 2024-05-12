@@ -7,7 +7,7 @@ export class Init {
     readonly type = "MessageToWorker_Init"
 
     constructor(readonly index: number,
-                readonly buffer: SharedArrayBuffer,
+                readonly canvas_buffer: SharedArrayBuffer,
                 readonly amount_workers: number,
                 readonly scene_file: string,
                 readonly width: number,

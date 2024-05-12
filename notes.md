@@ -29,10 +29,28 @@
 - [x] use typescript
 
 
-- [ ] solve fetching files from WASM
-  - using rust callback?
-  - using js api in rust?
-  - what about async?
+- [ ] parallelize worker startup
+    - problem: worker startup is serialized, as was scene fetching
+- [ ] solve fetching files
+    - disable SharedArrayBuffer & use OffScreenCanvases as replacement
+    - if we can 
+- [ ] generic actions batching
+    - reason: A: sending messages for every action (e.g. turn_camera) kills responsiveness - e.g. calculating new frames at 60fps might not be possible. This increases Latency and indeterminism.
+      state-of-the-art in turn_camera is keeping action messages until workers respond as ready, then transmit a single message that represents the change of all untransmitted actions (technically, we only send that message when the user triggers it, we don't queue).
+      problem currently is, that UI actions (scene-select, resize, etc.) must be disabled during worker rendering
+         --> that entails disabling-logic which is cumbersome
+         --> and impossible-to-handle error scenarios, when messages couldn't be handled/sent (even though they could!)
+      solution: generalize the turn_camera mechanism
+          - UI state changes (canvas resize, turn_camera, scene change, mesh placement) are tracked until the next time workers are input-ready again. Events are merged, to lose unnecessary updates (2 turns merge to 1, 2 successive scene selects merge into the newest, resize merges into newest) - that way, responsiveness is ensured.
+          - A: once all workers report ready, the merged message is sent
+          - B: workers pull the current changeset on their own, saving one message
+              [ ] how to ensure all workers see the same updates? Their state mustn't diverge
+- [ ] remove the buffer-stitching on main as a potential perf improvement
+    - state-of-the-art: workers render to SharedArrayBuffers in parallel, send a message to main once they're done, main stitches buffers together, line-by-line
+    - idea: instead of one, use n stacked canvases belonging to a worker each. Workers receive an OffscreenCanvas (in major browsers since 2023-03) which they draw to in parallel. They can even request animation frames, to render continuously and *without message feedback to main*
+        - flow control may still be implemented using feedback, this won't entail stitching on main, though.
+   
+  
 ## Web state machines
 1. View holds State-Object, offers Interface, delegates to object
 2. State-Objects hold View

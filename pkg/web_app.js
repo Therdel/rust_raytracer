@@ -45,20 +45,6 @@ function passArray8ToWasm0(arg, malloc) {
     WASM_VECTOR_LEN = arg.length;
     return ptr;
 }
-/**
-*/
-export function wasm_main() {
-    wasm.wasm_main();
-}
-
-function addHeapObject(obj) {
-    if (heap_next === heap.length) heap.push(heap.length + 1);
-    const idx = heap_next;
-    heap_next = heap[idx];
-
-    heap[idx] = obj;
-    return idx;
-}
 
 let cachedTextEncoder = new TextEncoder('utf-8');
 
@@ -112,6 +98,20 @@ function passStringToWasm0(arg, malloc, realloc) {
     WASM_VECTOR_LEN = offset;
     return ptr;
 }
+/**
+*/
+export function wasm_main() {
+    wasm.wasm_main();
+}
+
+function addHeapObject(obj) {
+    if (heap_next === heap.length) heap.push(heap.length + 1);
+    const idx = heap_next;
+    heap_next = heap[idx];
+
+    heap[idx] = obj;
+    return idx;
+}
 
 let cachegetInt32Memory0 = null;
 function getInt32Memory0() {
@@ -145,16 +145,18 @@ export class Renderer {
     /**
     * @param {number} width
     * @param {number} height
-    * @param {Uint8Array} scene
-    * @param {Uint8Array} mesh_obj
     */
-    constructor(width, height, scene, mesh_obj) {
+    constructor(width, height) {
+        var ret = wasm.renderer_new(width, height);
+        return Renderer.__wrap(ret);
+    }
+    /**
+    * @param {Uint8Array} scene
+    */
+    set_scene(scene) {
         var ptr0 = passArray8ToWasm0(scene, wasm.__wbindgen_malloc);
         var len0 = WASM_VECTOR_LEN;
-        var ptr1 = passArray8ToWasm0(mesh_obj, wasm.__wbindgen_malloc);
-        var len1 = WASM_VECTOR_LEN;
-        var ret = wasm.renderer_new(width, height, ptr0, len0, ptr1, len1);
-        return Renderer.__wrap(ret);
+        wasm.renderer_set_scene(this.ptr, ptr0, len0);
     }
     /**
     * @param {Uint8Array} canvas_u8
@@ -199,6 +201,17 @@ export class Renderer {
     */
     turn_camera(drag_begin_x, drag_begin_y, drag_end_x, drag_end_y) {
         wasm.renderer_turn_camera(this.ptr, drag_begin_x, drag_begin_y, drag_end_x, drag_end_y);
+    }
+    /**
+    * @param {string} name
+    * @param {Uint8Array} file_buffer
+    */
+    load_mesh(name, file_buffer) {
+        var ptr0 = passStringToWasm0(name, wasm.__wbindgen_malloc, wasm.__wbindgen_realloc);
+        var len0 = WASM_VECTOR_LEN;
+        var ptr1 = passArray8ToWasm0(file_buffer, wasm.__wbindgen_malloc);
+        var len1 = WASM_VECTOR_LEN;
+        wasm.renderer_load_mesh(this.ptr, ptr0, len0, ptr1, len1);
     }
 }
 

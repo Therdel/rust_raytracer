@@ -1,3 +1,12 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { DidHandleMessage } from "./model.js";
 export class Controller {
     constructor(canvas) {
@@ -12,7 +21,7 @@ export class Controller {
             prev_width: this.canvas_resizer.clientWidth
         };
         this.is_moving_camera = false;
-        this.camera_move_start_point = null;
+        this.turn_camera_start_point = null;
         this.init_listeners();
         this.deactivate_controls();
     }
@@ -23,37 +32,34 @@ export class Controller {
         const observer = new ResizeObserver(() => this.on_canvas_resize());
         observer.observe(this.canvas_resizer);
         // canvas camera panning 
-        this.canvas.onpointerdown = pointer_event => this.start_moving_camera(pointer_event);
-        this.canvas.onpointermove = pointer_event => this.move_camera(pointer_event);
+        this.canvas.onpointerdown = pointer_event => this.start_turning_camera(pointer_event);
+        this.canvas.onpointermove = pointer_event => this.turn_camera(pointer_event);
         const stop_moving_camera = () => { this.stop_moving_camera(); };
         this.canvas.onpointerup = stop_moving_camera;
         this.canvas.onpointerleave = stop_moving_camera;
         this.canvas.onpointerout = stop_moving_camera;
         this.canvas.onpointercancel = stop_moving_camera;
         // scene selection
-        this.select.onchange = (event) => this.on_scene_select(event);
+        this.select.onchange = (event) => __awaiter(this, void 0, void 0, function* () { return yield this.on_set_scene(event); });
     }
     // TODO: lock mouse: https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
-    start_moving_camera(pointer_event) {
+    start_turning_camera(pointer_event) {
         // allow camera panning when moving outside of canvas
         this.canvas.setPointerCapture(pointer_event.pointerId);
         const inverted_y = this.canvas.height - pointer_event.offsetY;
-        this.camera_move_start_point = { x: pointer_event.offsetX, y: inverted_y };
+        this.turn_camera_start_point = { x: pointer_event.offsetX, y: inverted_y };
         this.is_moving_camera = true;
-        console.debug(`pointer down `, this.camera_move_start_point);
+        console.debug(`pointer down `, this.turn_camera_start_point);
     }
-    move_camera(pointer_event) {
+    turn_camera(pointer_event) {
         if (this.is_moving_camera) {
             const inverted_y = this.canvas.height - pointer_event.offsetY;
             const camera_move_end_point = { x: pointer_event.offsetX, y: inverted_y };
             console.debug(`camera move by pointer`);
-            const turn_camera_result = this.model.turn_camera(this.camera_move_start_point, camera_move_end_point);
+            const turn_camera_result = this.model.turn_camera(this.turn_camera_start_point, camera_move_end_point);
             if (DidHandleMessage.YES == turn_camera_result) {
-                this.camera_move_start_point = camera_move_end_point;
+                this.turn_camera_start_point = camera_move_end_point;
             }
-        }
-        else {
-            console.debug(`inactive pointer move `);
         }
     }
     stop_moving_camera() {
@@ -65,7 +71,7 @@ export class Controller {
             return;
         }
         const do_resize = () => {
-            console.log("Controller: New canvas size: ", this.get_current_canvas_size());
+            console.debug("Controller: New canvas size: ", this.get_current_canvas_size());
             this.canvas.width = this.canvas_resizer.clientWidth;
             this.canvas.height = this.canvas_resizer.clientHeight;
             this.model.resize(this.canvas.width, this.canvas.height);
@@ -79,7 +85,7 @@ export class Controller {
     set_model(model) {
         this.model = model;
     }
-    get_current_scene_file() {
+    get_current_scene_file_name() {
         return this.select.value;
     }
     get_current_canvas_size() {
@@ -98,8 +104,10 @@ export class Controller {
         this.canvas_resizer.style.resize = "both";
         this.select.disabled = false;
     }
-    on_scene_select(_) {
-        this.model.scene_select(this.get_current_scene_file());
-        console.debug(`Controller: Selected scene ${this.select.value}`);
+    on_set_scene(_) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.model.set_scene(this.get_current_scene_file_name());
+            console.debug(`Controller: Selected scene ${this.select.value}`);
+        });
     }
 }

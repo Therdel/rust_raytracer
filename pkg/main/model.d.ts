@@ -6,8 +6,9 @@ export declare enum DidHandleMessage {
 }
 export declare class Model {
     private readonly core;
-    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement);
-    scene_select(scene_file: string): DidHandleMessage;
+    private constructor();
+    static create(view: View, controller: Controller, canvas: HTMLCanvasElement): Promise<Model>;
+    set_scene(scene_name: string): Promise<DidHandleMessage>;
     resize(width: number, height: number): DidHandleMessage;
     turn_camera(drag_begin: {
         x: number;

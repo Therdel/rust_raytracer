@@ -1,3 +1,12 @@
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 import { RenderWorkerPool } from "./render_worker_pool.js";
 import * as MessageToWorker from "../messages/message_to_worker.js";
 export var DidHandleMessage;
@@ -6,11 +15,19 @@ export var DidHandleMessage;
     DidHandleMessage[DidHandleMessage["NO"] = 1] = "NO";
 })(DidHandleMessage || (DidHandleMessage = {}));
 export class Model {
-    constructor(view, controller, canvas) {
-        this.core = new ModelCore(view, controller, canvas);
+    constructor(core) {
+        this.core = core;
     }
-    scene_select(scene_file) {
-        return this.core.scene_select(scene_file);
+    static create(view, controller, canvas) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const model_core = yield ModelCore.create(view, controller, canvas);
+            return new Model(model_core);
+        });
+    }
+    set_scene(scene_name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            return yield this.core.set_scene(scene_name);
+        });
     }
     resize(width, height) {
         return this.core.resize(width, height);
@@ -23,15 +40,101 @@ class ModelCore {
     constructor(view, controller, canvas) {
         this.view = view;
         this.controller = controller;
-        this.state = new ModelState.InitPingPong(this);
+        this.state = undefined;
         this.canvas = canvas;
         this.canvas_context = canvas.getContext("2d");
         this.init_image_data();
-        // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
-        // source: https://stackoverflow.com/a/20279485
-        const delegate = (message) => this.on_worker_message(message);
-        this.render_worker_pool = new RenderWorkerPool(delegate);
+        this.amount_workers = navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4;
         this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
+        this.render_worker_pool = undefined;
+    }
+    static create(view, controller, canvas) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const model_core = new ModelCore(view, controller, canvas);
+            const scene_file_name = controller.get_current_scene_file_name();
+            yield model_core.fetch_scene_and_cache_meshes(scene_file_name);
+            const init_set_scene = new MessageToWorker.SetScene(model_core.scene.file_buffer, model_core.mesh_cache);
+            model_core.state = new ModelState.InitPingPong(model_core, init_set_scene);
+            // start rendering
+            const delegate = (message) => model_core.on_worker_message(message); // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker source: https://stackoverflow.com/a/20279485
+            model_core.render_worker_pool = new RenderWorkerPool(delegate, model_core.amount_workers);
+            return model_core;
+        });
+    }
+    set_scene(scene_name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            yield this.fetch_scene_and_cache_meshes(scene_name);
+            const set_scene = new MessageToWorker.SetScene(this.scene.file_buffer, this.mesh_cache);
+            return this.state.set_scene(set_scene);
+        });
+    }
+    resize(width, height) {
+        return this.state.resize(width, height);
+    }
+    turn_camera(drag_begin, drag_end) {
+        return this.state.turn_camera(drag_begin, drag_end);
+    }
+    fetch_scene_and_cache_meshes(scene_file_name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const scene_file_buffer = yield this.fetch_scene(scene_file_name);
+            this.scene = { file_name: scene_file_name, file_buffer: scene_file_buffer };
+            yield this.cache_scene_meshes(scene_file_buffer);
+        });
+    }
+    fetch_scene(file_name) {
+        return __awaiter(this, void 0, void 0, function* () {
+            const SCENES_BASE_PATH = "res/scenes";
+            const url = SCENES_BASE_PATH + '/' + file_name;
+            let file_buffer_u8 = yield this.fetch_into_array(url);
+            let file_buffer_shared = new SharedArrayBuffer(file_buffer_u8.byteLength);
+            new Uint8Array(file_buffer_shared).set(file_buffer_u8);
+            return file_buffer_shared;
+        });
+    }
+    // parse the scene to cache its meshes
+    cache_scene_meshes(scene_file_buffer) {
+        return __awaiter(this, void 0, void 0, function* () {
+            this.mesh_cache = new Map();
+            const MODELS_BASE_PATH = "res/models";
+            const scene_file_buffer_nonshared_for_decoding = new ArrayBuffer(scene_file_buffer.byteLength);
+            const scene_file_buffer_u8 = new Uint8Array(scene_file_buffer_nonshared_for_decoding);
+            scene_file_buffer_u8.set(new Uint8Array(scene_file_buffer));
+            const scene_str = new TextDecoder().decode(scene_file_buffer_u8);
+            const scene = JSON.parse(scene_str);
+            // TODO validate scene, throw if of wrong format
+            // "meshes": [
+            //     {
+            //         "name": "bunny",
+            //         "file_name": "bunny.obj",
+            //         "winding_order": "CounterClockwise",
+            //         "material": "someShinyGreen"
+            //     }
+            // ]
+            // const scene_format = {
+            //     "meshes": [
+            //         {
+            //             "name": "bunny",
+            //             "file_name": "bunny.obj",
+            //             "winding_order": "CounterClockwise",
+            //             "material": "someShinyGreen"
+            //         }
+            //     ]
+            // }
+            if ("meshes" in scene) {
+                for (const mesh of scene.meshes) {
+                    const mesh_file_name = mesh.file_name;
+                    if (this.mesh_cache.has(mesh_file_name)) {
+                        continue;
+                    }
+                    const mesh_url = MODELS_BASE_PATH + '/' + mesh_file_name;
+                    let mesh_file_buffer_u8 = yield this.fetch_into_array(mesh_url);
+                    let mesh_file_buffer_shared = new SharedArrayBuffer(mesh_file_buffer_u8.byteLength);
+                    new Uint8Array(mesh_file_buffer_shared).set(mesh_file_buffer_u8);
+                    this.mesh_cache.set(mesh_file_name, mesh_file_buffer_shared);
+                    console.debug(`ModelCore cached new mesh: name=${mesh_file_name}`);
+                }
+            }
+        });
     }
     transition_state(state) {
         console.debug(`Model:\ttransition: ${this.state.state_name()} -> ${state.state_name()}`);
@@ -44,7 +147,7 @@ class ModelCore {
     create_worker_image_buffers(width, height) {
         this.worker_image_buffers = [];
         const image_buf_size = width * height * 4;
-        for (let i = 0; i < this.render_worker_pool.amount_workers(); ++i) {
+        for (let i = 0; i < this.amount_workers; ++i) {
             const image_buffer = new SharedArrayBuffer(image_buf_size);
             this.worker_image_buffers.push(image_buffer);
         }
@@ -54,15 +157,6 @@ class ModelCore {
     }
     get_image_data() {
         return this.image_data;
-    }
-    scene_select(scene_file) {
-        return this.state.scene_select(scene_file);
-    }
-    resize(width, height) {
-        return this.state.resize(width, height);
-    }
-    turn_camera(drag_begin, drag_end) {
-        return this.state.turn_camera(drag_begin, drag_end);
     }
     on_worker_message(message) {
         this.state.on_message(message);
@@ -80,6 +174,12 @@ class ModelCore {
             row_dst.set(row_src);
         }
     }
+    fetch_into_array(path) {
+        return __awaiter(this, void 0, void 0, function* () {
+            let array_buffer = yield (yield fetch(path)).arrayBuffer();
+            return new Uint8Array(array_buffer);
+        });
+    }
 }
 var ModelState;
 (function (ModelState) {
@@ -87,8 +187,8 @@ var ModelState;
         constructor(model) {
             this.model = model;
         }
-        scene_select(scene_file) {
-            console.log(`ModelCore<${this.state_name()}>: Didn't handle scene_select(${scene_file})`);
+        set_scene(message) {
+            console.log(`ModelCore<${this.state_name()}>: Didn't handle set_scene(${message})`);
             return DidHandleMessage.NO;
         }
         resize(width, height) {
@@ -110,17 +210,19 @@ var ModelState;
             return DidHandleMessage.NO;
         }
     }
+    ModelState.AbstractState = AbstractState;
     class InitPingPong extends AbstractState {
-        constructor(model) {
+        constructor(model, init_set_scene) {
             super(model);
             this.worker_responses = 0;
+            this.init_set_scene = init_set_scene;
         }
         send_init_and_start_first_render() {
-            const amount_workers = this.model.render_worker_pool.amount_workers();
+            const amount_workers = this.model.amount_workers;
             const canvas_size = this.model.controller.get_current_canvas_size();
             for (let index = 0; index < amount_workers; ++index) {
-                const buffer = this.model.get_worker_buffer(index);
-                const message = new MessageToWorker.Init(index, buffer, amount_workers, this.model.controller.get_current_scene_file(), canvas_size.width, canvas_size.height);
+                const canvas_buffer = this.model.get_worker_buffer(index);
+                const message = new MessageToWorker.Init(index, canvas_buffer, amount_workers, this.init_set_scene, canvas_size.width, canvas_size.height);
                 this.model.render_worker_pool.post(index, message);
             }
             this.model.transition_state(new Rendering(this.model));
@@ -196,8 +298,7 @@ var ModelState;
             this.transition_to_rendering();
             return DidHandleMessage.YES;
         }
-        scene_select(scene_file) {
-            const message = new MessageToWorker.SceneSelect(scene_file);
+        set_scene(message) {
             this.post_all(message);
             this.transition_to_rendering();
             return DidHandleMessage.YES;

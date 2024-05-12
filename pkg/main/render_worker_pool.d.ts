@@ -6,7 +6,7 @@ export interface RenderWorkerMessageDelegate {
 export declare class RenderWorkerPool {
     private message_delegate;
     private workers;
-    constructor(message_delegate: RenderWorkerMessageDelegate);
+    constructor(message_delegate: RenderWorkerMessageDelegate, amount_workers: number);
     private init_workers;
     amount_workers(): number;
     post(index: number, message: MessageToWorker.Message): void;

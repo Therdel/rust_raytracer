@@ -6,20 +6,20 @@ export declare class Controller {
     private canvas;
     private select;
     private is_moving_camera;
-    private camera_move_start_point;
+    private turn_camera_start_point;
     constructor(canvas: HTMLCanvasElement);
     private init_listeners;
-    private start_moving_camera;
-    private move_camera;
+    private start_turning_camera;
+    private turn_camera;
     private stop_moving_camera;
     private on_canvas_resize;
     set_model(model: Model): void;
-    get_current_scene_file(): string;
+    get_current_scene_file_name(): string;
     get_current_canvas_size(): {
         width: number;
         height: number;
     };
     deactivate_controls(): void;
     activate_controls(): void;
-    private on_scene_select;
+    private on_set_scene;
 }

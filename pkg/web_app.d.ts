@@ -10,10 +10,12 @@ export class Renderer {
 /**
 * @param {number} width
 * @param {number} height
-* @param {Uint8Array} scene
-* @param {Uint8Array} mesh_obj
 */
-  constructor(width: number, height: number, scene: Uint8Array, mesh_obj: Uint8Array);
+  constructor(width: number, height: number);
+/**
+* @param {Uint8Array} scene
+*/
+  set_scene(scene: Uint8Array): void;
 /**
 * @param {Uint8Array} canvas_u8
 */
@@ -36,6 +38,11 @@ export class Renderer {
 * @param {number} drag_end_y
 */
   turn_camera(drag_begin_x: number, drag_begin_y: number, drag_end_x: number, drag_end_y: number): void;
+/**
+* @param {string} name
+* @param {Uint8Array} file_buffer
+*/
+  load_mesh(name: string, file_buffer: Uint8Array): void;
 }
 
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
@@ -43,11 +50,13 @@ export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembl
 export interface InitOutput {
   readonly memory: WebAssembly.Memory;
   readonly __wbg_renderer_free: (a: number) => void;
-  readonly renderer_new: (a: number, b: number, c: number, d: number, e: number, f: number) => number;
+  readonly renderer_new: (a: number, b: number) => number;
+  readonly renderer_set_scene: (a: number, b: number, c: number) => void;
   readonly renderer_render: (a: number, b: number, c: number) => void;
   readonly renderer_render_interlaced: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly renderer_resize_screen: (a: number, b: number, c: number) => void;
   readonly renderer_turn_camera: (a: number, b: number, c: number, d: number, e: number) => void;
+  readonly renderer_load_mesh: (a: number, b: number, c: number, d: number, e: number) => void;
   readonly wasm_main: () => void;
   readonly __wbindgen_malloc: (a: number) => number;
   readonly __wbindgen_free: (a: number, b: number) => void;

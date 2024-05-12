@@ -9,44 +9,36 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 };
 import * as MessageFromWorker from "../messages/message_from_worker.js";
 import init, { Renderer, wasm_main } from "../../pkg/web_app.js";
-const SCENE_BASE_PATH = "../../res/scenes";
-const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
 class RenderWorker {
-    constructor(index, buffer, amount_workers, scene, width, height) {
+    constructor(index, canvas_buffer, amount_workers, width, height) {
         this.index = index;
-        this.canvas_buffer = buffer;
+        this.canvas_buffer = canvas_buffer;
         this.canvas_buffer_u8 = new Uint8Array(this.canvas_buffer);
         this.amount_workers = amount_workers;
         this.width = width;
         this.height = height;
-        this.renderer = new Renderer(width, height, scene, RenderWorker.cheat_obj_file);
+        this.renderer = new Renderer(width, height);
     }
     static getInstance() {
         return RenderWorker.instance;
     }
-    static init_cheat_obj() {
-        return __awaiter(this, void 0, void 0, function* () {
-            this.cheat_obj_file = yield fetch_into_array(CHEAT_MODEL_PATH);
-        });
-    }
     static init(message) {
         return __awaiter(this, void 0, void 0, function* () {
             yield init_wasm();
-            // FIXME: These fetches are not done by the workers in parallel.
-            //        Move to main?
-            yield RenderWorker.init_cheat_obj();
-            const { index, buffer, amount_workers, scene_file: scene_file, width, height } = message;
-            const scene_url = SCENE_BASE_PATH + '/' + scene_file;
-            const scene = yield fetch_into_array(scene_url);
-            RenderWorker.instance = new RenderWorker(index, buffer, amount_workers, scene, width, height);
+            const { index, canvas_buffer, amount_workers, set_scene, width, height } = message;
+            RenderWorker.instance = new RenderWorker(index, canvas_buffer, amount_workers, width, height);
+            yield this.set_scene(set_scene);
         });
     }
-    static scene_select(_a) {
-        return __awaiter(this, arguments, void 0, function* ({ scene_file: scene_file }) {
+    static set_scene(_a) {
+        return __awaiter(this, arguments, void 0, function* ({ scene_file_buffer, meshes }) {
             const instance = RenderWorker.getInstance();
-            const scene_url = SCENE_BASE_PATH + '/' + scene_file;
-            const scene = yield fetch_into_array(scene_url);
-            instance.renderer = new Renderer(instance.width, instance.height, scene, this.cheat_obj_file);
+            for (const [mesh_name, mesh_file_buffer] of meshes) {
+                const mesh_file_buffer_u8 = new Uint8Array(mesh_file_buffer);
+                instance.renderer.load_mesh(mesh_name, mesh_file_buffer_u8);
+            }
+            const scene_file_buffer_u8 = new Uint8Array(scene_file_buffer);
+            instance.renderer.set_scene(scene_file_buffer_u8);
         });
     }
     static resize({ width, height, buffer }) {
@@ -78,12 +70,6 @@ function init_wasm() {
         wasm_main();
     });
 }
-function fetch_into_array(path) {
-    return __awaiter(this, void 0, void 0, function* () {
-        let array_buffer = yield (yield fetch(path)).arrayBuffer();
-        return new Uint8Array(array_buffer);
-    });
-}
 function on_message(_a) {
     return __awaiter(this, arguments, void 0, function* ({ data: message }) {
         console.debug(`Worker:\tReceived '${message.type}'`);
@@ -93,8 +79,8 @@ function on_message(_a) {
             const worker_init_duration = (performance.now() - worker_init_start).toFixed(0);
             console.debug(`Worker:\tinit took ${worker_init_duration}ms`);
         }
-        else if (message.type === "MessageToWorker_SceneSelect") {
-            yield RenderWorker.scene_select(message);
+        else if (message.type === "MessageToWorker_SetScene") {
+            yield RenderWorker.set_scene(message);
         }
         else if (message.type === "MessageToWorker_Resize") {
             RenderWorker.resize(message);

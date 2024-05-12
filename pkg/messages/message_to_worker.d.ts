@@ -1,18 +1,19 @@
-export type Message = Init | SceneSelect | Resize | TurnCamera;
+export type Message = Init | SetScene | Resize | TurnCamera;
 export declare class Init {
     readonly index: number;
-    readonly buffer: SharedArrayBuffer;
+    readonly canvas_buffer: SharedArrayBuffer;
     readonly amount_workers: number;
-    readonly scene_file: string;
+    readonly set_scene: SetScene;
     readonly width: number;
     readonly height: number;
     readonly type = "MessageToWorker_Init";
-    constructor(index: number, buffer: SharedArrayBuffer, amount_workers: number, scene_file: string, width: number, height: number);
+    constructor(index: number, canvas_buffer: SharedArrayBuffer, amount_workers: number, set_scene: SetScene, width: number, height: number);
 }
-export declare class SceneSelect {
-    readonly scene_file: string;
-    readonly type = "MessageToWorker_SceneSelect";
-    constructor(scene_file: string);
+export declare class SetScene {
+    readonly scene_file_buffer: SharedArrayBuffer;
+    readonly meshes: Map<string, SharedArrayBuffer>;
+    readonly type = "MessageToWorker_SetScene";
+    constructor(scene_file_buffer: SharedArrayBuffer, meshes: Map<string, SharedArrayBuffer>);
 }
 export declare class Resize {
     readonly width: number;

@@ -1,18 +1,19 @@
 export class Init {
-    constructor(index, buffer, amount_workers, scene_file, width, height) {
+    constructor(index, canvas_buffer, amount_workers, set_scene, width, height) {
         this.index = index;
-        this.buffer = buffer;
+        this.canvas_buffer = canvas_buffer;
         this.amount_workers = amount_workers;
-        this.scene_file = scene_file;
+        this.set_scene = set_scene;
         this.width = width;
         this.height = height;
         this.type = "MessageToWorker_Init";
     }
 }
-export class SceneSelect {
-    constructor(scene_file) {
-        this.scene_file = scene_file;
-        this.type = "MessageToWorker_SceneSelect";
+export class SetScene {
+    constructor(scene_file_buffer, meshes) {
+        this.scene_file_buffer = scene_file_buffer;
+        this.meshes = meshes;
+        this.type = "MessageToWorker_SetScene";
     }
 }
 export class Resize {

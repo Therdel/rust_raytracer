@@ -1,9 +1,9 @@
 use wasm_bindgen::prelude::*;
 
 mod color;
-mod fake_same_mesh_loader;
-mod utils;
+mod mesh_file_store;
 mod renderer;
+mod utils;
 
 // Called when the wasm module is instantiated
 #[wasm_bindgen(start)]

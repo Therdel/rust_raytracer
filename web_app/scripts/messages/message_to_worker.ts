@@ -1,5 +1,5 @@
 export type Message = Init |
-                      SceneSelect |
+                      SetScene |
                       Resize |
                       TurnCamera
 
@@ -9,16 +9,17 @@ export class Init {
     constructor(readonly index: number,
                 readonly canvas_buffer: SharedArrayBuffer,
                 readonly amount_workers: number,
-                readonly scene_file: string,
+                readonly set_scene: SetScene,
                 readonly width: number,
                 readonly height: number) {
     }
 }
 
-export class SceneSelect {
-    readonly type = "MessageToWorker_SceneSelect"
+export class SetScene {
+    readonly type = "MessageToWorker_SetScene"
 
-    constructor(readonly scene_file: string) {
+    constructor(readonly scene_file_buffer: SharedArrayBuffer,
+                readonly meshes: Map<string, SharedArrayBuffer>) {
     }
 }
 

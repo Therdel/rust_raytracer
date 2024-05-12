@@ -9,16 +9,9 @@ export class RenderWorkerPool {
     private message_delegate: RenderWorkerMessageDelegate
     private workers: Worker[]
 
-    constructor(message_delegate: RenderWorkerMessageDelegate) {
+    // starts the workers
+    constructor(message_delegate: RenderWorkerMessageDelegate, amount_workers: number) {
         this.message_delegate = message_delegate
-
-        let amount_workers;
-        if (navigator.hardwareConcurrency) {
-            amount_workers = navigator.hardwareConcurrency
-        } else {
-            amount_workers = 4
-        }
-
         this.init_workers(amount_workers)
     }
 

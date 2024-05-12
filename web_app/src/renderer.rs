@@ -1,36 +1,59 @@
 use std::io::Cursor;
 
-use nalgebra_glm as glm;
-use wasm_bindgen::prelude::wasm_bindgen;
-
+use lib_raytracer::raytracing::color::{Color, ColorRgb};
+use lib_raytracer::raytracing::{Camera, Screen};
+use lib_raytracer::raytracing::raytracer::Raytracer;
 use lib_raytracer::Scene;
 use lib_raytracer::scene_file::Parser;
-use lib_raytracer::raytracing::raytracer::Raytracer;
+use nalgebra_glm as glm;
+use num_traits::zero;
+use wasm_bindgen::prelude::wasm_bindgen;
 
 
-use crate::utils;
+use crate::mesh_file_store::MeshFileStore;
 use crate::color::{ColorRgbaU8, QuantizeToU8};
-use crate::fake_same_mesh_loader::FakeSameMeshLoader;
+use crate::utils;
 
 #[wasm_bindgen]
 pub struct Renderer {
-    scene: Scene
+    scene: Scene,
+    mesh_file_store: MeshFileStore
 }
 
 #[wasm_bindgen]
 impl Renderer {
     #[wasm_bindgen(constructor)]
-    pub fn new(width: usize, height: usize,
-               scene: &[u8], mesh_obj: &[u8]) -> Self {
-        let mut scene = Parser {
-            file_reader: Cursor::new(scene),
-            mesh_loader: FakeSameMeshLoader { mesh_obj },
-        }.parse_json().unwrap();
-        scene.resize_screen(width, height);
+    pub fn new(width: usize, height: usize) -> Self {
+        let camera = Camera {
+            position: zero(),
+            orientation: zero(),
+            y_fov_degrees: 90.,
+            z_near: 0.1,
+            z_far: 25.
+        };
+        let screen = Screen {
+            pixel_width: width,
+            pixel_height: height,
+            background: ColorRgb::urple()
+        };
 
-        Self {
-            scene
-        }
+        let empty_scene = Scene::new(camera, screen);
+        let mesh_file_store = MeshFileStore { meshes: Default::default() };
+        Self { scene: empty_scene, mesh_file_store }
+    }
+
+    // TODO: handle failure when json interface cometh
+    pub fn set_scene(&mut self, scene: &[u8]) {
+        let width = self.scene.screen().pixel_width;
+        let height = self.scene.screen().pixel_height;
+
+        let scene = Parser {
+            file_reader: Cursor::new(scene),
+            mesh_loader: &self.mesh_file_store,
+        }.parse_json().unwrap();
+        self.scene = scene;
+
+        self.resize_screen(width, height)
     }
 
     pub fn render(&self, canvas_u8: &mut [u8]) {
@@ -78,5 +101,9 @@ impl Renderer {
     pub fn turn_camera(&mut self, drag_begin_x: f32, drag_begin_y: f32, drag_end_x: f32, drag_end_y: f32) {
         self.scene.turn_camera(&glm::vec2(drag_begin_x, drag_begin_y),
                                           &glm::vec2(drag_end_x, drag_end_y));
+    }
+    
+    pub fn load_mesh(&mut self, name: &str, file_buffer: &[u8]) {
+        self.mesh_file_store.meshes.insert(name.to_string(), file_buffer.to_vec());
     }
 }

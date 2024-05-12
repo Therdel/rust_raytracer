@@ -12,12 +12,17 @@ export enum DidHandleMessage {
 export class Model {
     private readonly core: ModelCore
 
-    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
-        this.core = new ModelCore(view, controller, canvas)
+    private constructor(core: ModelCore) {
+        this.core = core
     }
 
-    scene_select(scene_file: string): DidHandleMessage {
-        return this.core.scene_select(scene_file)
+    static async create(view: View, controller: Controller, canvas: HTMLCanvasElement): Promise<Model> {
+        const model_core = await ModelCore.create(view, controller, canvas)
+        return new Model(model_core)
+    }
+
+    async set_scene(scene_name: string): Promise<DidHandleMessage> {
+        return await this.core.set_scene(scene_name)
     }
 
     resize(width: number,
@@ -41,27 +46,126 @@ class ModelCore {
     private readonly canvas_context: CanvasRenderingContext2D
     private image_data: ImageData
 
+    public amount_workers: number
     private worker_image_buffers: SharedArrayBuffer[]
-    public readonly render_worker_pool: RenderWorkerPool
+    public render_worker_pool: RenderWorkerPool
 
-    constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
+    private scene: { file_name: string, file_buffer: SharedArrayBuffer }
+    private mesh_cache: Map<string, SharedArrayBuffer>
+
+    private constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
         this.view = view
         this.controller = controller
 
-        this.state = new ModelState.InitPingPong(this)
+        this.state = undefined
 
         this.canvas = canvas
         this.canvas_context = canvas.getContext("2d")
         this.init_image_data()
 
-        // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
-        // source: https://stackoverflow.com/a/20279485
-        const delegate = (message) => this.on_worker_message(message)
-        this.render_worker_pool = new RenderWorkerPool(delegate)
+        this.amount_workers = navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4
         this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
+
+        this.render_worker_pool = undefined
     }
 
-    transition_state(state: ModelState.State) {
+    static async create(view: View, controller: Controller, canvas: HTMLCanvasElement): Promise<ModelCore> {
+        const model_core = new ModelCore(view, controller, canvas)
+        
+        const scene_file_name = controller.get_current_scene_file_name()
+        await model_core.fetch_scene_and_cache_meshes(scene_file_name)
+        const init_set_scene = new MessageToWorker.SetScene(model_core.scene.file_buffer, model_core.mesh_cache)
+        model_core.state = new ModelState.InitPingPong(model_core, init_set_scene)
+
+        // start rendering
+        const delegate = (message) => model_core.on_worker_message(message) // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker source: https://stackoverflow.com/a/20279485
+        model_core.render_worker_pool = new RenderWorkerPool(delegate, model_core.amount_workers)
+        return model_core
+    }
+
+    async set_scene(scene_name: string): Promise<DidHandleMessage> {
+        await this.fetch_scene_and_cache_meshes(scene_name)
+        const set_scene = new MessageToWorker.SetScene(this.scene.file_buffer, this.mesh_cache)
+        return this.state.set_scene(set_scene)
+    }
+
+    resize(width: number,
+           height: number): DidHandleMessage {
+        return this.state.resize(width, height)
+    }
+
+    turn_camera(drag_begin: { x: number, y: number },
+                drag_end: { x: number, y: number }): DidHandleMessage {
+        return this.state.turn_camera(drag_begin, drag_end)
+    }
+
+    private async fetch_scene_and_cache_meshes(scene_file_name: string) {
+        const scene_file_buffer = await this.fetch_scene(scene_file_name)
+        this.scene = { file_name: scene_file_name, file_buffer: scene_file_buffer }
+
+        await this.cache_scene_meshes(scene_file_buffer)
+    }
+
+    private async fetch_scene(file_name: string): Promise<SharedArrayBuffer> {
+        const SCENES_BASE_PATH = "../res/scenes";
+        const url = SCENES_BASE_PATH + '/' + file_name
+
+        let file_buffer_u8 = await this.fetch_into_array(url)
+        let file_buffer_shared = new SharedArrayBuffer(file_buffer_u8.byteLength)
+        new Uint8Array(file_buffer_shared).set(file_buffer_u8)
+
+        return file_buffer_shared
+    }
+
+    // parse the scene to cache its meshes
+    private async cache_scene_meshes(scene_file_buffer: SharedArrayBuffer) {
+        this.mesh_cache = new Map<string, SharedArrayBuffer>()
+        const MODELS_BASE_PATH = "../res/models";
+
+        const scene_file_buffer_nonshared_for_decoding = new ArrayBuffer(scene_file_buffer.byteLength)
+        const scene_file_buffer_u8 = new Uint8Array(scene_file_buffer_nonshared_for_decoding)
+        scene_file_buffer_u8.set(new Uint8Array(scene_file_buffer))
+        const scene_str = new TextDecoder().decode(scene_file_buffer_u8)
+        const scene = JSON.parse(scene_str)
+
+        // TODO validate scene, throw if of wrong format
+        // "meshes": [
+        //     {
+        //         "name": "bunny",
+        //         "file_name": "bunny.obj",
+        //         "winding_order": "CounterClockwise",
+        //         "material": "someShinyGreen"
+        //     }
+        // ]
+        // const scene_format = {
+        //     "meshes": [
+        //         {
+        //             "name": "bunny",
+        //             "file_name": "bunny.obj",
+        //             "winding_order": "CounterClockwise",
+        //             "material": "someShinyGreen"
+        //         }
+        //     ]
+        // }
+
+        if ("meshes" in scene) {
+            for (const mesh of scene.meshes) {
+                const mesh_file_name: string = mesh.file_name
+                if (this.mesh_cache.has(mesh_file_name)) {
+                    continue
+                }
+                
+                const mesh_url = MODELS_BASE_PATH + '/' + mesh_file_name
+                let mesh_file_buffer_u8 = await this.fetch_into_array(mesh_url)
+                let mesh_file_buffer_shared = new SharedArrayBuffer(mesh_file_buffer_u8.byteLength)
+                new Uint8Array(mesh_file_buffer_shared).set(mesh_file_buffer_u8)
+                this.mesh_cache.set(mesh_file_name, mesh_file_buffer_shared)
+                console.debug(`ModelCore cached new mesh: name=${mesh_file_name}`)
+            }
+        }
+    }
+
+    transition_state(state: ModelState.AbstractState) {
         console.debug(`Model:\ttransition: ${this.state.state_name()} -> ${state.state_name()}`)
         this.state = state
     }
@@ -74,7 +178,7 @@ class ModelCore {
     create_worker_image_buffers(width: number, height: number) {
         this.worker_image_buffers = []
         const image_buf_size = width * height * 4
-        for (let i = 0; i < this.render_worker_pool.amount_workers(); ++i) {
+        for (let i = 0; i < this.amount_workers; ++i) {
             const image_buffer = new SharedArrayBuffer(image_buf_size);
             this.worker_image_buffers.push(image_buffer);
         }
@@ -86,20 +190,6 @@ class ModelCore {
 
     get_image_data() {
         return this.image_data
-    }
-
-    scene_select(scene_file: string): DidHandleMessage {
-        return this.state.scene_select(scene_file)
-    }
-
-    resize(width: number,
-           height: number): DidHandleMessage {
-        return this.state.resize(width, height)
-    }
-
-    turn_camera(drag_begin: { x: number, y: number },
-                drag_end: { x: number, y: number }): DidHandleMessage {
-        return this.state.turn_camera(drag_begin, drag_end)
     }
 
     private on_worker_message(message: MessageFromWorker.Message) {
@@ -121,6 +211,11 @@ class ModelCore {
             row_dst.set(row_src);
     }
     }
+        
+    private async fetch_into_array(path) {
+        let array_buffer = await (await fetch(path)).arrayBuffer();
+        return new Uint8Array(array_buffer);
+    }
 }
 
 namespace ModelState {
@@ -131,8 +226,8 @@ namespace ModelState {
             this.model = model
         }
 
-        scene_select(scene_file: string): DidHandleMessage {
-            console.log(`ModelCore<${this.state_name()}>: Didn't handle scene_select(${scene_file})`)
+        set_scene(message: MessageToWorker.SetScene): DidHandleMessage {
+            console.log(`ModelCore<${this.state_name()}>: Didn't handle set_scene(${message})`)
             return DidHandleMessage.NO
         }
 
@@ -164,20 +259,22 @@ namespace ModelState {
 
     export class InitPingPong extends AbstractState {
         worker_responses: number = 0
+        init_set_scene: MessageToWorker.SetScene
 
-        constructor(model: ModelCore) {
+        constructor(model: ModelCore, init_set_scene: MessageToWorker.SetScene) {
             super(model);
+            this.init_set_scene = init_set_scene
         }
 
         private send_init_and_start_first_render() {
-            const amount_workers = this.model.render_worker_pool.amount_workers()
+            const amount_workers = this.model.amount_workers
             const canvas_size = this.model.controller.get_current_canvas_size()
             for (let index=0; index<amount_workers; ++index) {
-                const buffer = this.model.get_worker_buffer(index);
+                const canvas_buffer = this.model.get_worker_buffer(index);
                 const message = new MessageToWorker.Init(index,
-                                                         buffer,
+                                                         canvas_buffer,
                                                          amount_workers,
-                                                         this.model.controller.get_current_scene_file(),
+                                                         this.init_set_scene,
                                                          canvas_size.width,
                                                          canvas_size.height)
                 this.model.render_worker_pool.post(index, message)
@@ -269,8 +366,7 @@ namespace ModelState {
             return DidHandleMessage.YES
         }
 
-        scene_select(scene_file: string): DidHandleMessage {
-            const message = new MessageToWorker.SceneSelect(scene_file)
+        set_scene(message: MessageToWorker.SetScene): DidHandleMessage {
             this.post_all(message)
             this.transition_to_rendering()
             return DidHandleMessage.YES

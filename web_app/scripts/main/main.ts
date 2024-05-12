@@ -14,7 +14,7 @@ async function main() {
 
     const view = new View(canvas)
     const controller = new Controller(canvas)
-    const model = new Model(view, controller, canvas)
+    const model = await Model.create(view, controller, canvas)
     controller.set_model(model)
 }
 main()

@@ -2,9 +2,6 @@ import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
 import init, {Renderer, wasm_main} from "../../pkg/web_app.js"
 
-const SCENE_BASE_PATH = "../../res/scenes";
-const CHEAT_MODEL_PATH = "../../res/models/santa.obj";
-
 class RenderWorker {
     private index: number
     private canvas_buffer: SharedArrayBuffer
@@ -15,12 +12,10 @@ class RenderWorker {
     private renderer: Renderer
 
     private static instance: RenderWorker
-    private static cheat_obj_file: Uint8Array
 
     private constructor(index: number,
                         canvas_buffer: SharedArrayBuffer,
                         amount_workers: number,
-                        scene: Uint8Array,
                         width: number,
                         height: number) {
         this.index = index
@@ -29,47 +24,36 @@ class RenderWorker {
         this.amount_workers = amount_workers
         this.width = width
         this.height = height
-        this.renderer = new Renderer(width,
-                                     height,
-                                     scene,
-                                     RenderWorker.cheat_obj_file);
+        this.renderer = new Renderer(width, height)
     }
 
     private static getInstance() {
         return RenderWorker.instance
     }
 
-    static async init_cheat_obj() {
-        this.cheat_obj_file = await fetch_into_array(CHEAT_MODEL_PATH)
-    }
-
     static async init(message: MessageToWorker.Init) {
         await init_wasm()
 
-        // FIXME: These fetches are not done by the workers in parallel.
-        //        Move to main?
-        await RenderWorker.init_cheat_obj()
-
-        const { index, buffer, amount_workers, scene_file: scene_file, width, height } = message;
-        const scene_url = SCENE_BASE_PATH + '/' + scene_file
-        const scene = await fetch_into_array(scene_url)
+        const { index, canvas_buffer, amount_workers, set_scene, width, height } = message;
 
         RenderWorker.instance = new RenderWorker(index,
-                                                 buffer,
+                                                 canvas_buffer,
                                                  amount_workers,
-                                                 scene,
                                                  width,
                                                  height)
+        await this.set_scene(set_scene)
     }
 
-    static async scene_select({ scene_file: scene_file }: MessageToWorker.SceneSelect) {
+    static async set_scene({scene_file_buffer, meshes}: MessageToWorker.SetScene) {
         const instance = RenderWorker.getInstance()
-        const scene_url = SCENE_BASE_PATH + '/' + scene_file
-        const scene = await fetch_into_array(scene_url)
-        instance.renderer = new Renderer(instance.width,
-                                         instance.height,
-                                         scene,
-                                         this.cheat_obj_file)
+
+        for (const [mesh_name, mesh_file_buffer] of meshes) {
+            const mesh_file_buffer_u8 = new Uint8Array(mesh_file_buffer)
+            instance.renderer.load_mesh(mesh_name, mesh_file_buffer_u8)
+        }
+
+        const scene_file_buffer_u8 = new Uint8Array(scene_file_buffer)
+        instance.renderer.set_scene(scene_file_buffer_u8)
     }
 
     static resize({ width, height, buffer }: MessageToWorker.Resize) {
@@ -107,11 +91,6 @@ async function init_wasm() {
     wasm_main();
 }
 
-async function fetch_into_array(path) {
-    let array_buffer = await (await fetch(path)).arrayBuffer();
-    return new Uint8Array(array_buffer);
-}
-
 async function on_message({ data: message }: MessageEvent<MessageToWorker.Message>) {
     console.debug(`Worker:\tReceived '${message.type}'`);
 
@@ -122,8 +101,8 @@ async function on_message({ data: message }: MessageEvent<MessageToWorker.Messag
             (performance.now() - worker_init_start).toFixed(0)
     
         console.debug(`Worker:\tinit took ${worker_init_duration}ms`)
-    } else if (message.type === "MessageToWorker_SceneSelect") {
-        await RenderWorker.scene_select(message)
+    } else if (message.type === "MessageToWorker_SetScene") {
+        await RenderWorker.set_scene(message)
     } else if (message.type === "MessageToWorker_Resize") {
         RenderWorker.resize(message)
     } else if (message.type === "MessageToWorker_TurnCamera") {

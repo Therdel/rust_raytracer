@@ -47,7 +47,7 @@ export class Controller {
         this.canvas.onpointercancel = stop_moving_camera
 
         // scene selection
-        this.select.onchange = (event) => this.on_scene_select(event)
+        this.select.onchange = async (event) => await this.on_set_scene(event)
     }
 
     // TODO: lock mouse: https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
@@ -102,7 +102,7 @@ export class Controller {
         this.model = model
     }
 
-    get_current_scene_file(): string {
+    get_current_scene_file_name(): string {
         return this.select.value
     }
 
@@ -125,9 +125,8 @@ export class Controller {
         this.select.disabled = false;
     }
 
-    private on_scene_select(_: Event) {
-        this.model.scene_select(this.get_current_scene_file())
-
+    private async on_set_scene(_: Event) {
+        await this.model.set_scene(this.get_current_scene_file_name())
         console.debug(`Controller: Selected scene ${this.select.value}`)
     }
 }

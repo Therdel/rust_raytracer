@@ -1,7 +1,7 @@
-import * as MessageToWorker from "../messages/message_to_worker.js"
-import * as MessageFromWorker from "../messages/message_from_worker.js"
-import init, {Renderer, wasm_main} from "../../pkg/web_app.js"
-import { AssetStore } from "../messages/asset_store.js"
+import { AssetStore } from "../messages/asset_store"
+import * as MessageToWorker from "../messages/message_to_worker"
+import * as MessageFromWorker from "../messages/message_from_worker"
+import init, {Renderer, wasm_main} from "../../wasm/pkg/wasm"
 
 class RenderWorker {
     private index: number

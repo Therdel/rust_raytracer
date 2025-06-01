@@ -1,0 +1,26 @@
+{
+  "name": "web_app",
+  "version": "0.0.1",
+  "description": "web_app",
+  "scripts": {
+    "dev": "pnpm build:wasm && vite",
+    "build": "pnpm build:wasm && vite build",
+    "build:wasm": "wasm-pack build ./wasm --target web --release",
+    "preview": "vite preview",
+    "clean": "rm -rf ./wasm/pkg && rm -rf dist"
+  },
+  "dependencies": {
+    "wasm-pack": "^0.13.1",
+    "wasm": "file:./wasm",
+    "vite-plugin-top-level-await": "^1.5.0",
+    "vite-plugin-wasm": "^3.4.1"
+  },
+  "devDependencies": {
+    "typescript": "~5.8.3",
+    "vite": "^6.3.5"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "engines": {
+    "npm": "please-use-pnpm"
+  }
+}

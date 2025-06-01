@@ -1213,6 +1213,29 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ccf3ec651a847eb01de73ccad15eb7d99f80485de043efb2f370cd654f4ea44b"
 
 [[package]]
+name = "wasm"
+version = "0.1.0"
+dependencies = [
+ "bytemuck",
+ "console_error_panic_hook",
+ "console_log",
+ "futures-intrusive",
+ "getrandom",
+ "instant",
+ "js-sys",
+ "lib_raytracer",
+ "log",
+ "nalgebra-glm",
+ "num-traits",
+ "parking_lot 0.12.4",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wasm-bindgen-test",
+ "web-sys",
+ "wgpu",
+]
+
+[[package]]
 name = "wasm-bindgen"
 version = "0.2.100"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1315,29 +1338,6 @@ checksum = "33b6dd2ef9186f1f2072e409e99cd22a975331a6b3591b12c764e0e55c60d5d2"
 dependencies = [
  "js-sys",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "web_app"
-version = "0.1.0"
-dependencies = [
- "bytemuck",
- "console_error_panic_hook",
- "console_log",
- "futures-intrusive",
- "getrandom",
- "instant",
- "js-sys",
- "lib_raytracer",
- "log",
- "nalgebra-glm",
- "num-traits",
- "parking_lot 0.12.4",
- "wasm-bindgen",
- "wasm-bindgen-futures",
- "wasm-bindgen-test",
- "web-sys",
- "wgpu",
 ]
 
 [[package]]

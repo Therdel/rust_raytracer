@@ -1,4 +1,4 @@
-import { fetch_into_shared_buffer, isAbsoluteURL } from "./util.js"
+import { fetch_into_shared_buffer, isAbsoluteURL } from "./util"
 
 export class AssetStore {
     public readonly BASE_PATHS = {

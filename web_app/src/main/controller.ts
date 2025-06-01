@@ -1,4 +1,4 @@
-import {Model, DidHandleMessage} from "./model.js";
+import {Model, DidHandleMessage} from "./model";
 
 export class Controller {
     private model?: Model

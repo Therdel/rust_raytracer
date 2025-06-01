@@ -1,0 +1,8 @@
+{
+  "name": "wasm",
+  "scripts": {
+    "build": "wasm-pack build --target web",
+    "prepare": "npm run build"
+  },
+  "main": "./pkg/web_app.js"
+}

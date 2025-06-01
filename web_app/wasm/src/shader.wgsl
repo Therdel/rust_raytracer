@@ -706,10 +706,6 @@ fn transform_unhomogeneous(vector: vec3f, matrix: mat4x4f) -> vec3f {
 fn intersect_mesh_instance(instance: MeshInstance, ray: Ray) -> OptionHitpoint {
     let mesh = meshes_get(instance.mesh_index);
 
-    if (DEPTH_MAP_LINEAR_FOR_DEBUGGING) {
-        return intersect_mesh(mesh, ray);
-    }
-
     // transform ray into model-local coordinate-system
     let transformed_origin = transform_unhomogeneous(ray.origin, instance.model_inverse);
     let transformed_direction = normalize(

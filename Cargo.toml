@@ -1,9 +1,10 @@
 [workspace]
+resolver = "3"
 
 members = [
     "lib_raytracer",
     "native_app",
-    "web_app"
+    "web_app/wasm"
 ]
 
 [profile.dev]

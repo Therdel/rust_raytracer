@@ -5,8 +5,8 @@
   // to compile it with this config - which will fail
   "files": [],
   "references": [
-    { "path": "./main" },
-    { "path": "./messages"},
-    { "path": "./worker" }
+    { "path": "./src/main" },
+    { "path": "./src/messages"},
+    { "path": "./src/worker" }
   ]
 }

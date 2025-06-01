@@ -1,6 +1,6 @@
-import * as MessageToWorker from "../messages/message_to_worker.js"
-import * as MessageFromWorker from "../messages/message_from_worker.js"
-import init, {Renderer, wasm_main} from "../../pkg/web_app.js"
+import * as MessageToWorker from "../messages/message_to_worker"
+import * as MessageFromWorker from "../messages/message_from_worker"
+import init, {Renderer, wasm_main} from "../../wasm/pkg/wasm"
 import {AssetStore} from "../main/asset_store.js"
 
 const SCENE_BASE_PATH = "../../res/scenes";

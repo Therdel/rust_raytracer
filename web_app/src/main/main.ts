@@ -1,8 +1,8 @@
-import init, {wasm_main, wasm_log_init, GpuRenderer} from "../../pkg/web_app.js"
-import {View} from "./view.js";
-import {Controller} from "./controller.js";
-import {Model, GpuModel, CpuModel} from "./model.js";
-import {AssetStore} from "./asset_store.js";
+import init, {wasm_main, wasm_log_init, GpuRenderer} from "../../wasm/pkg/wasm"
+import {View} from "./view";
+import {Controller} from "./controller";
+import {Model, GpuModel, CpuModel} from "./model";
+import {AssetStore} from "./asset_store";
 
 async function main() {
     console.log(`Main:\tstarted`)

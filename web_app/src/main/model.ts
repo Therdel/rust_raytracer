@@ -1,9 +1,9 @@
-import {View} from "./view.js";
-import {Controller} from "./controller.js";
-import {RenderWorkerPool} from "./render_worker_pool.js";
-import * as MessageToWorker from "../messages/message_to_worker.js"
-import * as MessageFromWorker from "../messages/message_from_worker.js"
-import {GpuRenderer} from "../../pkg/web_app.js"
+import {View} from "./view";
+import {Controller} from "./controller";
+import {RenderWorkerPool} from "./render_worker_pool";
+import * as MessageToWorker from "../messages/message_to_worker"
+import * as MessageFromWorker from "../messages/message_from_worker"
+import {GpuRenderer} from "../../wasm/pkg/wasm"
 
 export enum DidHandleMessage {
     YES,

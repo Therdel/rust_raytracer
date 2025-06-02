@@ -1,6 +1,7 @@
 import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
 import init, {Renderer, wasm_main} from "../../pkg/web_app.js"
+import { AssetStore } from "../messages/asset_store.js"
 
 class RenderWorker {
     private index: number
@@ -44,14 +45,19 @@ class RenderWorker {
         await this.set_scene(set_scene)
     }
 
-    static async set_scene({scene_file_buffer, meshes}: MessageToWorker.SetScene) {
+    static async set_scene({scene_url_or_filename, assets_serialized}: MessageToWorker.SetScene) {
         const instance = RenderWorker.getInstance()
 
-        for (const [mesh_name, mesh_file_buffer] of meshes) {
-            const mesh_file_buffer_u8 = new Uint8Array(mesh_file_buffer)
-            instance.renderer.load_mesh(mesh_name, mesh_file_buffer_u8)
+        const asset_store = AssetStore.deserialize(assets_serialized)
+        for (const [asset_name, asset_buffer] of asset_store.iterate()) {
+            const asset_buffer_u8 = new Uint8Array(asset_buffer)
+            instance.renderer.load_mesh(asset_name, asset_buffer_u8)
         }
 
+        const scene_file_buffer = await asset_store.get_scene(scene_url_or_filename)
+        if (scene_file_buffer === undefined) {
+            throw new Error(`SetScene message with scene missing from asset store`)
+        }
         const scene_file_buffer_u8 = new Uint8Array(scene_file_buffer)
         instance.renderer.set_scene(scene_file_buffer_u8)
     }

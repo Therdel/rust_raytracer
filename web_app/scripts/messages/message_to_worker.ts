@@ -18,8 +18,9 @@ export class Init {
 export class SetScene {
     readonly type = "MessageToWorker_SetScene"
 
-    constructor(readonly scene_file_buffer: SharedArrayBuffer,
-                readonly meshes: Map<string, SharedArrayBuffer>) {
+    // TODO: communicate using e.g. IndexDB
+    constructor(readonly scene_url_or_filename: string,
+                readonly assets_serialized: Map<string, SharedArrayBuffer>) {
     }
 }
 

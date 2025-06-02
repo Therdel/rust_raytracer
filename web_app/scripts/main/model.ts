@@ -3,6 +3,7 @@ import {Controller} from "./controller.js";
 import {RenderWorkerPool} from "./render_worker_pool.js";
 import * as MessageToWorker from "../messages/message_to_worker.js"
 import * as MessageFromWorker from "../messages/message_from_worker.js"
+import { AssetStore } from "../messages/asset_store.js"
 
 export enum DidHandleMessage {
     YES,
@@ -50,8 +51,7 @@ class ModelCore {
     private worker_image_buffers: SharedArrayBuffer[]
     public render_worker_pool: RenderWorkerPool
 
-    private scene: { file_name: string, file_buffer: SharedArrayBuffer }
-    private mesh_cache: Map<string, SharedArrayBuffer>
+    private asset_store: AssetStore
 
     private constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
         this.view = view
@@ -67,14 +67,19 @@ class ModelCore {
         this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
 
         this.render_worker_pool = undefined
+        this.asset_store = new AssetStore()
     }
 
     static async create(view: View, controller: Controller, canvas: HTMLCanvasElement): Promise<ModelCore> {
         const model_core = new ModelCore(view, controller, canvas)
-        
+
         const scene_file_name = controller.get_current_scene_file_name()
-        await model_core.fetch_scene_and_cache_meshes(scene_file_name)
-        const init_set_scene = new MessageToWorker.SetScene(model_core.scene.file_buffer, model_core.mesh_cache)
+
+        await model_core.asset_store.put_scene_and_cache_assets(scene_file_name)
+        const init_set_scene = new MessageToWorker.SetScene(scene_file_name, model_core.asset_store.serialize())
+        for (const bam of model_core.asset_store.iterate()) {
+            console.debug(`asset name: ${bam[0]}`)
+        }
         model_core.state = new ModelState.InitPingPong(model_core, init_set_scene)
 
         // start rendering
@@ -84,8 +89,8 @@ class ModelCore {
     }
 
     async set_scene(scene_name: string): Promise<DidHandleMessage> {
-        await this.fetch_scene_and_cache_meshes(scene_name)
-        const set_scene = new MessageToWorker.SetScene(this.scene.file_buffer, this.mesh_cache)
+        await this.asset_store.put_scene_and_cache_assets(scene_name)
+        const set_scene = new MessageToWorker.SetScene(scene_name, this.asset_store.serialize())
         return this.state.set_scene(set_scene)
     }
 
@@ -97,72 +102,6 @@ class ModelCore {
     turn_camera(drag_begin: { x: number, y: number },
                 drag_end: { x: number, y: number }): DidHandleMessage {
         return this.state.turn_camera(drag_begin, drag_end)
-    }
-
-    private async fetch_scene_and_cache_meshes(scene_file_name: string) {
-        const scene_file_buffer = await this.fetch_scene(scene_file_name)
-        this.scene = { file_name: scene_file_name, file_buffer: scene_file_buffer }
-
-        await this.cache_scene_meshes(scene_file_buffer)
-    }
-
-    private async fetch_scene(file_name: string): Promise<SharedArrayBuffer> {
-        const SCENES_BASE_PATH = "../res/scenes";
-        const url = SCENES_BASE_PATH + '/' + file_name
-
-        let file_buffer_u8 = await this.fetch_into_array(url)
-        let file_buffer_shared = new SharedArrayBuffer(file_buffer_u8.byteLength)
-        new Uint8Array(file_buffer_shared).set(file_buffer_u8)
-
-        return file_buffer_shared
-    }
-
-    // parse the scene to cache its meshes
-    private async cache_scene_meshes(scene_file_buffer: SharedArrayBuffer) {
-        this.mesh_cache = new Map<string, SharedArrayBuffer>()
-        const MODELS_BASE_PATH = "../res/models";
-
-        const scene_file_buffer_nonshared_for_decoding = new ArrayBuffer(scene_file_buffer.byteLength)
-        const scene_file_buffer_u8 = new Uint8Array(scene_file_buffer_nonshared_for_decoding)
-        scene_file_buffer_u8.set(new Uint8Array(scene_file_buffer))
-        const scene_str = new TextDecoder().decode(scene_file_buffer_u8)
-        const scene = JSON.parse(scene_str)
-
-        // TODO validate scene, throw if of wrong format
-        // "meshes": [
-        //     {
-        //         "name": "bunny",
-        //         "file_name": "bunny.obj",
-        //         "winding_order": "CounterClockwise",
-        //         "material": "someShinyGreen"
-        //     }
-        // ]
-        // const scene_format = {
-        //     "meshes": [
-        //         {
-        //             "name": "bunny",
-        //             "file_name": "bunny.obj",
-        //             "winding_order": "CounterClockwise",
-        //             "material": "someShinyGreen"
-        //         }
-        //     ]
-        // }
-
-        if ("meshes" in scene) {
-            for (const mesh of scene.meshes) {
-                const mesh_file_name: string = mesh.file_name
-                if (this.mesh_cache.has(mesh_file_name)) {
-                    continue
-                }
-                
-                const mesh_url = MODELS_BASE_PATH + '/' + mesh_file_name
-                let mesh_file_buffer_u8 = await this.fetch_into_array(mesh_url)
-                let mesh_file_buffer_shared = new SharedArrayBuffer(mesh_file_buffer_u8.byteLength)
-                new Uint8Array(mesh_file_buffer_shared).set(mesh_file_buffer_u8)
-                this.mesh_cache.set(mesh_file_name, mesh_file_buffer_shared)
-                console.debug(`ModelCore cached new mesh: name=${mesh_file_name}`)
-            }
-        }
     }
 
     transition_state(state: ModelState.AbstractState) {
@@ -209,12 +148,7 @@ class ModelCore {
             const row_dst = dst.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
             const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
             row_dst.set(row_src);
-    }
-    }
-        
-    private async fetch_into_array(path) {
-        let array_buffer = await (await fetch(path)).arrayBuffer();
-        return new Uint8Array(array_buffer);
+        }
     }
 }
 

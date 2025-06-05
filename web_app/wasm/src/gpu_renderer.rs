@@ -242,9 +242,11 @@ impl GpuRenderer {
     async fn get_device_and_queue() -> Result<(Device, Queue), String> {
         let instance = wgpu::Instance::default();
     
+        let mut adapter_options = wgpu::RequestAdapterOptions::default();
+        adapter_options.power_preference = PowerPreference::HighPerformance;
         // `request_adapter` instantiates the general connection to the GPU
         let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .request_adapter(&adapter_options)
             .await
             .ok_or("Didn't get adapter")?;
     

@@ -41,7 +41,7 @@ wasm-bindgen-futures = "0.4.37"
 wasm-bindgen-test = "0.3.37"
 parking_lot = "0.12.1"
 web-sys = { version = "0.3.64", features = ['console'] }
-wgpu = "0.17.0"
+wgpu = "25.0.2"
 
 [dev-dependencies]
 wasm-bindgen-test = "0.3.34"

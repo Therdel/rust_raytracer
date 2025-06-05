@@ -6,7 +6,7 @@ use lib_raytracer::{gpu_types, Scene};
 use lib_raytracer::scene_file::Parser;
 use nalgebra_glm as glm;
 use wasm_bindgen::prelude::*;
-use wgpu::{BufferUsages, Device, Queue, ComputePipelineDescriptor, BindGroupDescriptor, BindGroupEntry, BufferDescriptor, ShaderModuleDescriptor, DeviceDescriptor, CommandEncoderDescriptor, ComputePassDescriptor};
+use wgpu::{BindGroupDescriptor, BindGroupEntry, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, ComputePassDescriptor, ComputePipelineDescriptor, Device, DeviceDescriptor, PipelineCompilationOptions, PowerPreference, Queue, ShaderModuleDescriptor};
 use wgpu::util::{DeviceExt, BufferInitDescriptor};
 
 use crate::color::ColorRgbaU8;
@@ -159,11 +159,15 @@ impl GpuRenderer {
         // A pipeline specifies the operation of a shader
 
         // Instantiates the pipeline.
+        // TODO: evaluate using wgpu::PipelineCompilationOptions::constants
         let compute_pipeline = device.create_compute_pipeline(&ComputePipelineDescriptor {
             label: None,
             layout: None,
             module: &cs_module,
-            entry_point: "main",
+            entry_point: None,
+            // TODO: evaluate using a cache
+            cache: None,
+            compilation_options: PipelineCompilationOptions::default(),
         });
 
         // Instantiates the bind group, once again specifying the binding of buffers.
@@ -248,7 +252,7 @@ impl GpuRenderer {
         let adapter = instance
             .request_adapter(&adapter_options)
             .await
-            .ok_or("Didn't get adapter")?;
+            .map_err(|_| "Didn't get adapter")?;
     
         // skip this on LavaPipe temporarily
         if adapter.get_info().vendor == 0x10005 {
@@ -259,12 +263,7 @@ impl GpuRenderer {
         //  `features` being the available features.
         adapter
             .request_device(
-                &DeviceDescriptor {
-                    label: None,
-                    features: wgpu::Features::empty(),
-                    limits: wgpu::Limits::downlevel_defaults(),
-                },
-                None,
+                &DeviceDescriptor::default()
             )
             .await
             .map_err(|err| err.to_string())
@@ -307,7 +306,7 @@ impl GpuRenderer {
             self.device.create_command_encoder(&CommandEncoderDescriptor { label: None });
 
         {
-            let mut cpass = encoder.begin_compute_pass(&ComputePassDescriptor { label: None });
+            let mut cpass = encoder.begin_compute_pass(&ComputePassDescriptor::default());
             cpass.set_pipeline(compute_pipeline);
             cpass.set_bind_group(0, bind_group, &[]);
             cpass.insert_debug_marker("compute canvas");
@@ -332,7 +331,7 @@ impl GpuRenderer {
         // // Poll the device in a blocking manner so that our future resolves.
         // // In an actual application, `device.poll(...)` should
         // // be called in an event loop or on another thread.
-        self.device.poll(wgpu::Maintain::Wait);
+        self.device.poll(wgpu::PollType::Wait).unwrap();
     
         // // Awaits until `buffer_future` can be read from
         if let Some(Ok(())) = receiver.receive().await {

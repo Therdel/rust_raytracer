@@ -304,8 +304,6 @@ export class GpuModel implements Model {
     public readonly view: View
     public readonly controller: Controller
 
-    private state: GpuModelState.State
-
     private readonly canvas_context: CanvasRenderingContext2D
     private image_data: ImageData
 
@@ -314,8 +312,6 @@ export class GpuModel implements Model {
     constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, gpu_renderer: GpuRenderer) {
         this.view = view
         this.controller = controller
-
-        this.state = new GpuModelState.AcceptUserControl(this)
 
         this.canvas_context = canvas_context
         this.image_data = this.init_image_data()
@@ -334,11 +330,6 @@ export class GpuModel implements Model {
         const gpu_model = new GpuModel(view, controller, canvas_context, gpu_renderer)
         
         return gpu_model
-    }
-
-    transition_state(state: GpuModelState.State) {
-        console.debug(`GpuModel:\ttransition: ${this.state.state_name()} -> ${state.state_name()}`)
-        this.state = state
     }
 
     init_image_data(): ImageData {
@@ -372,85 +363,22 @@ export class GpuModel implements Model {
     }
 
     async set_scene(scene_name: string): Promise<DidHandleMessage> {
-        return await this.state.set_scene(scene_name)
+        console.log(`GpuModel: Doesn't implement scene_select(${scene_name})`)
+        return DidHandleMessage.NO
     }
 
     async resize(width: number,
                  height: number): Promise<DidHandleMessage> {
-        return await this.state.resize(width, height)
+        this.init_image_data()
+        this.get_gpu_renderer().resize_screen(width, height)
+        await this.render()
+        return DidHandleMessage.YES
     }
 
     async turn_camera(drag_begin: { x: number, y: number },
                       drag_end: { x: number, y: number }): Promise<DidHandleMessage> {
-        return await this.state.turn_camera(drag_begin, drag_end)
-    }
-}
-
-namespace GpuModelState {
-    export interface State extends Model {
-        on_message(message: MessageFromWorker.Message): DidHandleMessage
-        state_name(): string
-    }
-
-    abstract class AbstractState implements State {
-        protected model: GpuModel
-
-        constructor(model: GpuModel) {
-            this.model = model
-        }
-
-        async set_scene(scene_name: string): Promise<DidHandleMessage> {
-            console.log(`GpuModelCore<${this.state_name()}>: Didn't handle set_scene(${scene_name})`)
-            return DidHandleMessage.NO
-        }
-
-        async resize(width: number, height: number): Promise<DidHandleMessage> {
-            console.log(`GpuModelCore<${this.state_name()}>: Didn't handle resize(`, {width, height}, `)`)
-            return DidHandleMessage.NO
-        }
-
-        async turn_camera(drag_begin: { x: number; y: number },
-                    drag_end: { x: number; y: number }): Promise<DidHandleMessage> {
-            console.log(`GpuModelCore<${this.state_name()}>: Didn't handle turn_camera(`, {drag_begin, drag_end}, `)`)
-            return DidHandleMessage.NO
-        }
-
-        on_message(message: MessageFromWorker.Message): DidHandleMessage {
-            const result = this.on_message_impl(message)
-            if (result == DidHandleMessage.NO) {
-                console.error(`GpuModelCore<${this.state_name()}>: Didn't handle message:`, message.constructor.name)
-            }
-            return result
-        }
-
-        protected on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
-            return DidHandleMessage.NO
-        }
-
-        abstract state_name(): string
-    }
-
-    export class AcceptUserControl extends AbstractState {
-        constructor(model: GpuModel) {
-            super(model);
-        }
-
-        async resize(width: number, height: number): Promise<DidHandleMessage> {
-            this.model.init_image_data()
-            this.model.get_gpu_renderer().resize_screen(width, height)
-            await this.model.render()
+        this.get_gpu_renderer().turn_camera(drag_begin.x, drag_begin.y, drag_end.x, drag_end.y)
+        await this.render()
             return DidHandleMessage.YES
-        }
-
-        async turn_camera(drag_begin: { x: number; y: number },
-                          drag_end: { x: number; y: number }): Promise<DidHandleMessage> {
-            this.model.get_gpu_renderer().turn_camera(drag_begin.x, drag_begin.y, drag_end.x, drag_end.y)
-            await this.model.render()
-            return DidHandleMessage.YES
-        }
-
-        state_name(): string {
-            return this.constructor.name;
-        }
     }
 }

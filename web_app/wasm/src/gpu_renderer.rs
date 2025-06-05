@@ -249,7 +249,7 @@ impl GpuRenderer {
         let instance = wgpu::Instance::default();
     
         let mut adapter_options = wgpu::RequestAdapterOptions::default();
-        adapter_options.power_preference = PowerPreference::HighPerformance;
+        adapter_options.power_preference = wgpu::PowerPreference::HighPerformance;
         // `request_adapter` instantiates the general connection to the GPU
         let adapter = instance
             .request_adapter(&adapter_options)

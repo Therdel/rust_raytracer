@@ -3,9 +3,11 @@
   "version": "0.0.1",
   "description": "web_app",
   "scripts": {
-    "dev": "pnpm build:wasm && vite",
-    "build": "pnpm build:wasm && vite build",
-    "build:wasm": "wasm-pack build ./wasm --target web --release",
+    "dev": "pnpm build:wasm:debug && vite",
+    "build:release": "pnpm build:wasm:release && vite build",
+    "build:debug": "pnpm build:wasm:debug && vite build",
+    "build:wasm:debug": "wasm-pack build ./wasm --target web --debug",
+    "build:wasm:release": "wasm-pack build ./wasm --target web --release",
     "preview": "vite preview",
     "clean": "rm -rf ./wasm/pkg && rm -rf dist"
   },

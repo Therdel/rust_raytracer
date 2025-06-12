@@ -4,6 +4,7 @@
   "description": "web_app",
   "scripts": {
     "dev": "pnpm build:wasm:release && vite",
+    "build": "pnpm build:release",
     "build:release": "pnpm build:wasm:release && vite build",
     "build:debug": "pnpm build:wasm:debug && vite build",
     "build:wasm:debug": "wasm-pack build ./wasm --target web --debug",

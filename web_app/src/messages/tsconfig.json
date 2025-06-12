@@ -1,7 +1,7 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "lib": [ "ES2024", "ES2024.SharedMemory" ],
+    "lib": [ "ES2024", "ES2024.SharedMemory", "DOM" ],
     "composite": true
   },
   "files": [

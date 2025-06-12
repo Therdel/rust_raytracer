@@ -3,6 +3,7 @@
   "compilerOptions": {
     "target": "es2024",
     "module": "es2022",
+    "types":["@webgpu/types"],
 
     /* Linting */
     "strict": true,

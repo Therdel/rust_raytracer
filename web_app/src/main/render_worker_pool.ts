@@ -1,5 +1,5 @@
-import * as MessageToWorker from "../messages/message_to_worker.js"
-import * as MessageFromWorker from "../messages/message_from_worker.js"
+import * as MessageToWorker from "../messages/message_to_worker"
+import * as MessageFromWorker from "../messages/message_from_worker"
 
 export interface RenderWorkerMessageDelegate {
     (message: MessageFromWorker.Message): void
@@ -18,7 +18,12 @@ export class RenderWorkerPool {
     private init_workers(amount_workers: number): Worker[] {
         this.workers = []
         for (let index=0; index<amount_workers; ++index) {
-            const worker = new Worker("pkg/worker/render_worker.js", {type:'module'});
+            const worker = new Worker(
+              new URL("../worker/render_worker", import.meta.url),
+              {
+                type: "module",
+              }
+            );
 
             // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker
             // source: https://stackoverflow.com/a/20279485

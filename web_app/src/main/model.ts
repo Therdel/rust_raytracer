@@ -301,20 +301,23 @@ class AcceptUserControl extends AbstractState {
 }
 
 export class GpuModel implements Model {
+    public readonly asset_store: AssetStore
     public readonly view: View
     public readonly controller: Controller
 
     private readonly canvas_context: CanvasRenderingContext2D
     private image_data: ImageData
 
-    private readonly gpu_renderer: GpuRenderer
+    private gpu_renderer: GpuRenderer
 
-    constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, gpu_renderer: GpuRenderer) {
+    constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore, gpu_renderer: GpuRenderer) {
         this.view = view
         this.controller = controller
 
         this.canvas_context = canvas_context
         this.image_data = this.init_image_data()
+
+        this.asset_store = asset_store
 
         this.gpu_renderer = gpu_renderer
         this.render()
@@ -327,7 +330,7 @@ export class GpuModel implements Model {
         
         const canvas = canvas_context.canvas
         const gpu_renderer = await GpuRenderer.new(canvas.width, canvas.height, asset_store, scene_file_name)
-        const gpu_model = new GpuModel(view, controller, canvas_context, gpu_renderer)
+        const gpu_model = new GpuModel(view, controller, canvas_context, asset_store, gpu_renderer)
         
         return gpu_model
     }
@@ -362,9 +365,17 @@ export class GpuModel implements Model {
         this.controller.activate_controls()
     }
 
+    // FIXME: don't just recreate everything
     async set_scene(scene_name: string): Promise<DidHandleMessage> {
-        console.log(`GpuModel: Doesn't implement scene_select(${scene_name})`)
-        return DidHandleMessage.NO
+        await this.asset_store.putScene(scene_name)
+        
+        const canvas = this.canvas_context.canvas
+        const gpu_renderer = await GpuRenderer.new(canvas.width, canvas.height, this.asset_store, scene_name)
+        this.gpu_renderer = gpu_renderer
+
+        this.render()
+
+        return DidHandleMessage.YES
     }
 
     async resize(width: number,

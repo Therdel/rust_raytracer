@@ -28,7 +28,7 @@ export class AssetStore {
 
     async putScene(key: string, source?: SharedArrayBuffer): Promise<SharedArrayBuffer> {
         if (this.assets.has(key)) {
-            throw new Error(`Key ${key} already exists`)
+            return this.assets.get(key)!
         }
 
         const buffer = await this.put(key, source)

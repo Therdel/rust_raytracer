@@ -73,7 +73,7 @@
     test_cross_origin.innerHTML = `Cross origin isolated: ${window.crossOriginIsolated ? "✅" : "❌"}`
     document.body.append(test_cross_origin);
     const test_webgpu = document.createElement("div")
-    test_webgpu.innerHTML = `WebGPU available: ${navigator.gpu != undefined ? "✅" : "❌"}`
+    test_webgpu.innerHTML = `WebGPU available: ${navigator.gpu !== undefined ? "✅" : "❌"}`
     document.body.append(test_webgpu);
 </script>
 </html>

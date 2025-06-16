@@ -13,7 +13,9 @@
     "main.ts",
     "model.ts",
     "render_worker_pool.ts",
-    "view.ts"
+    "view.ts",
+    "cpu_model.ts",
+    "gpu_model.ts"
   ],
   "references": [
     { "path": "../messages"}

@@ -36,7 +36,11 @@ export class AssetStore {
         return buffer
     }
 
-    async put(key: string, source?: string | SharedArrayBuffer): Promise<SharedArrayBuffer> {
+    async putMesh(key: string, source?: string | SharedArrayBuffer): Promise<SharedArrayBuffer> {
+        return this.put(key, source)
+    }
+
+    private async put(key: string, source?: string | SharedArrayBuffer): Promise<SharedArrayBuffer> {
         let buffer: SharedArrayBuffer
 
         if (this.assets.has(key)) {
@@ -80,7 +84,7 @@ export class AssetStore {
             const cachePromises = scene.meshes
                 .map((mesh: any) => mesh.file_name)
                 .filter((fileName: string) => !this.has(fileName))
-                .map((fileName: string) => this.put(fileName))
+                .map((fileName: string) => this.putMesh(fileName))
 
             await Promise.all(cachePromises)
         } catch (error: unknown) {

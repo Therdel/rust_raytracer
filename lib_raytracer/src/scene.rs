@@ -58,7 +58,7 @@ impl Scene {
     }
 
     pub fn turn_camera(&mut self, begin: &glm::Vec2, end: &glm::Vec2) {
-        let radians = |degrees: f32| degrees * (glm::pi::<f32>() / 180.0);
+        let radians = f32::to_radians;
     
         // pixel to degrees mapping
         let y_fov_degrees = self.camera.y_fov_degrees;

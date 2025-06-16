@@ -3,6 +3,8 @@ import {Model, DidHandleMessage} from "./model";
 export class Controller {
     private model?: Model
 
+    private pixel_ratio: HTMLInputElement
+    private pixel_ratio_display: HTMLLabelElement
     private canvas_resizer: HTMLDivElement
     private canvas_resizer_observer_context: { call_count: number, timeout_id?: number, prev_width: number }
     private canvas: HTMLCanvasElement
@@ -12,11 +14,16 @@ export class Controller {
     private turn_camera_start_point?: { x: number, y: number }
 
     constructor(canvas: HTMLCanvasElement) {
+        this.pixel_ratio = document.getElementById("pixel_ratio") as HTMLInputElement
+        this.pixel_ratio_display = document.getElementById("pixel_ratio_display") as HTMLLabelElement
         this.canvas_resizer = document.getElementById('canvas-resizer') as HTMLDivElement
         this.canvas = canvas
-        this.canvas.width = this.canvas_resizer.clientWidth
-        this.canvas.height = this.canvas_resizer.clientHeight
         this.select = document.getElementById("select_scenes") as HTMLSelectElement
+
+        this.canvas.style.width = this.canvas_resizer.clientWidth + 'px'
+        this.canvas.style.height = this.canvas_resizer.clientHeight + 'px'
+        this.canvas.width = this.canvas_resizer.clientWidth * this.get_pixel_ratio()
+        this.canvas.height = this.canvas_resizer.clientHeight * this.get_pixel_ratio()
 
         this.canvas_resizer_observer_context = {
             call_count: 0,
@@ -28,6 +35,10 @@ export class Controller {
 
         this.init_listeners()
         this.deactivate_controls()
+    }
+
+    private get_pixel_ratio(): number {
+        return +this.pixel_ratio.value * devicePixelRatio
     }
 
     private init_listeners() {
@@ -48,6 +59,10 @@ export class Controller {
 
         // scene selection
         this.select.onchange = async (event) => await this.on_set_scene(event)
+
+        // pixel ratio
+        this.pixel_ratio.onchange = () => this.on_update_pixel_ratio(true)
+        this.on_update_pixel_ratio(false)
     }
 
     // TODO: lock mouse: https://developer.mozilla.org/en-US/docs/Web/API/Pointer_Lock_API
@@ -56,7 +71,7 @@ export class Controller {
         this.canvas.setPointerCapture(pointer_event.pointerId)
 
         const inverted_y = this.canvas.height - pointer_event.offsetY
-        this.turn_camera_start_point = { x: pointer_event.offsetX, y: inverted_y }
+        this.turn_camera_start_point = { x: pointer_event.offsetX * this.get_pixel_ratio(), y: inverted_y * this.get_pixel_ratio() }
         this.is_moving_camera = true
         console.debug(`pointer down `, this.turn_camera_start_point)
     }
@@ -64,7 +79,7 @@ export class Controller {
     private async turn_camera(pointer_event: PointerEvent) {
         if (this.is_moving_camera) {
             const inverted_y = this.canvas.height - pointer_event.offsetY
-            const turn_camera_end_point = { x: pointer_event.offsetX, y: inverted_y }
+            const turn_camera_end_point = { x: pointer_event.offsetX * this.get_pixel_ratio(), y: inverted_y * this.get_pixel_ratio() }
             console.debug(`camera move by pointer`)
 
             if (this.turn_camera_start_point == undefined) return
@@ -88,8 +103,10 @@ export class Controller {
 
         const do_resize = async () => {
             console.debug("Controller: New canvas size: ", this.get_current_canvas_size())
-            this.canvas.width = this.canvas_resizer.clientWidth
-            this.canvas.height = this.canvas_resizer.clientHeight
+            this.canvas.style.width = this.canvas_resizer.clientWidth + 'px'
+            this.canvas.style.height = this.canvas_resizer.clientHeight + 'px'
+            this.canvas.width = this.canvas_resizer.clientWidth * this.get_pixel_ratio()
+            this.canvas.height = this.canvas_resizer.clientHeight * this.get_pixel_ratio()
 
             if (this.model == undefined) throw Error(`Controller::on_canvas_resize: Model undefined`)
             await this.model.resize(this.canvas.width, this.canvas.height)
@@ -134,5 +151,10 @@ export class Controller {
         await this.model.set_scene(this.get_current_scene_file_name())
 
         console.debug(`Controller: Selected scene ${this.select.value}`)
+    }
+
+    private on_update_pixel_ratio(finish_with_resize: boolean) {
+        this.pixel_ratio_display.innerText = this.pixel_ratio.value
+        if (finish_with_resize) this.on_canvas_resize()
     }
 }

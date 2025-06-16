@@ -15,6 +15,9 @@
                 but leaves pinch zoom to the browser*/
             touch-action: pinch-zoom;
         }
+        #pixel_ratio {
+            width: 20em;
+        }
     </style>
 </head>
 <body>
@@ -26,18 +29,37 @@
         </div>
 
         <br>
-        <br>
 
         <label id="time-measurement"></label>
 
         <br>
 
-        <label for="select_scenes">Choose a scene:</label>
-        <select id="select_scenes">
-            <option value="gpu_test.json">GPU Test</option>
-            <option value="cornell_box.json">Cornell box</option>
-            <option value="santa_and_balls.json">Santa and balls</option>
-        </select>
+        <div style="margin-top: 1em;">
+            <label for="pixel_ratio">Pixel-ratio</label>
+            <input
+                type="range"
+                id="pixel_ratio"
+                name="pixel_ratio"
+                min="0.01"
+                max="2.0"
+                value="1.0"
+                step="0.01"
+                list="values" />
+            <label id="pixel_ratio_display">1.0</label>
+
+            <datalist id="values">
+                <option value="1" label="1"></option>
+                <option value="2" label="2"></option>
+            </datalist>
+        </div>
+        <div style="margin-top: 1em;">
+            <label for="select_scenes">Choose a scene:</label>
+            <select id="select_scenes">
+                <option value="gpu_test.json">GPU Test</option>
+                <option value="cornell_box.json">Cornell box</option>
+                <option value="santa_and_balls.json">Santa and balls</option>
+            </select>
+        </div>
     </center>
 
 <!-- Credits        

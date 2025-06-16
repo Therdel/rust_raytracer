@@ -1,10 +1,10 @@
 import { AssetStore } from "../messages/asset_store"
-import {View} from "./view";
-import {Controller} from "./controller";
-import {RenderWorkerPool} from "./render_worker_pool";
-import * as MessageToWorker from "../messages/message_to_worker"
 import * as MessageFromWorker from "../messages/message_from_worker"
-import {GpuRenderer} from "../../wasm/pkg/wasm"
+import * as MessageToWorker from "../messages/message_to_worker"
+import { Controller } from "./controller"
+import { GpuRenderer } from "../../wasm/pkg/wasm"
+import { RenderWorkerPool } from "./render_worker_pool"
+import { View } from "./view"
 
 export enum DidHandleMessage {
     YES,
@@ -26,7 +26,6 @@ export class CpuModel implements Model {
     private asset_store: AssetStore
     private state: AbstractState
 
-    private readonly canvas: HTMLCanvasElement
     private readonly canvas_context: CanvasRenderingContext2D
     private image_data: ImageData
 
@@ -43,12 +42,12 @@ export class CpuModel implements Model {
         const init_set_scene = new MessageToWorker.SetScene(scene_file_name, this.asset_store.getAssetsMap())
         this.state = new InitPingPong(this, init_set_scene)
 
-        this.canvas = canvas_context.canvas
         this.canvas_context = canvas_context
         this.image_data = this.init_image_data()
 
         this.amount_workers = navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4
-        this.worker_image_buffers = this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
+        const { width, height } = this.controller.get_current_canvas_size()
+        this.worker_image_buffers = this.create_worker_image_buffers(width, height)
 
         // start rendering
         const delegate = (message: MessageFromWorker.Message) => this.on_worker_message(message)
@@ -85,7 +84,7 @@ export class CpuModel implements Model {
     }
 
     init_image_data() {
-        const [width, height] = [this.canvas.width, this.canvas.height]
+        const { width, height } = this.controller.get_current_canvas_size()
         this.image_data = this.canvas_context.createImageData(width, height)
         return this.image_data
     }
@@ -93,10 +92,8 @@ export class CpuModel implements Model {
     create_worker_image_buffers(width: number, height: number): SharedArrayBuffer[] {
         this.worker_image_buffers = []
         const image_buf_size = width * height * 4
-        for (let i = 0; i < this.amount_workers; ++i) {
-            const image_buffer = new SharedArrayBuffer(image_buf_size);
-            this.worker_image_buffers.push(image_buffer);
-        }
+        this.worker_image_buffers = Array.from({ length: this.amount_workers },
+            () => new SharedArrayBuffer(image_buf_size))
         return this.worker_image_buffers
     }
 
@@ -117,19 +114,19 @@ export class CpuModel implements Model {
 
         const y_offset = index
         const row_jump = this.render_worker_pool.amount_workers()
-        const [width, height] = [this.canvas.width, this.canvas.height]
+        const { width, height } = this.controller.get_current_canvas_size()
 
-        const row_len_bytes = width * 4;
+        const row_len_bytes = width * 4
         for (let y = y_offset; y < height; y += row_jump) {
-            const row_begin_offset = y * row_len_bytes;
-            const row_dst = dst.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
-            const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
-            row_dst.set(row_src);
+            const row_begin_offset = y * row_len_bytes
+            const row_dst = dst.subarray(row_begin_offset, row_begin_offset + row_len_bytes)
+            const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes)
+            row_dst.set(row_src)
         }
     }
 }
 
-export abstract class AbstractState {
+abstract class AbstractState {
     protected model: CpuModel
 
     constructor(model: CpuModel) {
@@ -137,19 +134,19 @@ export abstract class AbstractState {
     }
 
     async set_scene(message: MessageToWorker.SetScene): Promise<DidHandleMessage> {
-    // async set_scene(scene_name: string): Promise<DidHandleMessage> {
+        // async set_scene(scene_name: string): Promise<DidHandleMessage> {
         console.log(`CpuModel<${this.state_name()}>: Didn't handle set_scene(${message})`)
         return DidHandleMessage.NO
     }
 
     async resize(width: number, height: number): Promise<DidHandleMessage> {
-        console.log(`CpuModel<${this.state_name()}>: Didn't handle resize(`, {width, height}, `)`)
+        console.log(`CpuModel<${this.state_name()}>: Didn't handle resize(`, { width, height }, `)`)
         return DidHandleMessage.NO
     }
 
-    async turn_camera(drag_begin: { x: number; y: number },
-                drag_end: { x: number; y: number }): Promise<DidHandleMessage> {
-        console.log(`CpuModel<${this.state_name()}>: Didn't handle turn_camera(`, {drag_begin, drag_end}, `)`)
+    async turn_camera(drag_begin: { x: number, y: number },
+        drag_end: { x: number, y: number }): Promise<DidHandleMessage> {
+        console.log(`CpuModel<${this.state_name()}>: Didn't handle turn_camera(`, { drag_begin, drag_end }, `)`)
         return DidHandleMessage.NO
     }
 
@@ -167,27 +164,26 @@ export abstract class AbstractState {
 
     abstract state_name(): string
 }
-
-export class InitPingPong extends AbstractState {
+class InitPingPong extends AbstractState {
     worker_responses: number = 0
     init_set_scene: MessageToWorker.SetScene
 
     constructor(model: CpuModel, init_set_scene: MessageToWorker.SetScene) {
-        super(model);
+        super(model)
         this.init_set_scene = init_set_scene
     }
 
     private send_init_and_start_first_render() {
         const amount_workers = this.model.amount_workers
-        const canvas_size = this.model.controller.get_current_canvas_size()
-        for (let index=0; index<amount_workers; ++index) {
-            const canvas_buffer = this.model.get_worker_buffer(index);
+        const { width, height } = this.model.controller.get_current_canvas_size()
+        for (let index = 0; index < amount_workers; ++index) {
+            const canvas_buffer = this.model.get_worker_buffer(index)
             const message = new MessageToWorker.Init(index,
-                                                        canvas_buffer,
-                                                        amount_workers,
-                                                        this.init_set_scene,
-                                                        canvas_size.width,
-                                                        canvas_size.height)
+                canvas_buffer,
+                amount_workers,
+                this.init_set_scene,
+                width,
+                height)
             this.model.render_worker_pool.post(index, message)
         }
         this.model.transition_state(new Rendering(this.model))
@@ -205,7 +201,7 @@ export class InitPingPong extends AbstractState {
     }
 
     state_name(): string {
-        return this.constructor.name;
+        return this.constructor.name
     }
 }
 
@@ -220,8 +216,8 @@ class Rendering extends AbstractState {
     }
 
     on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
-        if (message.type == "MessageFromWorker_RenderResponse") {                
-            const buffer = new Uint8Array(this.model.get_worker_buffer(message.index));
+        if (message.type == "MessageFromWorker_RenderResponse") {
+            const buffer = new Uint8Array(this.model.get_worker_buffer(message.index))
             this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer)
 
             this.worker_responses += 1
@@ -241,13 +237,13 @@ class Rendering extends AbstractState {
     }
 
     state_name(): string {
-        return this.constructor.name;
+        return this.constructor.name
     }
 }
 
 class AcceptUserControl extends AbstractState {
     constructor(model: CpuModel) {
-        super(model);
+        super(model)
         this.model.controller.activate_controls()
     }
 
@@ -258,7 +254,7 @@ class AcceptUserControl extends AbstractState {
 
     private post_all(message: MessageToWorker.Message) {
         const amount_workers = this.model.render_worker_pool.amount_workers()
-        for (let index=0; index<amount_workers; ++index) {
+        for (let index = 0; index < amount_workers; ++index) {
             this.model.render_worker_pool.post(index, message)
         }
     }
@@ -267,26 +263,26 @@ class AcceptUserControl extends AbstractState {
         this.model.init_image_data()
         this.model.create_worker_image_buffers(width, height)
         const amount_workers = this.model.render_worker_pool.amount_workers()
-        for (let index=0; index<amount_workers; ++index) {
-            const buffer = this.model.get_worker_buffer(index);
+        for (let index = 0; index < amount_workers; ++index) {
+            const buffer = this.model.get_worker_buffer(index)
             const message = new MessageToWorker.Resize(width, height, buffer)
             this.model.render_worker_pool.post(index, message)
         }
-        
+
         this.transition_to_rendering()
         return DidHandleMessage.YES
     }
 
     async set_scene(message: MessageToWorker.SetScene): Promise<DidHandleMessage> {
-    // async set_scene(scene_file: string): Promise<DidHandleMessage> {
+        // async set_scene(scene_file: string): Promise<DidHandleMessage> {
         // const message = new MessageToWorker.SetScene(scene_file, this.model.)
         this.post_all(message)
         this.transition_to_rendering()
         return DidHandleMessage.YES
     }
 
-    async turn_camera(drag_begin: { x: number; y: number },
-                drag_end: { x: number; y: number }): Promise<DidHandleMessage> {
+    async turn_camera(drag_begin: { x: number, y: number },
+        drag_end: { x: number, y: number }): Promise<DidHandleMessage> {
         const message = new MessageToWorker.TurnCamera(drag_begin, drag_end)
 
         console.log("Posting turn_camera: ", message)
@@ -296,7 +292,7 @@ class AcceptUserControl extends AbstractState {
     }
 
     state_name(): string {
-        return this.constructor.name;
+        return this.constructor.name
     }
 }
 
@@ -327,17 +323,16 @@ export class GpuModel implements Model {
         const asset_store = new AssetStore()
         const scene_file_name = controller.get_current_scene_file_name()
         await asset_store.putScene(scene_file_name)
-        
-        const canvas = canvas_context.canvas
-        const gpu_renderer = await GpuRenderer.new(canvas.width, canvas.height, asset_store, scene_file_name)
+
+        const { width, height } = controller.get_current_canvas_size()
+        const gpu_renderer = await GpuRenderer.new(width, height, asset_store, scene_file_name)
         const gpu_model = new GpuModel(view, controller, canvas_context, asset_store, gpu_renderer)
-        
+
         return gpu_model
     }
 
     init_image_data(): ImageData {
-        const canvas = this.canvas_context.canvas
-        const [width, height] = [canvas.width, canvas.height]
+        const { width, height } = this.controller.get_current_canvas_size()
         this.image_data = this.canvas_context.createImageData(width, height)
         return this.image_data
     }
@@ -349,10 +344,10 @@ export class GpuModel implements Model {
     get_gpu_renderer(): GpuRenderer {
         return this.gpu_renderer
     }
-    
+
     async render() {
         this.controller.deactivate_controls()
-        
+
         const canvas_u8 = new Uint8Array(this.get_image_data().data.buffer)
 
         const time_start = performance.now()
@@ -368,9 +363,9 @@ export class GpuModel implements Model {
     // FIXME: don't just recreate everything
     async set_scene(scene_name: string): Promise<DidHandleMessage> {
         await this.asset_store.putScene(scene_name)
-        
-        const canvas = this.canvas_context.canvas
-        const gpu_renderer = await GpuRenderer.new(canvas.width, canvas.height, this.asset_store, scene_name)
+
+        const { width, height } = this.controller.get_current_canvas_size()
+        const gpu_renderer = await GpuRenderer.new(width, height, this.asset_store, scene_name)
         this.gpu_renderer = gpu_renderer
 
         this.render()
@@ -379,7 +374,7 @@ export class GpuModel implements Model {
     }
 
     async resize(width: number,
-                 height: number): Promise<DidHandleMessage> {
+        height: number): Promise<DidHandleMessage> {
         this.init_image_data()
         this.get_gpu_renderer().resize_screen(width, height)
         await this.render()
@@ -387,9 +382,9 @@ export class GpuModel implements Model {
     }
 
     async turn_camera(drag_begin: { x: number, y: number },
-                      drag_end: { x: number, y: number }): Promise<DidHandleMessage> {
+        drag_end: { x: number, y: number }): Promise<DidHandleMessage> {
         this.get_gpu_renderer().turn_camera(drag_begin.x, drag_begin.y, drag_end.x, drag_end.y)
         await this.render()
-            return DidHandleMessage.YES
+        return DidHandleMessage.YES
     }
 }

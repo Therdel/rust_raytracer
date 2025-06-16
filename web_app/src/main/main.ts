@@ -1,7 +1,7 @@
 import init, {wasm_main, wasm_log_init} from "../../wasm/pkg/wasm"
 import {View} from "./view";
 import {Controller} from "./controller";
-import {GpuModel, CpuModel} from "./model";
+import {CpuModel, GpuModel} from "./model";
 
 async function main() {
     console.log(`Main:\tstarted`)

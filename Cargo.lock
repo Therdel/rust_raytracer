@@ -3,6 +3,17 @@
 version = 4
 
 [[package]]
+name = "CLI"
+version = "0.1.0"
+dependencies = [
+ "lib_raytracer",
+ "nalgebra-glm",
+ "num-traits",
+ "png",
+ "rayon",
+]
+
+[[package]]
 name = "adler2"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -683,17 +694,6 @@ dependencies = [
  "nalgebra",
  "num-traits",
  "simba",
-]
-
-[[package]]
-name = "native_app"
-version = "0.1.0"
-dependencies = [
- "lib_raytracer",
- "nalgebra-glm",
- "num-traits",
- "png",
- "rayon",
 ]
 
 [[package]]

@@ -3,7 +3,7 @@ resolver = "3"
 
 members = [
     "lib_raytracer",
-    "native_app",
+    "CLI",
     "web_app/wasm"
 ]
 

@@ -44,13 +44,13 @@ struct ComputePipelineAndBuffers {
 #[wasm_bindgen]
 impl GpuRenderer {
     pub async fn new(canvas_width: usize, canvas_height: usize,
-                     asset_store: AssetStore, scene_file_name: &str) -> GpuRenderer {
+                     asset_store: &AssetStore, scene_file_name: &str) -> GpuRenderer {
         let Some(scene_buffer): Option<Vec<u8>> = asset_store.get_asset_bytes(scene_file_name) else {
             panic!("Loading scene '{scene_file_name}' was undefined")
         };
         let mut scene = Parser {
             file_reader: Cursor::new(scene_buffer),
-            mesh_loader: &asset_store,
+            mesh_loader: asset_store,
         }.parse_json().unwrap();
         scene.resize_screen(canvas_width, canvas_height);
 

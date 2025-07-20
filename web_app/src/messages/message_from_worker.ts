@@ -1,15 +1,9 @@
-export type Message = Init | RenderResponse;
-
-export class Init {
-    readonly type = "MessageFromWorker_Init"
-
-    constructor() {
+export class Message {
+    constructor(readonly sequence: number,
+                readonly worker_index: number) {
     }
 }
 
-export class RenderResponse {
-    readonly type = "MessageFromWorker_RenderResponse"
-
-    constructor(readonly index: number) {
-    }
+export class Startup {
+    readonly type = "MessageFromWorker_Startup"
 }

@@ -1,4 +1,12 @@
-export type Message = Init |
+export class Message {
+    constructor(readonly sequence: number,
+                readonly worker_index: number,
+                readonly payload: Payload) {
+    }
+}
+
+export type Payload = Init |
+                      Render |
                       SetScene |
                       Resize |
                       TurnCamera
@@ -6,13 +14,13 @@ export type Message = Init |
 export class Init {
     readonly type = "MessageToWorker_Init"
 
-    constructor(readonly index: number,
-                readonly canvas_buffer: SharedArrayBuffer,
-                readonly amount_workers: number,
-                readonly set_scene: SetScene,
-                readonly width: number,
-                readonly height: number) {
+    constructor(readonly amount_workers: number,
+                readonly resize: Resize) {
     }
+}
+
+export class Render {
+    readonly type = "MessageToWorker_Render"
 }
 
 export class SetScene {

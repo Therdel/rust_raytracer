@@ -1,4 +1,4 @@
-import {Model, DidHandleMessage} from "./model";
+import {Model} from "./model";
 
 export class Controller {
     private model?: Model
@@ -84,10 +84,8 @@ export class Controller {
 
             if (this.turn_camera_start_point == undefined) return
             if (this.model == undefined) throw Error(`Controller::turn_camera: Model undefined`)
-            const turn_camera_result = await this.model.turn_camera(this.turn_camera_start_point, turn_camera_end_point)
-            if (DidHandleMessage.YES == turn_camera_result) {
-                this.turn_camera_start_point = turn_camera_end_point
-            }
+            await this.model.turn_camera(this.turn_camera_start_point, turn_camera_end_point)
+            this.turn_camera_start_point = turn_camera_end_point
         }
     }
 

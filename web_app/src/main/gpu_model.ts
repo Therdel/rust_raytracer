@@ -1,7 +1,7 @@
 import { AssetStore } from "../messages/asset_store"
 import { Controller } from "./controller"
 import { GpuRenderer } from "../../wasm/pkg/wasm"
-import { DidHandleMessage, Model } from "./model"
+import { Model } from "./model"
 import { View } from "./view"
 
 export class GpuModel implements Model {
@@ -69,7 +69,7 @@ export class GpuModel implements Model {
     }
 
     // FIXME: don't just recreate everything
-    async set_scene(scene_name: string): Promise<DidHandleMessage> {
+    async set_scene(scene_name: string) {
         await this.asset_store.putScene(scene_name)
 
         const { width, height } = this.controller.get_current_canvas_size()
@@ -77,22 +77,18 @@ export class GpuModel implements Model {
         this.gpu_renderer = gpu_renderer
 
         this.render()
-
-        return DidHandleMessage.YES
     }
 
     async resize(width: number,
-        height: number): Promise<DidHandleMessage> {
+                 height: number) {
         this.init_image_data()
         this.get_gpu_renderer().resize_screen(width, height)
         await this.render()
-        return DidHandleMessage.YES
     }
 
     async turn_camera(drag_begin: { x: number, y: number },
-        drag_end: { x: number, y: number }): Promise<DidHandleMessage> {
+                      drag_end: { x: number, y: number }) {
         this.get_gpu_renderer().turn_camera(drag_begin.x, drag_begin.y, drag_end.x, drag_end.y)
         await this.render()
-        return DidHandleMessage.YES
     }
 }

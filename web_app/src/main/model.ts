@@ -1,12 +1,8 @@
-export enum DidHandleMessage {
-    YES,
-    NO
-}
-
 export interface Model {
-    set_scene(scene_name: string): Promise<DidHandleMessage>
+    render(): Promise<void>
+    set_scene(scene_name: string): Promise<void>
     resize(width: number,
-           height: number): Promise<DidHandleMessage>
+           height: number): Promise<void>
     turn_camera(drag_begin: { x: number, y: number },
-                drag_end:   { x: number, y: number }): Promise<DidHandleMessage>
+                drag_end:   { x: number, y: number }): Promise<void>
 }

@@ -1,7 +1,7 @@
 import { AssetStore } from "../messages/asset_store"
 import * as MessageToWorker from "../messages/message_to_worker"
 import * as MessageFromWorker from "../messages/message_from_worker"
-import wasm_bindgen_init, {Renderer, wasm_main} from "../../wasm/pkg/wasm"
+import wasm_bindgen_init, {Renderer, wasm_log_init, wasm_main} from "../../wasm/pkg/wasm"
 
 class RenderWorker {
     public static readonly index: number = RenderWorker.parse_worker_index()
@@ -110,6 +110,7 @@ async function start_worker() {
     // Load wasm file, run its entry point
     await wasm_bindgen_init();
     wasm_main();
+    wasm_log_init();
     console.log(`Worker: WASM initialized`)
 
     const STARTUP_SEQUENCE = 0

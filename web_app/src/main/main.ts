@@ -2,6 +2,7 @@ import init, { wasm_main, wasm_log_init } from "../../wasm/pkg/wasm"
 import { Controller } from "./controller";
 import { CpuModel } from "./cpu_model";
 import { GpuModel } from "./gpu_model";
+import { Model } from "./model";
 import { View } from "./view";
 
 async function main() {
@@ -24,12 +25,12 @@ async function main() {
     // TODO: UI CPU/GPU switch
         // TODO: wasm: Animator - shared by CPU/GPU
     const USE_GPU = navigator.gpu
+    let model: Model
     if (USE_GPU) {
-        const gpu_model = await GpuModel.create(view, controller, canvas_context)
-        controller.set_model(gpu_model)
+        model = await GpuModel.create(view, controller, canvas_context)
     } else {
-        const cpu_model = await CpuModel.create(view, controller, canvas_context)
-        controller.set_model(cpu_model)
+        model = await CpuModel.create(view, controller, canvas_context)
     }
+    controller.set_model(model)
 }
 main()

@@ -1,8 +1,7 @@
 import { AssetStore } from "../messages/asset_store"
 import { Controller } from "./controller"
-import * as MessageFromWorker from "../messages/message_from_worker"
 import * as MessageToWorker from "../messages/message_to_worker"
-import { DidHandleMessage, Model } from "./model"
+import { Model } from "./model"
 import { RenderWorkerPool } from "./render_worker_pool"
 import { View } from "./view"
 
@@ -11,72 +10,129 @@ export class CpuModel implements Model {
     public readonly controller: Controller
 
     private asset_store: AssetStore
-    private state: AbstractState
 
     private readonly canvas_context: CanvasRenderingContext2D
     private image_data: ImageData
 
     public amount_workers: number
+    // TODO: Either one SharedArrayBuffer or many regular buffers to avoid CORS problems
     private worker_image_buffers: SharedArrayBuffer[]
     public render_worker_pool: RenderWorkerPool
 
-    private constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore) {
+    private constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore, render_worker_pool: RenderWorkerPool) {
         this.view = view
         this.controller = controller
 
         this.asset_store = asset_store
-        const scene_file_name = controller.get_current_scene_file_name()
-        const init_set_scene = new MessageToWorker.SetScene(scene_file_name, this.asset_store.getAssetsMap())
-        this.state = new InitPingPong(this, init_set_scene)
 
         this.canvas_context = canvas_context
         this.image_data = this.init_image_data()
 
         this.amount_workers = navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4
         const { width, height } = this.controller.get_current_canvas_size()
+        // TODO: rename to worker_render_buffers
         this.worker_image_buffers = this.create_worker_image_buffers(width, height)
 
-        // start rendering
-        const delegate = (message: MessageFromWorker.Message) => this.on_worker_message(message)
-        this.render_worker_pool = new RenderWorkerPool(delegate, this.amount_workers)
+        this.render_worker_pool = render_worker_pool
     }
 
     static async create(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D): Promise<CpuModel> {
         const asset_store = new AssetStore()
-        const scene_file_name = controller.get_current_scene_file_name()
-        await asset_store.putScene(scene_file_name)
 
-        return new CpuModel(view, controller, canvas_context, asset_store)
+        const amount_workers = navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4
+        const render_worker_pool = await RenderWorkerPool.create(amount_workers)
+
+        const model = new CpuModel(view, controller, canvas_context, asset_store, render_worker_pool)
+        const init = await model.init_workers()
+        const scene_file_name = controller.get_current_scene_file_name()
+        const setScene = await model.set_scene(scene_file_name)
+        model.controller.activate_controls()
+
+        return model
     }
 
-    async set_scene(scene_name: string): Promise<DidHandleMessage> {
+    private async init_workers() {
+        const { width, height } = this.controller.get_current_canvas_size()
+
+        const mapFn = (workerIndex: number): MessageToWorker.Payload => {
+            const canvas_buffer = this.get_worker_buffer(workerIndex)
+            const resize_message = new MessageToWorker.Resize(width, height, canvas_buffer)
+            const init_message = new MessageToWorker.Init(this.amount_workers, resize_message)
+
+            return init_message
+        }
+
+        return this.render_worker_pool.dispatch(mapFn)
+    }
+
+    async render(){
+        // this.view.display_rendering_state()
+        const time_start = performance.now()
+
+        const message = new MessageToWorker.Render()
+        const mapFn = (workerIndex: number) => message
+
+        const reduceFn = (workerIndex: number, isLastMessage: boolean) => {
+            const buffer = new Uint8Array(this.get_worker_buffer(workerIndex))
+            this.write_interlaced_worker_buffer_into_image_data(workerIndex, buffer)
+
+            if (isLastMessage) {
+                const duration = performance.now() - time_start
+                this.view.display_render_duration(duration)
+                
+                // TODO: maybe do update_canvas in the render loop?
+                // TODO: model updates canvas, canvas calls model.get_current_frame() 
+                //       would mean that we keep a duplicate, clean frame-buffer here that the view can get, or we just push it only when it's consistent
+                this.view.update_canvas(this.get_image_data())
+            }
+        }
+        await this.render_worker_pool.dispatch(mapFn, reduceFn)
+        
+        console.debug(`Render finished`)
+    }
+
+    async set_scene(scene_name: string) {
         await this.asset_store.putScene(scene_name)
-        const set_scene = new MessageToWorker.SetScene(scene_name, this.asset_store.getAssetsMap())
-        return this.state.set_scene(set_scene)
+        const assets_serialized = this.asset_store.getAssetsMap()
+
+        const message = new MessageToWorker.SetScene(scene_name, assets_serialized)
+        await this.render_worker_pool.dispatch(() => message)
+
+        console.debug(`Set scene finished`)
     }
 
     async resize(width: number,
-                 height: number): Promise<DidHandleMessage> {
-        return await this.state.resize(width, height)
+                 height: number) {        
+        // TODO: invalidate current frame
+        this.init_image_data()
+        this.create_worker_image_buffers(width, height)
+
+        const mapFn = (workerIndex: number): MessageToWorker.Payload => {
+            const buffer = this.get_worker_buffer(workerIndex)
+            return new MessageToWorker.Resize(width, height, buffer)
+        }
+        await this.render_worker_pool.dispatch(mapFn)
+
+        console.debug(`Resize finished`)
     }
 
     async turn_camera(drag_begin: { x: number, y: number },
-                      drag_end: { x: number, y: number }): Promise<DidHandleMessage> {
-        return await this.state.turn_camera(drag_begin, drag_end)
+                      drag_end: { x: number, y: number }) {
+        const message = new MessageToWorker.TurnCamera(drag_begin, drag_end)
+
+        console.log("Posting turn_camera: ", message)
+        await this.render_worker_pool.dispatch(() => message)
+
+        console.debug(`Turn camera finished`)
     }
 
-    transition_state(state: AbstractState) {
-        console.debug(`CpuModel:\ttransition: ${this.state.state_name()} -> ${state.state_name()}`)
-        this.state = state
-    }
-
-    init_image_data() {
+    private init_image_data() {
         const { width, height } = this.controller.get_current_canvas_size()
         this.image_data = this.canvas_context.createImageData(width, height)
         return this.image_data
     }
 
-    create_worker_image_buffers(width: number, height: number): SharedArrayBuffer[] {
+    private create_worker_image_buffers(width: number, height: number): SharedArrayBuffer[] {
         this.worker_image_buffers = []
         const image_buf_size = width * height * 4
         this.worker_image_buffers = Array.from({ length: this.amount_workers },
@@ -84,23 +140,19 @@ export class CpuModel implements Model {
         return this.worker_image_buffers
     }
 
-    get_worker_buffer(index: number): SharedArrayBuffer {
+    private get_worker_buffer(index: number): SharedArrayBuffer {
         return this.worker_image_buffers[index]
     }
 
-    get_image_data() {
+    private get_image_data() {
         return this.image_data
     }
 
-    private on_worker_message(message: MessageFromWorker.Message) {
-        this.state.on_message(message)
-    }
-
-    write_interlaced_worker_buffer_into_image_data(index: number, src: Uint8Array) {
+    private write_interlaced_worker_buffer_into_image_data(index: number, src: Uint8Array) {
         const dst = new Uint8Array(this.image_data.data.buffer)
 
         const y_offset = index
-        const row_jump = this.render_worker_pool.amount_workers()
+        const row_jump = this.amount_workers
         const { width, height } = this.controller.get_current_canvas_size()
 
         const row_len_bytes = width * 4
@@ -110,175 +162,5 @@ export class CpuModel implements Model {
             const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes)
             row_dst.set(row_src)
         }
-    }
-}
-
-abstract class AbstractState {
-    protected model: CpuModel
-
-    constructor(model: CpuModel) {
-        this.model = model
-    }
-
-    async set_scene(message: MessageToWorker.SetScene): Promise<DidHandleMessage> {
-        // async set_scene(scene_name: string): Promise<DidHandleMessage> {
-        console.log(`CpuModel<${this.state_name()}>: Didn't handle set_scene(${message})`)
-        return DidHandleMessage.NO
-    }
-
-    async resize(width: number, height: number): Promise<DidHandleMessage> {
-        console.log(`CpuModel<${this.state_name()}>: Didn't handle resize(`, { width, height }, `)`)
-        return DidHandleMessage.NO
-    }
-
-    async turn_camera(drag_begin: { x: number, y: number },
-        drag_end: { x: number, y: number }): Promise<DidHandleMessage> {
-        console.log(`CpuModel<${this.state_name()}>: Didn't handle turn_camera(`, { drag_begin, drag_end }, `)`)
-        return DidHandleMessage.NO
-    }
-
-    on_message(message: MessageFromWorker.Message): DidHandleMessage {
-        const result = this.on_message_impl(message)
-        if (result == DidHandleMessage.NO) {
-            console.error(`CpuModel<${this.state_name()}>: Didn't handle message:`, message.constructor.name)
-        }
-        return result
-    }
-
-    protected on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
-        return DidHandleMessage.NO
-    }
-
-    abstract state_name(): string
-}
-class InitPingPong extends AbstractState {
-    worker_responses: number = 0
-    init_set_scene: MessageToWorker.SetScene
-
-    constructor(model: CpuModel, init_set_scene: MessageToWorker.SetScene) {
-        super(model)
-        this.init_set_scene = init_set_scene
-    }
-
-    private send_init_and_start_first_render() {
-        const amount_workers = this.model.amount_workers
-        const { width, height } = this.model.controller.get_current_canvas_size()
-        for (let index = 0; index < amount_workers; ++index) {
-            const canvas_buffer = this.model.get_worker_buffer(index)
-            const message = new MessageToWorker.Init(index,
-                canvas_buffer,
-                amount_workers,
-                this.init_set_scene,
-                width,
-                height)
-            this.model.render_worker_pool.post(index, message)
-        }
-        this.model.transition_state(new Rendering(this.model))
-    }
-
-    on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
-        if (message.type == "MessageFromWorker_Init") {
-            this.worker_responses += 1
-            if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {
-                this.send_init_and_start_first_render()
-            }
-            return DidHandleMessage.YES
-        }
-        return DidHandleMessage.NO
-    }
-
-    state_name(): string {
-        return this.constructor.name
-    }
-}
-
-class Rendering extends AbstractState {
-    worker_responses: number = 0
-    time_start: number
-
-    constructor(model: CpuModel) {
-        super(model)
-        this.model.view.display_rendering_state()
-        this.time_start = performance.now()
-    }
-
-    on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
-        if (message.type == "MessageFromWorker_RenderResponse") {
-            const buffer = new Uint8Array(this.model.get_worker_buffer(message.index))
-            this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer)
-
-            this.worker_responses += 1
-            if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {
-                this.model.view.update_canvas(this.model.get_image_data())
-                this.model.transition_state(new AcceptUserControl(this.model))
-                this.display_render_time()
-            }
-            return DidHandleMessage.YES
-        }
-        return DidHandleMessage.NO
-    }
-
-    private display_render_time() {
-        const duration = performance.now() - this.time_start
-        this.model.view.display_render_duration(duration)
-    }
-
-    state_name(): string {
-        return this.constructor.name
-    }
-}
-
-class AcceptUserControl extends AbstractState {
-    constructor(model: CpuModel) {
-        super(model)
-        this.model.controller.activate_controls()
-    }
-
-    private transition_to_rendering() {
-        this.model.controller.deactivate_controls()
-        this.model.transition_state(new Rendering(this.model))
-    }
-
-    private post_all(message: MessageToWorker.Message) {
-        const amount_workers = this.model.render_worker_pool.amount_workers()
-        for (let index = 0; index < amount_workers; ++index) {
-            this.model.render_worker_pool.post(index, message)
-        }
-    }
-
-    async resize(width: number, height: number): Promise<DidHandleMessage> {
-        this.model.init_image_data()
-        this.model.create_worker_image_buffers(width, height)
-        const amount_workers = this.model.render_worker_pool.amount_workers()
-        for (let index = 0; index < amount_workers; ++index) {
-            const buffer = this.model.get_worker_buffer(index)
-            const message = new MessageToWorker.Resize(width, height, buffer)
-            this.model.render_worker_pool.post(index, message)
-        }
-
-        this.transition_to_rendering()
-        return DidHandleMessage.YES
-    }
-
-    async set_scene(message: MessageToWorker.SetScene): Promise<DidHandleMessage> {
-        // async set_scene(scene_file: string): Promise<DidHandleMessage> {
-        // const message = new MessageToWorker.SetScene(scene_file, this.model.)
-        this.post_all(message)
-        this.transition_to_rendering()
-        return DidHandleMessage.YES
-    }
-
-    async turn_camera(drag_begin: { x: number, y: number },
-        drag_end: { x: number, y: number }): Promise<DidHandleMessage> {
-        const message = new MessageToWorker.TurnCamera(drag_begin, drag_end)
-
-        console.log("Posting turn_camera: ", message)
-        this.post_all(message)
-        this.transition_to_rendering()
-        return DidHandleMessage.YES
-    }
-
-    state_name(): string {
-        return this.constructor.name
     }
 }

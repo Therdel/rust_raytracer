@@ -13,8 +13,8 @@ export class RenderWorkerPool {
     private next_sequence_number: number
     private pending_message_handlers: (MessageHandler | undefined)[]
 
-    private constructor(workers: Worker[]) {
-        this.workers = workers
+    private constructor(amount_workers: number) {
+        this.workers = RenderWorkerPool.spawn_workers(amount_workers)
         this.workers.forEach(worker => {
             worker.onmessage = (event: MessageEvent<MessageFromWorker.Message>) => this.onMessage(event)
         })
@@ -25,40 +25,25 @@ export class RenderWorkerPool {
     }
 
     static async create(amount_workers: number): Promise<RenderWorkerPool> {
-        const workers = await RenderWorkerPool.spawn_workers(amount_workers)
-        return new RenderWorkerPool(workers)
+        const pool = new RenderWorkerPool(amount_workers)
+
+        // await all Workers' startup messages
+        // by not sending a message (empty `mapFn`)
+        // and registering a handler for message sequence=0, the startup sequence
+        await pool.dispatch_raw()
+        return pool
     }
 
-    private static async spawn_workers(amount_workers: number): Promise<Worker[]> {
+    private static spawn_workers(amount_workers: number): Worker[] {
         const workers: Worker[] = []
 
-        // Create all workers
         for (let i = 0; i < amount_workers; i++) {
             const worker = new Worker(
                 new URL("../worker/render_worker", import.meta.url),
-                { type: "module" }
+                { type: "module", name: `${i}` }
             )
             workers.push(worker)
         }
-
-        // Wait for all workers to send their startup message
-        await new Promise<void>((resolve) => {
-            let started = 0
-
-            const onMessage = ({ data: message }: MessageEvent<MessageFromWorker.Startup>) => {
-                if (message.type === "MessageFromWorker_Startup") {
-                    if (++started === amount_workers) {
-                        // Remove listeners after all workers have started
-                        workers.forEach(worker => worker.onmessage = null)
-                        resolve()
-                    }
-                } else {
-                    throw new Error(`Unexpected message: '${message}'`)
-                }
-            }
-
-            workers.forEach(worker => worker.onmessage = onMessage)
-        })
 
         return workers
     }
@@ -66,11 +51,19 @@ export class RenderWorkerPool {
     async dispatch(mapFn: (workerIndex: number) => MessageToWorker.Payload,
                    reduceFn?: (workerIndex: number, isLastMessage: boolean) => void
     ): Promise<void> {
+        await this.dispatch_raw(mapFn, reduceFn)
+    }
+
+    private async dispatch_raw(mapFn?: (workerIndex: number) => MessageToWorker.Payload,
+                               reduceFn?: (workerIndex: number, isLastMessage: boolean) => void
+    ): Promise<void> {
         const sequenceNumber = this.next_sequence_number++
-        for (let i = 0; i < this.workers.length; i++) {
-            const payload: MessageToWorker.Payload = mapFn(i)
-            const message = new MessageToWorker.Message(sequenceNumber, i, payload)
-            this.workers[i].postMessage(message)
+        if (mapFn !== undefined) {
+            for (let i = 0; i < this.workers.length; i++) {
+                const payload: MessageToWorker.Payload = mapFn(i)
+                const message = new MessageToWorker.Message(sequenceNumber, payload)
+                this.workers[i].postMessage(message)
+            }
         }
 
         return new Promise<void>((resolve) => {

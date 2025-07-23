@@ -3,7 +3,3 @@ export class Message {
                 readonly worker_index: number) {
     }
 }
-
-export class Startup {
-    readonly type = "MessageFromWorker_Startup"
-}

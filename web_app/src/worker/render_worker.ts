@@ -4,7 +4,7 @@ import * as MessageFromWorker from "../messages/message_from_worker"
 import wasm_bindgen_init, {Renderer, wasm_main} from "../../wasm/pkg/wasm"
 
 class RenderWorker {
-    private index: number
+    public static readonly index: number = RenderWorker.parse_worker_index()
     private amount_workers: number
     private canvas_buffer: SharedArrayBuffer
     private canvas_buffer_u8: Uint8Array
@@ -14,12 +14,10 @@ class RenderWorker {
 
     private static instance: RenderWorker
 
-    private constructor(index: number,
-                        amount_workers: number,
+    private constructor(amount_workers: number,
                         canvas_buffer: SharedArrayBuffer,
                         width: number,
                         height: number) {
-        this.index = index
         this.amount_workers = amount_workers
         this.canvas_buffer = canvas_buffer
         this.canvas_buffer_u8 = new Uint8Array(this.canvas_buffer)
@@ -28,13 +26,19 @@ class RenderWorker {
         this.renderer = new Renderer(width, height)
     }
 
+    private static parse_worker_index() {
+        if (!self.name) {
+            throw new Error("Worker: name is not set")
+        }
+        return parseInt(self.name)
+    }
+
     private static getInstance() {
         return RenderWorker.instance
     }
 
-    static async init(index: number, amount_workers: number, canvas_buffer: SharedArrayBuffer, width: number, height: number) {
-        RenderWorker.instance = new RenderWorker(index,
-                                                 amount_workers,
+    static async init(amount_workers: number, canvas_buffer: SharedArrayBuffer, width: number, height: number) {
+        RenderWorker.instance = new RenderWorker(amount_workers,
                                                  canvas_buffer,
                                                  width,
                                                  height)
@@ -63,7 +67,7 @@ class RenderWorker {
 
     static render() {
         const instance = RenderWorker.getInstance()
-        const y_offset = instance.index
+        const y_offset = RenderWorker.index
         const row_jump = instance.amount_workers
         instance.renderer.render_interlaced(instance.canvas_buffer_u8, y_offset, row_jump)
     }
@@ -71,16 +75,16 @@ class RenderWorker {
 
 async function on_message({ data: message }: MessageEvent<MessageToWorker.Message>) {
     const payload = message.payload
-    console.debug(`Worker #${message.worker_index}:\tReceived '${payload.type}'`);
+    console.debug(`Worker: received '${payload.type}'`);
 
     if (payload.type === "MessageToWorker_Init") {
         const worker_init_start = performance.now()
         const { amount_workers, resize } = payload
-        await RenderWorker.init(message.worker_index, amount_workers, resize.buffer, resize.width, resize.height)
+        await RenderWorker.init(amount_workers, resize.buffer, resize.width, resize.height)
         const worker_init_duration =
             (performance.now() - worker_init_start).toFixed(0)
-    
-        console.debug(`Worker:\tinit took ${worker_init_duration}ms`)
+
+        console.debug(`Worker: init took ${worker_init_duration}ms`)
     } else if (payload.type === "MessageToWorker_SetScene") {
         await RenderWorker.set_scene(payload.scene_url_or_filename, payload.assets_serialized)
     } else if (payload.type === "MessageToWorker_Resize") {
@@ -91,12 +95,12 @@ async function on_message({ data: message }: MessageEvent<MessageToWorker.Messag
         const worker_render_start = performance.now()
         RenderWorker.render()
         const worker_render_stop = performance.now() - worker_render_start
-        console.debug(`Worker:${message.worker_index}\tRender time: ${worker_render_stop.toFixed(0)} ms`);
+        console.debug(`Worker: render time: ${worker_render_stop.toFixed(0)} ms`);
     }
 
     const response = new MessageFromWorker.Message(
         message.sequence,
-        message.worker_index)
+        RenderWorker.index)
     postMessage(response)
 }
 
@@ -106,9 +110,10 @@ async function start_worker() {
     // Load wasm file, run its entry point
     await wasm_bindgen_init();
     wasm_main();
-    console.log(`Worker:\tWASM initialized`)
-    
-    postMessage(new MessageFromWorker.Startup())
-    console.log(`Worker:\tstarted`)
+    console.log(`Worker: WASM initialized`)
+
+    const STARTUP_SEQUENCE = 0
+    postMessage(new MessageFromWorker.Message(STARTUP_SEQUENCE, RenderWorker.index))
+    console.log(`Worker: started`)
 }
 await start_worker()

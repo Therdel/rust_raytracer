@@ -27,6 +27,8 @@
 
 - [x] gouraud shading
 - [x] use typescript
+- [x] remove CPU SM
+- [x] continuous render
 
 
 - [ ] parallelize worker startup

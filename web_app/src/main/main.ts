@@ -45,4 +45,4 @@ async function main() {
     // TODO: switch continuous rendering on/off
     await start_render_loop(model)
 }
-main()
+await main()

@@ -70,22 +70,19 @@ export class CpuModel implements Model {
 
         const message = new MessageToWorker.Render()
         const mapFn = (workerIndex: number) => message
-
-        const reduceFn = (workerIndex: number, isLastMessage: boolean) => {
+        const reduceFn = (workerIndex: number) => {
             const buffer = new Uint8Array(this.get_worker_buffer(workerIndex))
             this.write_interlaced_worker_buffer_into_image_data(workerIndex, buffer)
-
-            if (isLastMessage) {
-                const duration = performance.now() - time_start
-                this.view.display_render_duration(duration)
-                
-                // TODO: maybe do update_canvas in the render loop?
-                // TODO: model updates canvas, canvas calls model.get_current_frame() 
-                //       would mean that we keep a duplicate, clean frame-buffer here that the view can get, or we just push it only when it's consistent
-                this.view.update_canvas(this.get_image_data())
-            }
         }
         await this.render_worker_pool.dispatch(mapFn, reduceFn)
+
+        const duration = performance.now() - time_start
+        this.view.display_render_duration(duration)
+
+        // TODO: maybe do update_canvas in the render loop?
+        // TODO: model updates canvas, canvas calls model.get_current_frame() 
+        //       would mean that we keep a duplicate, clean frame-buffer here that the view can get, or we just push it only when it's consistent
+        this.view.update_canvas(this.get_image_data())
         
         console.debug(`Render finished`)
     }

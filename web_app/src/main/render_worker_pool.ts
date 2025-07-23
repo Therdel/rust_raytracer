@@ -49,13 +49,13 @@ export class RenderWorkerPool {
     }
 
     async dispatch(mapFn: (workerIndex: number) => MessageToWorker.Payload,
-                   reduceFn?: (workerIndex: number, isLastMessage: boolean) => void
+                   reduceFn?: (workerIndex: number) => void
     ): Promise<void> {
         await this.dispatch_raw(mapFn, reduceFn)
     }
 
     private async dispatch_raw(mapFn?: (workerIndex: number) => MessageToWorker.Payload,
-                               reduceFn?: (workerIndex: number, isLastMessage: boolean) => void
+                               reduceFn?: (workerIndex: number) => void
     ): Promise<void> {
         const sequenceNumber = this.next_sequence_number++
         if (mapFn !== undefined) {
@@ -69,12 +69,11 @@ export class RenderWorkerPool {
         return new Promise<void>((resolve) => {
             let receivedCount = 0
             const handler: MessageHandler = ({data: message}: MessageEvent<MessageFromWorker.Message>) => {
-                const isLastMessage = ++receivedCount === this.workers.length;
-
                 if (reduceFn) {
-                    reduceFn(message.worker_index, isLastMessage)
+                    reduceFn(message.worker_index)
                 }
-
+                
+                const isLastMessage = ++receivedCount === this.workers.length;
                 if (isLastMessage) {
                     resolve()
                     return MessageResult.Finished

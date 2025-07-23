@@ -46,7 +46,6 @@ export class CpuModel implements Model {
         const init = await model.init_workers()
         const scene_file_name = controller.get_current_scene_file_name()
         const setScene = await model.set_scene(scene_file_name)
-        model.controller.activate_controls()
 
         return model
     }

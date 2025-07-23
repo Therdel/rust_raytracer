@@ -32,5 +32,6 @@ async function main() {
         model = await CpuModel.create(view, controller, canvas_context)
     }
     controller.set_model(model)
+    controller.activate_controls()
 }
 main()

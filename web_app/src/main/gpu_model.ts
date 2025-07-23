@@ -54,8 +54,6 @@ export class GpuModel implements Model {
     }
 
     async render() {
-        this.controller.deactivate_controls()
-
         const canvas_u8 = new Uint8Array(this.get_image_data().data.buffer)
 
         const time_start = performance.now()
@@ -64,8 +62,6 @@ export class GpuModel implements Model {
         this.view.display_render_duration(duration)
 
         this.view.update_canvas(this.get_image_data())
-
-        this.controller.activate_controls()
     }
 
     // FIXME: don't just recreate everything

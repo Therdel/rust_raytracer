@@ -14,6 +14,10 @@
             /*  canvas captures panning gestures for camera movement,
                 but leaves pinch zoom to the browser*/
             touch-action: pinch-zoom;
+
+            /* Prevent canvas from being draggable like an image */
+            user-select: none;
+            -webkit-user-select: none; /* for Safari */
         }
         #pixel_ratio {
             width: 20em;

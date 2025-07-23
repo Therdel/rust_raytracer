@@ -1,7 +1,7 @@
 import { AssetStore } from "../messages/asset_store"
 import * as MessageToWorker from "../messages/message_to_worker"
 import * as MessageFromWorker from "../messages/message_from_worker"
-import init, {Renderer, wasm_main} from "../../wasm/pkg/wasm"
+import wasm_bindgen_init, {Renderer, wasm_main} from "../../wasm/pkg/wasm"
 
 class RenderWorker {
     private index: number
@@ -33,8 +33,6 @@ class RenderWorker {
     }
 
     static async init(index: number, amount_workers: number, canvas_buffer: SharedArrayBuffer, width: number, height: number) {
-        await init_wasm()
-
         RenderWorker.instance = new RenderWorker(index,
                                                  amount_workers,
                                                  canvas_buffer,
@@ -71,12 +69,6 @@ class RenderWorker {
     }
 }
 
-async function init_wasm() {
-    // Load wasm file, run its entry point
-    await init();
-    wasm_main();
-}
-
 async function on_message({ data: message }: MessageEvent<MessageToWorker.Message>) {
     const payload = message.payload
     console.debug(`Worker #${message.worker_index}:\tReceived '${payload.type}'`);
@@ -108,11 +100,15 @@ async function on_message({ data: message }: MessageEvent<MessageToWorker.Messag
     postMessage(response)
 }
 
-onmessage = on_message
-
-function init_worker() {
-    console.log(`Worker:\tstarted`)
-
+async function start_worker() {
+    onmessage = on_message
+    
+    // Load wasm file, run its entry point
+    await wasm_bindgen_init();
+    wasm_main();
+    console.log(`Worker:\tWASM initialized`)
+    
     postMessage(new MessageFromWorker.Startup())
+    console.log(`Worker:\tstarted`)
 }
-init_worker()
+await start_worker()

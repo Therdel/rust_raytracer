@@ -6,7 +6,15 @@ export default defineConfig({
   base: `/rust_raytracer/`,
   publicDir: 'public',
   build: {
-    sourcemap: true
+    sourcemap: true,
+    rollupOptions: {
+      output: {
+        format: 'es',
+      }
+    }
+  },
+  worker: {
+    format: 'es'
   },
   plugins: [wasm(), topLevelAwait()]
 })

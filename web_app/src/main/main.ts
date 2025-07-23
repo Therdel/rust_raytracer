@@ -5,6 +5,14 @@ import { GpuModel } from "./gpu_model";
 import { Model } from "./model";
 import { View } from "./view";
 
+async function start_render_loop(model: Model) {
+    const renderLoop = async () => {
+        await model.render()
+        requestAnimationFrame(renderLoop)
+    }
+    await renderLoop()
+}
+
 async function main() {
     console.log(`Main:\tstarted`)
 
@@ -33,5 +41,8 @@ async function main() {
     }
     controller.set_model(model)
     controller.activate_controls()
+
+    // TODO: switch continuous rendering on/off
+    await start_render_loop(model)
 }
 main()

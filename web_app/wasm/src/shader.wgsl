@@ -921,9 +921,14 @@ fn set_pixel(screen_coordinate: vec2u, color_rgb: ColorRgb) {
 }
 
 @compute
-@workgroup_size(1)
+@workgroup_size(8, 8)
 fn main(@builtin(global_invocation_id) global_id: vec3u) {
     let screen_coordinate = global_id.xy;
+    if (screen_coordinate.x >= camera.screen_dimensions.x ||
+        screen_coordinate.y >= camera.screen_dimensions.y) {
+        // out of bounds
+        return;
+    }
 
     // TODO: The y coord isn't inverted - that's why the y object's y coords are flipped
     let ray = generate_primary_ray(vec2f(screen_coordinate), camera.screen_to_world);

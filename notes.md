@@ -1,5 +1,6 @@
 
 # ToDo
+- [x] increase workgroup size
 
 - [x] port initial exercise1 project structure
     - [x] copy LICENSE

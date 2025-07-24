@@ -24,7 +24,6 @@ export class GpuModel implements Model {
         this.asset_store = asset_store
 
         this.gpu_renderer = gpu_renderer
-        this.render()
     }
 
     static async create(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D): Promise<GpuModel> {
@@ -71,20 +70,16 @@ export class GpuModel implements Model {
         const { width, height } = this.controller.get_current_canvas_size()
         const gpu_renderer = await GpuRenderer.new(width, height, this.asset_store, scene_name)
         this.gpu_renderer = gpu_renderer
-
-        this.render()
     }
 
     async resize(width: number,
                  height: number) {
         this.init_image_data()
         this.get_gpu_renderer().resize_screen(width, height)
-        await this.render()
     }
 
     async turn_camera(drag_begin: { x: number, y: number },
                       drag_end: { x: number, y: number }) {
         this.get_gpu_renderer().turn_camera(drag_begin.x, drag_begin.y, drag_end.x, drag_end.y)
-        await this.render()
     }
 }

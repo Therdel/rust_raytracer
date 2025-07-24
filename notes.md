@@ -29,6 +29,7 @@
 - [x] use typescript
 - [x] remove CPU SM
 - [x] continuous render
+- [X] GPU continuous rendering
 
 
 - [ ] parallelize worker startup

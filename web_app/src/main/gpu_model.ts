@@ -14,7 +14,7 @@ export class GpuModel implements Model {
 
     private gpu_renderer: GpuRenderer
 
-    constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore, gpu_renderer: GpuRenderer) {
+    private constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore, gpu_renderer: GpuRenderer) {
         this.view = view
         this.controller = controller
 
@@ -38,17 +38,17 @@ export class GpuModel implements Model {
         return gpu_model
     }
 
-    init_image_data(): ImageData {
+    private init_image_data(): ImageData {
         const { width, height } = this.controller.get_current_canvas_size()
         this.image_data = this.canvas_context.createImageData(width, height)
         return this.image_data
     }
 
-    get_image_data() {
+    private get_image_data() {
         return this.image_data
     }
 
-    get_gpu_renderer(): GpuRenderer {
+    private get_gpu_renderer(): GpuRenderer {
         return this.gpu_renderer
     }
 

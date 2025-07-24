@@ -10,30 +10,27 @@ export class CpuModel implements Model {
     public readonly controller: Controller
 
     private asset_store: AssetStore
+    public render_worker_pool: RenderWorkerPool
 
     private readonly canvas_context: CanvasRenderingContext2D
     private image_data: ImageData
 
-    public amount_workers: number
     // TODO: Either one SharedArrayBuffer or many regular buffers to avoid CORS problems
     private worker_image_buffers: SharedArrayBuffer[]
-    public render_worker_pool: RenderWorkerPool
 
     private constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore, render_worker_pool: RenderWorkerPool) {
         this.view = view
         this.controller = controller
 
         this.asset_store = asset_store
+        this.render_worker_pool = render_worker_pool
 
         this.canvas_context = canvas_context
         this.image_data = this.init_image_data()
 
-        this.amount_workers = navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4
         const { width, height } = this.controller.get_current_canvas_size()
         // TODO: rename to worker_render_buffers
         this.worker_image_buffers = this.create_worker_image_buffers(width, height)
-
-        this.render_worker_pool = render_worker_pool
     }
 
     static async create(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D): Promise<CpuModel> {
@@ -56,7 +53,7 @@ export class CpuModel implements Model {
         const mapFn = (workerIndex: number): MessageToWorker.Payload => {
             const canvas_buffer = this.get_worker_buffer(workerIndex)
             const resize_message = new MessageToWorker.Resize(width, height, canvas_buffer)
-            const init_message = new MessageToWorker.Init(this.amount_workers, resize_message)
+            const init_message = new MessageToWorker.Init(this.render_worker_pool.amountWorkers(), resize_message)
 
             return init_message
         }
@@ -131,7 +128,7 @@ export class CpuModel implements Model {
     private create_worker_image_buffers(width: number, height: number): SharedArrayBuffer[] {
         this.worker_image_buffers = []
         const image_buf_size = width * height * 4
-        this.worker_image_buffers = Array.from({ length: this.amount_workers },
+        this.worker_image_buffers = Array.from({ length: this.render_worker_pool.amountWorkers() },
             () => new SharedArrayBuffer(image_buf_size))
         return this.worker_image_buffers
     }
@@ -148,7 +145,7 @@ export class CpuModel implements Model {
         const dst = new Uint8Array(this.image_data.data.buffer)
 
         const y_offset = index
-        const row_jump = this.amount_workers
+        const row_jump = this.render_worker_pool.amountWorkers()
         const { width, height } = this.controller.get_current_canvas_size()
 
         const row_len_bytes = width * 4

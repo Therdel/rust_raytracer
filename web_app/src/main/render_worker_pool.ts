@@ -127,4 +127,8 @@ export class RenderWorkerPool {
         this.first_pending_sequence_number += count_completed;
         this.pending_message_handlers = this.pending_message_handlers.slice(count_completed);
     }
+
+    amountWorkers(): number {
+        return this.workers.length
+    }
 }

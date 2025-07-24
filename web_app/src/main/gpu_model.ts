@@ -14,6 +14,8 @@ export class GpuModel implements Model {
 
     private gpu_renderer: GpuRenderer
 
+    private command_queue: Promise<void>
+
     private constructor(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D, asset_store: AssetStore, gpu_renderer: GpuRenderer) {
         this.view = view
         this.controller = controller
@@ -24,6 +26,8 @@ export class GpuModel implements Model {
         this.asset_store = asset_store
 
         this.gpu_renderer = gpu_renderer
+
+        this.command_queue = Promise.resolve()
     }
 
     static async create(view: View, controller: Controller, canvas_context: CanvasRenderingContext2D): Promise<GpuModel> {
@@ -36,6 +40,13 @@ export class GpuModel implements Model {
         const gpu_model = new GpuModel(view, controller, canvas_context, asset_store, gpu_renderer)
 
         return gpu_model
+    }
+
+    private enqueue_command<T>(command: () => Promise<T>): Promise<T> {
+        const queued: Promise<T> = this.command_queue.then(command, command)
+        const erased: Promise<void> = queued.then(() => {}, () => {})
+        this.command_queue = erased
+        return queued
     }
 
     private init_image_data(): ImageData {
@@ -53,33 +64,41 @@ export class GpuModel implements Model {
     }
 
     async render() {
-        const canvas_u8 = new Uint8Array(this.get_image_data().data.buffer)
+        return this.enqueue_command(async () => {
+            const canvas_u8 = new Uint8Array(this.get_image_data().data.buffer)
 
-        const time_start = performance.now()
-        await this.get_gpu_renderer().render(canvas_u8)
-        const duration = performance.now() - time_start
-        this.view.display_render_duration(duration)
+            const time_start = performance.now()
+            await this.get_gpu_renderer().render(canvas_u8)
+            const duration = performance.now() - time_start
+            this.view.display_render_duration(duration)
 
-        this.view.update_canvas(this.get_image_data())
+            this.view.update_canvas(this.get_image_data())
+        })
     }
 
     // FIXME: don't just recreate everything
     async set_scene(scene_name: string) {
-        await this.asset_store.putScene(scene_name)
-
-        const { width, height } = this.controller.get_current_canvas_size()
-        const gpu_renderer = await GpuRenderer.new(width, height, this.asset_store, scene_name)
-        this.gpu_renderer = gpu_renderer
+        return this.enqueue_command(async () => {
+            await this.asset_store.putScene(scene_name)
+    
+            const { width, height } = this.controller.get_current_canvas_size()
+            const gpu_renderer = await GpuRenderer.new(width, height, this.asset_store, scene_name)
+            this.gpu_renderer = gpu_renderer
+        })
     }
 
     async resize(width: number,
                  height: number) {
-        this.init_image_data()
-        this.get_gpu_renderer().resize_screen(width, height)
+        return this.enqueue_command(async () => {
+            this.init_image_data()
+            this.get_gpu_renderer().resize_screen(width, height)
+        })
     }
 
     async turn_camera(drag_begin: { x: number, y: number },
                       drag_end: { x: number, y: number }) {
-        this.get_gpu_renderer().turn_camera(drag_begin.x, drag_begin.y, drag_end.x, drag_end.y)
+        return this.enqueue_command(async () => {
+            this.get_gpu_renderer().turn_camera(drag_begin.x, drag_begin.y, drag_end.x, drag_end.y)
+        })
     }
 }

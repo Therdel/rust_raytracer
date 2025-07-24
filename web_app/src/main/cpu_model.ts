@@ -40,9 +40,9 @@ export class CpuModel implements Model {
         const render_worker_pool = await RenderWorkerPool.create(amount_workers)
 
         const model = new CpuModel(view, controller, canvas_context, asset_store, render_worker_pool)
-        const init = await model.init_workers()
+        await model.init_workers()
         const scene_file_name = controller.get_current_scene_file_name()
-        const setScene = await model.set_scene(scene_file_name)
+        await model.set_scene(scene_file_name)
 
         return model
     }

@@ -322,18 +322,18 @@ impl GpuRenderer {
         self.queue.write_buffer(camera_uniform_buf, 0, bytemuck::cast_slice(std::slice::from_ref(&gpu_camera)));
         self.queue.submit(Some(command_buffer));
     
-        // // Note that we're not calling `.await` here.
+        // Note that we're not calling `.await` here.
         let buffer_slice = canvas_staging_buf.slice(..);
-        // // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
+        // Sets the buffer up for mapping, sending over the result of the mapping back to us when it is finished.
         let (sender, receiver) = futures_intrusive::channel::shared::oneshot_channel();
         buffer_slice.map_async(wgpu::MapMode::Read, move |v| sender.send(v).unwrap());
         
-        // // Poll the device in a blocking manner so that our future resolves.
-        // // In an actual application, `device.poll(...)` should
-        // // be called in an event loop or on another thread.
+        // Poll the device in a blocking manner so that our future resolves.
+        // In an actual application, `device.poll(...)` should
+        // be called in an event loop or on another thread.
         self.device.poll(wgpu::PollType::Wait).unwrap();
     
-        // // Awaits until `buffer_future` can be read from
+        // Awaits until `buffer_future` can be read from
         if let Some(Ok(())) = receiver.receive().await {
             // Gets contents of buffer
             let data = buffer_slice.get_mapped_range();

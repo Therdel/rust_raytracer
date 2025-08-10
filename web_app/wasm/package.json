@@ -1,8 +1,19 @@
 {
   "name": "wasm",
+  "version": "0.1.0",
+  "main": "./pkg/wasm.js",
+  "types": "./pkg/wasm.d.ts",
   "scripts": {
-    "build": "wasm-pack build --target web",
-    "prepare": "npm run build"
+    "build":       "wasm-pack build --target web --release",
+    "build:debug": "wasm-pack build --target web --debug",
+    "clean":       "rm -rf ./pkg",
+    "prepare":     "pnpm build"
   },
-  "main": "./pkg/web_app.js"
+  "devDependencies": {
+    "wasm-pack": "^0.13.1"
+  },
+  "packageManager": "pnpm@10.11.0",
+  "engines": {
+    "npm": "please-use-pnpm"
+  }
 }

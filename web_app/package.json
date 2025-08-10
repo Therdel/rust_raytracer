@@ -3,20 +3,16 @@
   "version": "0.0.1",
   "description": "web_app",
   "scripts": {
-    "dev": "pnpm build:wasm:release && vite",
-    "build": "pnpm build:release",
-    "build:release": "pnpm build:wasm:release && vite build",
-    "build:debug": "pnpm build:wasm:debug && vite build",
-    "build:wasm:debug": "wasm-pack build ./wasm --target web --debug",
-    "build:wasm:release": "wasm-pack build ./wasm --target web --release",
-    "preview": "vite preview",
-    "clean": "rm -rf ./wasm/pkg && rm -rf dist"
+    "dev":           "pnpm --filter wasm build && vite",
+    "build":         "pnpm --filter wasm build && vite build",
+    "build:debug":   "pnpm --filter wasm build:debug && vite build",
+    "clean":         "pnpm --filter wasm clean && rm -rf dist",
+    "preview":       "vite preview"
   },
   "dependencies": {
     "vite-plugin-top-level-await": "^1.5.0",
     "vite-plugin-wasm": "^3.4.1",
-    "wasm": "file:./wasm",
-    "wasm-pack": "^0.13.1"
+    "wasm": "file:./wasm"
   },
   "devDependencies": {
     "@webgpu/types": "^0.1.61",

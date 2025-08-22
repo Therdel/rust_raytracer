@@ -1,4 +1,4 @@
-import init, { wasm_main, wasm_log_init } from "../../wasm/pkg/wasm"
+import wasm_bindgen_init, { wasm_main, wasm_log_init, InitOutput, initThreadPool } from "../../wasm/pkg/wasm"
 import { Controller } from "./controller";
 import { CpuModel } from "./cpu_model";
 import { GpuModel } from "./gpu_model";
@@ -13,13 +13,21 @@ async function start_render_loop(model: Model) {
     await renderLoop()
 }
 
-async function main() {
-    console.log(`Main:\tstarted`)
+async function init_wasm() {
+    const output: InitOutput = await wasm_bindgen_init()
 
-    // Load wasm file, run its entry point
-    await init();
+    const isSharedArrayBuffer = output.memory.buffer instanceof SharedArrayBuffer
+    if (!isSharedArrayBuffer) {
+        throw new Error('WebAssembly memory buffer is not a SharedArrayBuffer');
+    }
+    
+    await initThreadPool(navigator.hardwareConcurrency)
     wasm_main();
     wasm_log_init();
+}
+
+async function main() {
+    console.log(`Main:\tstarted`)
 
     const canvas = document.getElementById('screen') as HTMLCanvasElement
     const canvas_context = canvas.getContext("2d")

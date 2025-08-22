@@ -13,7 +13,7 @@ pub fn ray_equation(ray: &Ray, t: f32) -> glm::Vec3 {
 pub fn take_hitpoint_if_closer(closest_hitpoint: &mut Option<Hitpoint>,
                                hitpoint: Option<Hitpoint>) {
     if let Some(hitpoint) = hitpoint {
-        if let Some(ref mut closest_hitpoint) = closest_hitpoint {
+        if let Some(closest_hitpoint) = closest_hitpoint {
             if hitpoint.t < closest_hitpoint.t {
                 *closest_hitpoint = hitpoint;
             }

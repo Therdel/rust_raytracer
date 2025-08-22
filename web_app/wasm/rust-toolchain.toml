@@ -1,0 +1,8 @@
+[toolchain]
+# Pinned to Rust Nightly 2025-08-22 (2024 Edition)
+#   - Wasm shared memory is only supported on nightly, as is support for Wasm Bindgen Rayon
+#   - pinned so that future nightly updates do not break the build
+channel = "nightly-2025-08-22"
+components = ["rust-src"]            # needed to build the std lib
+profile = "minimal"                  # just include rustc, rust-std, and cargo
+targets = ["wasm32-unknown-unknown"]

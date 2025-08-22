@@ -32,7 +32,7 @@ impl Canvas {
         }
     }
 
-    pub fn borrow_stripes_mut(&mut self) -> impl Iterator<Item=CanvasStripe> {
+    pub fn borrow_stripes_mut(&mut self) -> impl Iterator<Item=CanvasStripe<'_>> {
         let max_y_index = self.height - 1;
 
         let row_stripes = self.pixels

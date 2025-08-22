@@ -1,0 +1,18 @@
+[unstable]
+# source: https://wasm-bindgen.github.io/wasm-bindgen/examples/raytrace.html#building-the-demo
+# source: https://github.com/RReverser/wasm-bindgen-rayon/tree/v1.3.0?tab=readme-ov-file#using-config-files
+build-std = ['std', 'panic_abort']
+
+[build]
+rustflags = [
+  # Use WebGPU backend instead of WebGL
+  # source: https://github.com/gfx-rs/wgpu/wiki/Running-on-the-Web-with-WebGPU-and-WebGL#webgpu
+  "--cfg=web_sys_unstable_apis",
+
+  # atomics for Wasm shared memory: https://wasm-bindgen.github.io/wasm-bindgen/examples/raytrace.html#building-the-demo
+  # atomics & bulk-memory for wasm-bindgen-rayon https://github.com/RReverser/wasm-bindgen-rayon/tree/v1.3.0?tab=readme-ov-file#using-config-files
+  "-Ctarget-feature=+atomics,+bulk-memory",
+
+  "--verbose"
+]
+target = "wasm32-unknown-unknown"

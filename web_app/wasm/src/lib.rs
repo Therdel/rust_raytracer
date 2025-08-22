@@ -5,6 +5,7 @@ mod color;
 mod gpu_renderer;
 mod renderer;
 mod utils;
+pub use wasm_bindgen_rayon::init_thread_pool;
 
 // Called when the wasm module is instantiated
 #[wasm_bindgen(start)]

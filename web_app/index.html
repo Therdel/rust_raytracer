@@ -5,15 +5,105 @@
     <title>knerz</title>
     <style>
         #canvas-resizer {
+            position: relative;
             border: black 2px dashed;
             overflow: hidden;
             height: 33em;
             width: 33em;
         }
-        #screen {
-            /*  canvas captures panning gestures for camera movement,
-                but leaves pinch zoom to the browser*/
+        #canvas-container {
+            overflow: hidden;
+            
+            position: absolute;
+            height: 100%;
+            width: 100%;
+            left:0;
+            top:0;
+        }
+        #canvas-container > canvas {
+            position: absolute;
+            left:0;
+            top:0;
+            height: 100%;
+            width: 100%;
+
+            /* don't do filtering, as the layered canvases will blur the lines TODO: better description lol don't push this */
+            image-rendering: pixelated;
+        }
+        #touchscreen {
+            position: absolute;
+            left:0;
+            top:0;
+            height: 100%;
+            width: 100%;
+            
             touch-action: pinch-zoom;
+        }
+        #slider_resolution_multiplier {
+            width: 25em
+        }
+
+        /* The switch - the box around the slider */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        /* Hide default HTML checkbox */
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        /* The slider */
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            -webkit-transition: .4s;
+            transition: .4s;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:focus + .slider {
+            box-shadow: 0 0 1px #2196F3;
+        }
+
+        input:checked + .slider:before {
+            -webkit-transform: translateX(26px);
+            -ms-transform: translateX(26px);
+            transform: translateX(26px);
+        }
+
+        /* Rounded sliders */
+        .slider.round {
+            border-radius: 34px;
+        }
+
+        .slider.round:before {
+            border-radius: 50%;
         }
     </style>
 </head>
@@ -21,13 +111,34 @@
     <center>
         <h2>Raytracing with WASM</h2>
 
-        <div id="canvas-resizer" class="resizable">
-            <canvas id="screen"></canvas>
+        <div id="canvas-resizer">
+            <div id="canvas-container">
+                <!-- <canvas id="worker_canvas0"></canvas> -->
+                <!-- <canvas id="worker_canvas1"></canvas> -->
+                <!-- <canvas id="worker_canvas2"></canvas> -->
+                <!--             ...                       -->
+            </div>
+            <div id="touchscreen">
+            </div>
         </div>
 
         <br>
         <br>
 
+        
+        <label for="slider_resolution_multiplier" id="label_slider_resolution_multiplier"></label>
+        <br>
+        <input type="range" min="0.01" max="1" value="1" step="any" id="slider_resolution_multiplier" list="slider_resolution_multiplier_markers">
+        <datalist id="slider_resolution_multiplier_markers">
+            <option value="1"></option>
+        </datalist>
+        <!-- Rounded switch -->
+        <label class="switch">
+            <input id="switch-camera-doorbit" type="checkbox">
+            <span class="slider round"></span>
+        </label>
+
+        <br>
         <label id="time-measurement"></label>
 
         <br>
@@ -38,6 +149,18 @@
             <option value="santa_and_balls.json">Santa and balls</option>
         </select>
     </center>
+    <br>
+    <!-- mesh loading -->
+    <label for="add_mesh_url_input">Load mesh .obj from URL:</label>
+    <input type="url" id="add_mesh_url_input" value="https://therdel.github.io/rust_raytracer/res/models/bunny.obj">
+    <label for="add_mesh_file_name_input">Mesh file name:</label>
+    <input type="text" id="add_mesh_file_name_input"></label>
+    <button type="button" id="add_mesh_button">Add mesh</button>
+    <label id="add_mesh_user_feedback"></label>
+    <label for="add_mesh_file_chooser">Upload mesh .obj:</label>
+    <input type="file" id="add_mesh_file_chooser"/>
+    <!-- loaded meshes list -->
+    <ul id="add_mesh_url_list"></ul>
 
 <!-- Credits        
         <br>
@@ -70,6 +193,6 @@
 <script>
     const el = document.createElement("div")
     el.innerHTML = `Cross origin isolated: ${window.crossOriginIsolated ? "✅" : "❌"}`
-    document.body.append(el);
+    document.body.append(el)
 </script>
 </html>

@@ -2,7 +2,7 @@
   "compileOnSave": true,
   "compilerOptions": {
     "target": "ES6",
-    "lib": [ "ES2017", "ES2017.SharedMemory" ],
+    "lib": [ "DOM", "ES2017", "ES2017.SharedMemory" ],
     "module": "ES6",
     "rootDir": ".",
     "outDir": "../../pkg/messages",

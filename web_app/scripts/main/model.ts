@@ -16,8 +16,8 @@ export class Model {
         this.core = core
     }
 
-    static async create(view: View, controller: Controller, canvas: HTMLCanvasElement): Promise<Model> {
-        const model_core = await ModelCore.create(view, controller, canvas)
+    static async create(amount_workers: number, view: View, controller: Controller): Promise<Model> {
+        const model_core = await ModelCore.create(amount_workers, view, controller)
         return new Model(model_core)
     }
 
@@ -26,13 +26,20 @@ export class Model {
     }
 
     resize(width: number,
-           height: number): DidHandleMessage {
-        return this.core.resize(width, height)
+           height: number,
+           devicePixelRatio: number,
+           resolution_multiplier: number): DidHandleMessage {
+        return this.core.resize(width, height, devicePixelRatio, resolution_multiplier)
     }
 
     turn_camera(drag_begin: { x: number, y: number },
-                drag_end: { x: number, y: number }): DidHandleMessage {
-        return this.core.turn_camera(drag_begin, drag_end)
+                drag_end: { x: number, y: number },
+                do_orbit: boolean): DidHandleMessage {
+        return this.core.turn_camera(drag_begin, drag_end, do_orbit)
+    }
+
+    add_mesh(mesh_url: string, mesh_file_buffer: SharedArrayBuffer) {
+        return this.core.add_mesh(mesh_url, mesh_file_buffer)
     }
 }
 
@@ -42,40 +49,43 @@ class ModelCore {
 
     private state: ModelState.AbstractState
 
-    private readonly canvas: HTMLCanvasElement
-    private readonly canvas_context: CanvasRenderingContext2D
-    private image_data: ImageData
+    // private readonly canvas: HTMLCanvasElement
+    // private readonly canvas_context: CanvasRenderingContext2D
+    // private image_data: ImageData
 
     public amount_workers: number
-    private worker_image_buffers: SharedArrayBuffer[]
+    // private worker_image_buffers: SharedArrayBuffer[]
     public render_worker_pool: RenderWorkerPool
 
     private scene: { file_name: string, file_buffer: SharedArrayBuffer }
     private mesh_cache: Map<string, SharedArrayBuffer>
 
-    private constructor(view: View, controller: Controller, canvas: HTMLCanvasElement) {
+    private constructor(amount_workers: number, view: View, controller: Controller) {
         this.view = view
         this.controller = controller
 
         this.state = undefined
 
-        this.canvas = canvas
-        this.canvas_context = canvas.getContext("2d")
-        this.init_image_data()
+        // this.canvas = canvas
+        // this.canvas_context = canvas.getContext("2d")
+        // this.init_image_data()
 
-        this.amount_workers = navigator.hardwareConcurrency ? navigator.hardwareConcurrency : 4
-        this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
+        this.amount_workers = amount_workers
+        // this.create_worker_image_buffers(this.canvas.width, this.canvas.height);
 
         this.render_worker_pool = undefined
     }
 
-    static async create(view: View, controller: Controller, canvas: HTMLCanvasElement): Promise<ModelCore> {
-        const model_core = new ModelCore(view, controller, canvas)
+    static async create(amount_workers: number, view: View, controller: Controller): Promise<ModelCore> {
+        const model_core = new ModelCore(amount_workers, view, controller)
         
         const scene_file_name = controller.get_current_scene_file_name()
         await model_core.fetch_scene_and_cache_meshes(scene_file_name)
         const init_set_scene = new MessageToWorker.SetScene(model_core.scene.file_buffer, model_core.mesh_cache)
-        model_core.state = new ModelState.InitPingPong(model_core, init_set_scene)
+        const offscreen_canvases = view.get_offscreen_canvases_once()
+        const { width, height } = controller.get_current_canvas_size()
+        const init_resize = new MessageToWorker.Resize(width, height, window.devicePixelRatio, controller.resolution_multiplier())
+        model_core.state = new ModelState.InitPingPong(model_core, offscreen_canvases, init_resize, init_set_scene)
 
         // start rendering
         const delegate = (message) => model_core.on_worker_message(message) // closure-wrap necessary, or else the this inside on_worker_message will refer to the calling worker source: https://stackoverflow.com/a/20279485
@@ -90,13 +100,20 @@ class ModelCore {
     }
 
     resize(width: number,
-           height: number): DidHandleMessage {
-        return this.state.resize(width, height)
+           height: number,
+           devicePixelRatio: number,
+           resolution_multiplier: number): DidHandleMessage {
+        return this.state.resize(width, height, devicePixelRatio, resolution_multiplier)
     }
 
     turn_camera(drag_begin: { x: number, y: number },
-                drag_end: { x: number, y: number }): DidHandleMessage {
-        return this.state.turn_camera(drag_begin, drag_end)
+                drag_end: { x: number, y: number },
+                do_orbit: boolean): DidHandleMessage {
+        return this.state.turn_camera(drag_begin, drag_end, do_orbit)
+    }
+
+    add_mesh(mesh_url: string, mesh_obj: SharedArrayBuffer): DidHandleMessage {
+        return this.state.add_mesh(mesh_url, mesh_obj)
     }
 
     private async fetch_scene_and_cache_meshes(scene_file_name: string) {
@@ -170,47 +187,47 @@ class ModelCore {
         this.state = state
     }
 
-    init_image_data() {
-        const [width, height] = [this.canvas.width, this.canvas.height]
-        this.image_data = this.canvas_context.createImageData(width, height)
-    }
+    // init_image_data() {
+    //     const [width, height] = [this.canvas.width, this.canvas.height]
+    //     this.image_data = this.canvas_context.createImageData(width, height)
+    // }
 
-    create_worker_image_buffers(width: number, height: number) {
-        this.worker_image_buffers = []
-        const image_buf_size = width * height * 4
-        for (let i = 0; i < this.amount_workers; ++i) {
-            const image_buffer = new SharedArrayBuffer(image_buf_size);
-            this.worker_image_buffers.push(image_buffer);
-        }
-    }
+    // create_worker_image_buffers(width: number, height: number) {
+    //     this.worker_image_buffers = []
+    //     const image_buf_size = width * height * 4
+    //     for (let i = 0; i < this.amount_workers; ++i) {
+    //         const image_buffer = new SharedArrayBuffer(image_buf_size);
+    //         this.worker_image_buffers.push(image_buffer);
+    //     }
+    // }
 
-    get_worker_buffer(index: number): SharedArrayBuffer {
-        return this.worker_image_buffers[index]
-    }
+    // get_worker_buffer(index: number): SharedArrayBuffer {
+    //     return this.worker_image_buffers[index]
+    // }
 
-    get_image_data() {
-        return this.image_data
-    }
+    // get_image_data() {
+    //     return this.image_data
+    // }
 
     private on_worker_message(message: MessageFromWorker.Message) {
         this.state.on_message(message)
     }
 
-    write_interlaced_worker_buffer_into_image_data(index: number, src: Uint8Array) {
-        const dst = new Uint8Array(this.image_data.data.buffer)
+    // write_interlaced_worker_buffer_into_image_data(index: number, src: Uint8Array) {
+    //     const dst = new Uint8Array(this.image_data.data.buffer)
 
-        const y_offset = index
-        const row_jump = this.render_worker_pool.amount_workers()
-        const [width, height] = [this.canvas.width, this.canvas.height]
+    //     const y_offset = index
+    //     const row_jump = this.render_worker_pool.amount_workers()
+    //     const [width, height] = [this.canvas.width, this.canvas.height]
 
-        const row_len_bytes = width * 4;
-        for (let y = y_offset; y < height; y += row_jump) {
-            const row_begin_offset = y * row_len_bytes;
-            const row_dst = dst.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
-            const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
-            row_dst.set(row_src);
-    }
-    }
+    //     const row_len_bytes = width * 4;
+    //     for (let y = y_offset; y < height; y += row_jump) {
+    //         const row_begin_offset = y * row_len_bytes;
+    //         const row_dst = dst.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
+    //         const row_src = src.subarray(row_begin_offset, row_begin_offset + row_len_bytes);
+    //         row_dst.set(row_src);
+    //     }
+    // }
         
     private async fetch_into_array(path) {
         let array_buffer = await (await fetch(path)).arrayBuffer();
@@ -231,14 +248,15 @@ namespace ModelState {
             return DidHandleMessage.NO
         }
 
-        resize(width: number, height: number): DidHandleMessage {
-            console.log(`ModelCore<${this.state_name()}>: Didn't handle resize(`, {width, height}, `)`)
+        resize(width: number, height: number, devicePixelRatio: number, resolution_multiplier: number): DidHandleMessage {
+            console.log(`ModelCore<${this.state_name()}>: Didn't handle resize(`, {width, height, devicePixelRatio, resolution_multiplier}, `)`)
             return DidHandleMessage.NO
         }
 
         turn_camera(drag_begin: { x: number; y: number },
-                    drag_end: { x: number; y: number }): DidHandleMessage {
-            console.log(`ModelCore<${this.state_name()}>: Didn't handle turn_camera(`, {drag_begin, drag_end}, `)`)
+                    drag_end: { x: number; y: number },
+                    do_orbit: boolean): DidHandleMessage {
+            console.log(`ModelCore<${this.state_name()}>: Didn't handle turn_camera(`, {drag_begin, drag_end, do_orbit}, `)`)
             return DidHandleMessage.NO
         }
 
@@ -250,6 +268,11 @@ namespace ModelState {
             return result
         }
 
+        add_mesh(mesh_url: string, mesh_obj: SharedArrayBuffer): DidHandleMessage {
+            console.log(`ModelCore<${this.state_name()}>: Didn't handle add_mesh(${mesh_url})`)
+            return DidHandleMessage.NO
+        }
+
         protected on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
             return DidHandleMessage.NO
         }
@@ -258,25 +281,33 @@ namespace ModelState {
     }
 
     export class InitPingPong extends AbstractState {
-        worker_responses: number = 0
+        worker_responses: number
+        offscreen_canvases: OffscreenCanvas[]
+        init_resize: MessageToWorker.Resize
         init_set_scene: MessageToWorker.SetScene
 
-        constructor(model: ModelCore, init_set_scene: MessageToWorker.SetScene) {
-            super(model);
+        constructor(model: ModelCore,
+                    offscreen_canvases: OffscreenCanvas[],
+                    init_resize: MessageToWorker.Resize,
+                    init_set_scene: MessageToWorker.SetScene) {
+            super(model)
+            this.worker_responses = 0
+            this.offscreen_canvases = offscreen_canvases
+            this.init_resize = init_resize
             this.init_set_scene = init_set_scene
         }
 
         private send_init_and_start_first_render() {
             const amount_workers = this.model.amount_workers
-            const canvas_size = this.model.controller.get_current_canvas_size()
+            // const canvas_size = this.model.controller.get_current_canvas_size()
             for (let index=0; index<amount_workers; ++index) {
-                const canvas_buffer = this.model.get_worker_buffer(index);
+                // const canvas_buffer = this.model.get_worker_buffer(index)
+                const offscreen_canvas = this.offscreen_canvases[index]
                 const message = new MessageToWorker.Init(index,
-                                                         canvas_buffer,
                                                          amount_workers,
-                                                         this.init_set_scene,
-                                                         canvas_size.width,
-                                                         canvas_size.height)
+                                                         offscreen_canvas,
+                                                         this.init_resize,
+                                                         this.init_set_scene)
                 this.model.render_worker_pool.post(index, message)
             }
             this.model.transition_state(new Rendering(this.model))
@@ -310,12 +341,12 @@ namespace ModelState {
 
         on_message_impl(message: MessageFromWorker.Message): DidHandleMessage {
             if (message.type == "MessageFromWorker_RenderResponse") {                
-                const buffer = new Uint8Array(this.model.get_worker_buffer(message.index));
-                this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer)
+                // const buffer = new Uint8Array(this.model.get_worker_buffer(message.index));
+                // this.model.write_interlaced_worker_buffer_into_image_data(message.index, buffer)
 
                 this.worker_responses += 1
                 if (this.worker_responses == this.model.render_worker_pool.amount_workers()) {
-                    this.model.view.update_canvas(this.model.get_image_data())
+                    // this.model.view.update_canvas(this.model.get_image_data())
                     this.model.transition_state(new AcceptUserControl(this.model))
                     this.display_render_time()
                 }
@@ -352,16 +383,13 @@ namespace ModelState {
             }
         }
 
-        resize(width: number, height: number): DidHandleMessage {
-            this.model.init_image_data()
-            this.model.create_worker_image_buffers(width, height)
+        resize(width: number, height: number, devicePixelRatio: number, resolution_multiplier: number): DidHandleMessage {
             const amount_workers = this.model.render_worker_pool.amount_workers()
             for (let index=0; index<amount_workers; ++index) {
-                const buffer = this.model.get_worker_buffer(index);
-                const message = new MessageToWorker.Resize(width, height, buffer)
+                const message = new MessageToWorker.Resize(width, height, devicePixelRatio, resolution_multiplier)
                 this.model.render_worker_pool.post(index, message)
             }
-            
+
             this.transition_to_rendering()
             return DidHandleMessage.YES
         }
@@ -373,10 +401,20 @@ namespace ModelState {
         }
 
         turn_camera(drag_begin: { x: number; y: number },
-                    drag_end: { x: number; y: number }): DidHandleMessage {
-            const message = new MessageToWorker.TurnCamera(drag_begin, drag_end)
+                    drag_end: { x: number; y: number },
+                    do_orbit: boolean): DidHandleMessage {
+            const message = new MessageToWorker.TurnCamera(drag_begin, drag_end, do_orbit)
 
             console.log("Posting turn_camera: ", message)
+            this.post_all(message)
+            this.transition_to_rendering()
+            return DidHandleMessage.YES
+        }
+
+        add_mesh(mesh_url: string, mesh_obj: SharedArrayBuffer): DidHandleMessage {
+            const message = new MessageToWorker.AddMesh(mesh_url, mesh_obj)
+
+            console.log("Posting add_mesh: ", message)
             this.post_all(message)
             this.transition_to_rendering()
             return DidHandleMessage.YES

@@ -1,3 +1,4 @@
 {
-    "liveServer.settings.multiRootWorkspaceName": "rust_raytracer"
+    "liveServer.settings.multiRootWorkspaceName": "rust_raytracer",
+    "liveServer.settings.port": 5502
 }

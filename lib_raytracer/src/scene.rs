@@ -53,11 +53,12 @@ impl Scene {
         self.screen_to_world = matrix::screen_to_world(&self.camera, &self.screen);
     }
 
-    pub fn turn_camera(&mut self, begin: &glm::Vec2, end: &glm::Vec2) {
+    pub fn turn_camera(&mut self, begin: &glm::Vec2, end: &glm::Vec2, do_orbit: bool) {
         let radians = |degrees: f32| degrees * (glm::pi::<f32>() / 180.0);
     
         // pixel to degrees mapping
         let y_fov_degrees = self.camera.y_fov_degrees;
+        // FIXME: This overshoots on tiny website zooms. At least since DPI-aware scaling. 
         let degrees_per_pixel = y_fov_degrees / self.screen.pixel_height as f32;
         let pixel_to_angle = |pixel| radians(pixel * degrees_per_pixel);
     
@@ -78,6 +79,15 @@ impl Scene {
             true => angle_diff_pitch.abs(),
             false => -angle_diff_pitch.abs()
         };
+
+        if do_orbit {
+            let rotate = matrix::rotation(angle_diff_heading, angle_diff_pitch, 0.0);
+            let camera_pos_4x4 = self.camera.position.push(0.0);
+            let result = rotate * camera_pos_4x4;
+            self.camera.position.x = result.x;
+            self.camera.position.y = result.y;
+            self.camera.position.z = result.z;
+        }
     
         let camera_orientation = &mut self.camera.orientation;
         camera_orientation.x += angle_diff_pitch;

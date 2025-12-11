@@ -17,8 +17,8 @@ use lib_raytracer::raytracing::raytracer::Raytracer;
 // TODO: Grab from args or default to stdout
 const IMAGE_PATH: &str = "render.png";
 const MODEL_DIR_PATH: &str = "res/models";
-const SCENE_PATH: &str = "res/scenes/og_scene_rust.json";
-// const SCENE_PATH: &str = "res/scenes/purple_marbles.json";
+// const SCENE_PATH: &str = "res/scenes/og_scene_rust.json";
+const SCENE_PATH: &str = "res/scenes/purple_marbles.json";
 // const SCENE_PATH: &str = "res/scenes/cornell_box.json";
 // const SCENE_PATH: &str = "res/scenes/santa_and_balls.json";
 

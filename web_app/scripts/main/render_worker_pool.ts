@@ -34,7 +34,16 @@ export class RenderWorkerPool {
 
     post(index: number, message: MessageToWorker.Message) {
         const worker = this.workers[index];
-        worker.postMessage(message);
+
+        const transfer: Transferable[] = []
+        if (message.type === "MessageToWorker_Init") {
+            transfer.push(message.offscreen_canvas)
+        } else if (message.type === "MessageToWorker_SetScene") {
+        } else if (message.type === "MessageToWorker_Resize") {
+        } else if (message.type === "MessageToWorker_TurnCamera") {
+        } else if (message.type === "MessageToWorker_AddMesh") {
+        }
+        worker.postMessage(message, transfer);
     }
 
     private on_worker_message({data: message}: MessageEvent<MessageFromWorker.Message>) {

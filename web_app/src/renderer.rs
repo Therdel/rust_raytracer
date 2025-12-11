@@ -98,12 +98,36 @@ impl Renderer {
         self.scene.resize_screen(width, height)
     }
 
-    pub fn turn_camera(&mut self, drag_begin_x: f32, drag_begin_y: f32, drag_end_x: f32, drag_end_y: f32) {
+    pub fn turn_camera(&mut self, drag_begin_x: f32, drag_begin_y: f32, drag_end_x: f32, drag_end_y: f32, do_orbit: bool) {
         self.scene.turn_camera(&glm::vec2(drag_begin_x, drag_begin_y),
-                                          &glm::vec2(drag_end_x, drag_end_y));
+                               &glm::vec2(drag_end_x, drag_end_y),
+                               do_orbit);
     }
     
     pub fn load_mesh(&mut self, name: &str, file_buffer: &[u8]) {
         self.mesh_file_store.meshes.insert(name.to_string(), file_buffer.to_vec());
     }
+    
+    // TODO
+
+    // pub fn add_mesh_to_scene(&mut self, name: &str, material: &str, winding_order: &str) {
+        // TODO: parse winding order
+        // TODO: find material index
+        // TODO: gotta parse the object file here
+        // lib_raytracer::object_file::load_mesh(name, mesh_file, material, winding_order)
+        // let mesh = lib_raytracer::raytracing::Mesh { name: name.to_string(), triangles: todo!(), bvh: todo!() };
+    // }
+
+    // pub fn instantiate_mesh(&mut self, pos, orientation, material)...
+
+    // TODO: maybe just do a json interface which generalizes
+    // pub fn add_mesh_instance(&mut self, mesh_url: &str, mesh_obj: &[u8]) {
+    //     // TODO: position
+    //     let mut mesh = Mesh {
+    //         name: mesh_url.to_string(),
+    //         triangles: todo!(),
+    //         bvh: todo!(),
+    //     };
+    //     self.scene.meshes.push(mesh)
+    // }
 }
